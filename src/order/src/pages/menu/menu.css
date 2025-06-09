@@ -1,0 +1,71 @@
+.violet-background {
+  --background: #5a189a;
+  color: white;
+}
+
+.navbar-violet {
+  background: #5a189a;
+  color: white;
+}
+
+.menu-sections-container {
+  padding: 20px;
+}
+
+.category-section {
+  scroll-margin-top: 80px; /* Reduced from 120px */
+  padding-top: 20px;
+  /* margin-bottom: 32px; */
+}
+
+.category-header {
+  margin-bottom: 16px;
+}
+
+.category-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px; /* Reduced from 8px */
+  color: var(--ion-color-dark);
+}
+
+.category-description {
+  font-size: 16px;
+  color: var(--ion-color-medium);
+  margin-bottom: 12px; /* Reduced from 16px */
+}
+
+.menu-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.category-section {
+  scroll-margin-top: 64px; /* Reduced from 80px */
+  padding-top: 0; /* Remove top padding */    /* padding-top: 24px; */
+  /* padding-bottom: 24px; */
+}
+
+.category-header {
+  margin-bottom: 12px; /* Reduced from 16px */
+}
+
+.menu-sections-container {
+  padding: 8px 16px; /* Reduced top padding */
+}
+
+/* Ensure IonContent allows scrolling */
+/* ion-content {
+  --offset-top: 0px;
+  --offset-bottom: 0px;
+} */
+
+/* Add some space between categories */
+.category-section:not(:last-child) {
+  /* margin-bottom: 32px; */
+}
+
+ion-content::part(scroll) {
+  scroll-padding-top: 64px; /* Match with scroll-margin-top */
+}

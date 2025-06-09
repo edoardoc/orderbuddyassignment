@@ -1,0 +1,129 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UseGuards,
+  Res,
+  HttpStatus,
+  BadRequestException,
+  Put,
+  NotFoundException,
+} from '@nestjs/common';
+import { OriginsService } from './origins.service';
+import { CreateOriginDto, CreateOriginsParamsDto, OriginsParamsDto } from './dto/create-origin.dto';
+import { ApiTags } from '@nestjs/swagger';
+import { GetOriginsParamsDto, OriginDto } from './dto/get-origin.dtos';
+import { AuthGuard } from 'src/auth/auth.guard';
+import { ApiResponse } from 'src/models/api-response';
+import { Response } from 'express';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import { ConfigService } from '@nestjs/config';
+import * as QC from 'qrcode';
+import { UpdateQrStyleParamsDto, UpdateQrStyleDto } from './dto/update-origin.dtos';
+
+@UseGuards(AuthGuard)
+@ApiTags('Origins')
+@Controller('origins')
+export class OriginsController {
+  constructor(
+    private readonly originsService: OriginsService,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService
+  ) {}
+
+  @Get(':restaurantId/:locationId')
+  async findAll(
+    @Param() params: GetOriginsParamsDto,
+    @Res() res: Response
+  ): Promise<Response<ApiResponse<OriginDto[]>>> {
+    const origins = await this.originsService.findAllOrigins(params.restaurantId, params.locationId);
+    return res.status(HttpStatus.OK).json({
+      data: origins,
+    });
+  }
+
+  @Post(':restaurantId/:locationId')
+  async create(
+    @Param() params: CreateOriginsParamsDto,
+    @Body() createOriginDto: OriginsParamsDto,
+    @Res() res: Response
+  ): Promise<Response<ApiResponse<OriginDto>>> {
+    try {
+      const menuEndPoint = this.configService.get<string>('MENU_ENDPOINT');
+      const smartScanUrl = this.configService.get<string>('SMART_SCAN_URL');
+
+      if (!menuEndPoint || !smartScanUrl) {
+        throw new BadRequestException('Missing configuration');
+      }
+
+      const restaurant = await this.originsService.getRestaurantDetails(params.restaurantId);
+      if (!restaurant) {
+        throw new BadRequestException('Restaurant not found');
+      }
+
+      const origin = await this.originsService.createOrigin(params.restaurantId, params.locationId, {
+        name: createOriginDto.name,
+        qrCode: '',
+        qrCodeId: '',
+        type: createOriginDto.type,
+      });
+
+      const redirectUrl =
+        `${menuEndPoint}/entry/${params.restaurantId}/${params.locationId}?` +
+        `originId=${origin._id}&` +
+        `name=${encodeURIComponent(restaurant.name)}`;
+
+      const { data, status } = await firstValueFrom(
+        this.httpService.post(`${smartScanUrl}/add-qrdata`, {
+          redirectUrl: redirectUrl,
+        })
+      );
+
+      if (status !== HttpStatus.CREATED) {
+        throw new BadRequestException('Failed to create origin QR code');
+      }
+
+      const tinyUrl = `${data}`;
+      const qrcode = await QC.toDataURL(tinyUrl);
+
+      const updatedOrigin = await this.originsService.updateOrigin(origin._id, {
+        qrCode: qrcode,
+        qrCodeId: tinyUrl,
+      });
+
+      return res.status(HttpStatus.CREATED).json({
+        data: updatedOrigin,
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to create origin: ' + error.message);
+    }
+  }
+
+  @Put(':restaurantId/:locationId/qr-style')
+  async updateQrStyle(
+    @Param() params: UpdateQrStyleParamsDto,
+    @Body() updateQrStyleDto: UpdateQrStyleDto,
+    @Res() res: Response
+  ): Promise<Response<ApiResponse<void>>> {
+    try {
+      await this.originsService.updateQrStyle(params.restaurantId, params.locationId, updateQrStyleDto);
+
+      return res.status(HttpStatus.OK).json({
+        data: null,
+        message: 'QR style updated successfully',
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+      throw new BadRequestException('Failed to update QR style: ' + error.message);
+    }
+  }
+}

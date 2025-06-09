@@ -1,0 +1,110 @@
+
+.display-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .display-card-link {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .display-card {
+    height: 100%;
+    transition: transform 0.2s ease;
+    margin: 0;
+  }
+  
+  .display-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .display-status {
+    margin: 0.5rem 0;
+  }
+  
+  .display-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+  }
+  
+  .status-chip {
+    margin: 0;
+  }
+  
+  .tag-chip {
+    margin: 0;
+  }
+  
+  .display-updated {
+    font-size: 0.875rem;
+    color: var(--ion-color-medium);
+    margin-top: 1rem;
+  }
+  .stations-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .station-card {
+    flex: 0 0 auto;
+    min-width: 250px;
+    margin: 0;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  
+  .station-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .station-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+
+
+  .add-station-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+    background-color: #f8f8f8;
+    border: 2px dashed #ccc;
+  }
+  
+  .add-station-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .add-icon {
+    font-size: 32px;
+    color: #666;
+  }
+  
+  .add-station-card:hover {
+    border-color: var(--ion-color-primary);
+    background-color: #f0f0f0;
+    cursor: pointer;
+  }
+  
+  .add-station-card:hover .add-icon,
+  .add-station-card:hover ion-label {
+    color: var(--ion-color-primary);
+  }
+
+  

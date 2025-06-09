@@ -1,0 +1,28 @@
+.lilita-one-regular {
+  font-family: 'Lilita One', serif;
+  font-weight: 400;
+  font-style: normal;
+  font-size: x-large;
+}
+.navbar-violet {
+  background-color: #5A189A;
+}
+.font-size-18 {
+  font-size: 18px;
+}
+.width {
+  width: 100%;
+}
+
+.card-element {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+
+
+.pay{
+  --background-activated: rgb(219, 208, 208);
+
+}
