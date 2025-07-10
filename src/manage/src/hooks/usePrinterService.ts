@@ -34,62 +34,62 @@ export function usePrinterService() {
       .line(`${restaurantInfo.restaurantName} - ${restaurantInfo.locationName}`)
       .bold()
       .newline(2)
-      .height(1);
+      .height(1)
 
-    //   // 👤 Customer Info
-    //   .width(2)
-    //   .underline()
-    //   .line(order.customer.name)
-    //   .underline()
+      // 👤 Customer Info
+      .width(2)
+      .underline()
+      .line(order.customer.name)
+      .underline()
 
-    //   // 🧾 Order Info
-    //   .text('#')
-    //   .text(order._id.slice(-4).toUpperCase())
-    //   .text(` ${order.origin.name}`)
-    //   .newline()
-    //   .width(1)
-    //   .rule();
+      // 🧾 Order Info
+      .text('#')
+      .text(order._id.slice(-4).toUpperCase())
+      .text(` ${order.origin.name}`)
+      .newline()
+      .width(1)
+      .rule();
 
-    // // 🧂 Items
-    // order.items.forEach((item) => {
-    //   receipt.bold().line(item.name).bold();
+    // 🧂 Items
+    order.items.forEach((item) => {
+      receipt.bold().line(item.name).bold();
 
-    //   if (item.variants?.length) {
-    //     item.variants.forEach((variant) => receipt.text('> ').text(variant.name).newline());
-    //   }
+      if (item.variants?.length) {
+        item.variants.forEach((variant) => receipt.text('> ').text(variant.name).newline());
+      }
 
-    //   if (item.modifiers?.length) {
-    //     item.modifiers.forEach((mod) => {
-    //       const options = mod.options?.map((o) => o.name).join(', ');
-    //       receipt.text('- ').text(mod.name).text(': ').text(options).newline();
-    //     });
-    //   }
+      if (item.modifiers?.length) {
+        item.modifiers.forEach((mod) => {
+          const options = mod.options?.map((o) => o.name).join(', ');
+          receipt.text('- ').text(mod.name).text(': ').text(options).newline();
+        });
+      }
 
-    //   receipt.newline();
-    // });
+      receipt.newline();
+    });
 
-    // receipt.rule();
+    receipt.rule();
 
-    // // 🧮 Summary
-    // receipt
-    //   .width(2)
-    //   .line(`Items: ${order.items.length}`)
-    //   .newline()
-    //   .line(`Total: $${(order.totalPrice / 100).toFixed(2)}`)
-    //   .newline()
-    //   .width(1);
+    // 🧮 Summary
+    receipt
+      .width(2)
+      .line(`Items: ${order.items.length}`)
+      .newline()
+      .line(`Total: $${(order.totalPrice / 100).toFixed(2)}`)
+      .newline()
+      .width(1);
 
-    // // 🔲 QR Code
-    // const qrText = `https://order.dev.orderbuddyapp.com/menus/${restaurantInfo.restaurantId}/${restaurantInfo.locationName}/${restaurantInfo.locationId}`;
-    // receipt
-    //   .align('center')
-    //   .bold()
-    //   .text('Order again anytime — just scan')
-    //   .bold()
-    //   .newline()
-    //   .qrcode(qrText, { size: 8 })
-    //   .newline()
-    //   .align('left');
+    // 🔲 QR Code
+    const qrText = `https://order.dev.orderbuddyapp.com/menus/${restaurantInfo.restaurantId}/${restaurantInfo.locationName}/${restaurantInfo.locationId}`;
+    receipt
+      .align('center')
+      .bold()
+      .text('Order again anytime — just scan')
+      .bold()
+      .newline()
+      .qrcode(qrText, { size: 8 })
+      .newline()
+      .align('left');
 
     // 💜 Footer
     receipt.align('right').invert().text('OrderBuddy').invert().align('left').newline();
