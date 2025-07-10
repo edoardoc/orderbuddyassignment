@@ -6,8 +6,8 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.orderbuddy.app"
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        minSdkVersion 26
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -43,6 +43,18 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     implementation platform('com.google.firebase:firebase-bom:33.12.0')
     implementation 'com.google.firebase:firebase-analytics'
+    implementation(name: 'stario', ext: 'aar')
+    implementation(name: 'starioextension', ext: 'aar')
+    implementation(name: 'StarIODeviceSetting', ext: 'aar')
+    
+    // Azure SDK core libraries
+    implementation 'com.azure:azure-core:1.35.0'
+    implementation 'com.azure:azure-core-http-okhttp:1.11.2'    
+    implementation 'com.azure.android:azure-core-logging:1.0.0-beta.6'
+    implementation 'com.azure.android:azure-communication-common:1.2.0'    
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.3'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.13.3'
+    implementation 'org.slf4j:slf4j-api:1.7.36'
 }
 
 apply from: 'capacitor.build.gradle'

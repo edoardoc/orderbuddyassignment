@@ -12,9 +12,10 @@ export class GetStoreInfoDto {
 export class CreateOrderDto {
   @IsNotEmpty() restaurantId!: string;
   @IsNotEmpty() locationId!: string;
+  @IsNotEmpty() locationSlug!: string;
   @IsOptional()
   paymentId?: string;
-  @IsNotEmpty() station!: Station;
+  @IsNotEmpty() origin!: Origin;
   @IsNotEmpty() customer!: Customer;
   @IsNotEmpty() items!: OrderItemDto[];
   @IsNotEmpty() getSms!: boolean;
@@ -22,7 +23,7 @@ export class CreateOrderDto {
   transactionDetails?: any;
 }
 
-export interface Station {
+export interface Origin {
   id: string;
   name: string;
 }

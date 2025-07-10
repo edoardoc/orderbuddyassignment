@@ -25,35 +25,30 @@ import EntryPage from './pages/entry/EntryPage';
 import MenuPage from './pages/menu/MenuPage';
 import CartPage from './pages/cart/Cart';
 import StatusPage from './pages/status/Status';
-import './App.css';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import TermsPage from './pages/terms/Terms';
 import PrivacyPage from './pages/privacy/Privacy';
 import ErrorPage from './pages/error/ErrorPage';
 import MenusPage from './pages/menus/MenusPage';
+import '../style.css';
 setupIonicReact();
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <IonApp className='inter mobile-container'>
+    <IonApp className='mobile-container'>
       <IonReactRouter>
         <IonRouterOutlet>
           <Switch>
             <Route exact path='/entry/:restaurantId/:locationSlug/:locationId' component={EntryPage} />
             <Route exact path='/menus/:restaurantId/:locationSlug/:locationId' component={MenusPage} />
             <Route exact path='/menu/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId' component={MenuPage} />
-            <Route exact path='/cart/:restaurantId/:locationId/:menuId' component={CartPage} />
+            <Route exact path='/cart/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId' component={CartPage} />
+            <Route exact path='/status/:restaurantId/:orderId' component={StatusPage} />
             <Route exact path='/terms' component={TermsPage} />
             <Route exact path='/privacy' component={PrivacyPage} />
             <Route exact path='/error' component={ErrorPage} />
-            {/* <Route exact path='/checkout' component={CheckoutPage} /> */}
-            <Route exact path='/status/:restaurantId/:orderId' component={StatusPage} />
-            {/* <Route exact path='/review/:orderId' component={ReviewPage} />
-            
-            <Route exact path='/support' component={SupportPage} />
-            <Route exact path='/' component={LandingPage} /> */}
           </Switch>
         </IonRouterOutlet>
       </IonReactRouter>

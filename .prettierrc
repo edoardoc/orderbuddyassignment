@@ -6,9 +6,10 @@
   "jsxSingleQuote": true,
   "arrowParens": "always",
   "bracketSameLine": false,
-  "trailingComma": "es5",
+  "trailingComma": "all",
+  "useTabs": false,
   "htmlWhitespaceSensitivity": "ignore",
-  "endOfLine": "auto",
+  "endOfLine": "lf",
   "importOrder": ["react", "<THIRD_PARTY_MODULES>", "^[./]"],
   "importOrderSeparation": true,
   "importOrderSortSpecifiers": true

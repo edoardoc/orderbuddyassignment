@@ -5,6 +5,11 @@ import React, { RefObject } from 'react';
 interface PaymentModalProps {
   modalRef: RefObject<HTMLIonModalElement>;
   amount: number;
+  customerData: {
+    name: string;
+    phone: string;
+    getSms: boolean;
+  };
   onPaymentSuccess: () => void;
   onPaymentError: (error: any) => void;
   onCancel: () => void;
@@ -13,6 +18,7 @@ interface PaymentModalProps {
 export const PaymentModal: React.FC<PaymentModalProps> = ({
   modalRef,
   amount,
+  customerData,
   onPaymentSuccess,
   onPaymentError,
   onCancel,
@@ -21,15 +27,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     <IonHeader>
       <IonToolbar>
         <IonButtons slot='start'>
-          <IonButton onClick={onCancel} color={'primary'}>
-            Cancel
-          </IonButton>
+          <IonButton onClick={onCancel}>Cancel</IonButton>
         </IonButtons>
         <IonTitle>Payment Information</IonTitle>
       </IonToolbar>
     </IonHeader>
     <IonContent className='ion-padding-top'>
-      <PaymentForm amount={amount} onPaymentSuccess={onPaymentSuccess} onPaymentError={onPaymentError} />
+      <PaymentForm
+        amount={amount}
+        customerData={customerData}
+        onPaymentSuccess={onPaymentSuccess}
+        onPaymentError={onPaymentError}
+      />{' '}
     </IonContent>
   </IonModal>
 );

@@ -1,18 +1,28 @@
-import { IonCheckbox, IonInput } from '@ionic/react';
-import { UseFormRegister } from 'react-hook-form';
+import { IonCheckbox, IonInput, IonText } from '@ionic/react';
 import React, { useState, useEffect } from 'react';
-// import './input.css';
-import { appStore } from '../../../../../store';
-
+import { useOrderStore } from '@/stores/orderStore';
+interface CustomerData {
+  name: string;
+  phone: string;
+  getSms: boolean;
+}
 interface InputFieldProps {
   onValidityChange?: (isValid: boolean) => void;
+  onCustomerDataChange: React.Dispatch<React.SetStateAction<CustomerData>>;
 }
 
-export const InputField: React.FC<InputFieldProps> = ({ onValidityChange }) => {
-  const appState = appStore();
+export const InputField: React.FC<InputFieldProps> = ({ onValidityChange, onCustomerDataChange }) => {
   const [customerName, setCustomerName] = useState('');
   const [phone, setPhone] = useState('');
   const [showPhoneNumberInput, setShowPhoneNumberInput] = useState(false);
+  const cartItems = useOrderStore((s) => s.cart.items);
+  useEffect(() => {
+    onCustomerDataChange({
+      name: customerName,
+      phone: phone,
+      getSms: showPhoneNumberInput,
+    });
+  }, [customerName, phone, showPhoneNumberInput]);
 
   useEffect(() => {
     const isValid = customerName.length > 0 && (!showPhoneNumberInput || phone.length === 10);
@@ -20,14 +30,12 @@ export const InputField: React.FC<InputFieldProps> = ({ onValidityChange }) => {
   }, [customerName, phone, showPhoneNumberInput, onValidityChange]);
   useEffect(() => {
     if (!showPhoneNumberInput) {
-      appState.setCustomerPhone('');
       setPhone('');
     }
   }, [showPhoneNumberInput]);
   const handleNameInput = (e: CustomEvent) => {
     const value = ((e.target as HTMLIonInputElement).value as string) || '';
     setCustomerName(value);
-    appState.setCustomerName(value);
   };
 
   const handlePhoneInput = (e: CustomEvent) => {
@@ -36,20 +44,18 @@ export const InputField: React.FC<InputFieldProps> = ({ onValidityChange }) => {
 
     if (!originalValue || typeof originalValue !== 'string' || !validPhoneRegex.test(originalValue)) {
       setPhone('');
-      appState.setCustomerPhone('');
       return;
     }
 
     if (originalValue.length === 10) {
       setPhone(originalValue);
-      appState.setCustomerPhone(originalValue);
     }
   };
 
   return (
-    <div className='ion-padding'>
+    <div className='ion-no-padding ion-padding-start ion-padding-end ion-padding-bottom'>
       <IonInput
-        disabled={appState.order.items.length === 0}
+        disabled={cartItems.length === 0}
         clearInput={true}
         aria-label='Custom input'
         class='custom'
@@ -63,7 +69,7 @@ export const InputField: React.FC<InputFieldProps> = ({ onValidityChange }) => {
           maxlength={10}
           type='tel'
           style={{ marginTop: '10px' }}
-          disabled={appState.order.items.length === 0}
+          disabled={cartItems.length === 0}
           clearInput={true}
           aria-label='Custom input'
           class='custom'
@@ -82,10 +88,9 @@ export const InputField: React.FC<InputFieldProps> = ({ onValidityChange }) => {
         }}
         onIonChange={(e: CustomEvent) => {
           setShowPhoneNumberInput(e.detail.checked);
-          appState.setGetSms(e.detail.checked);
         }}
       >
-        Get a text message when your order is ready
+        <IonText className='font-size-14'>Get a text message when your order is ready</IonText>
       </IonCheckbox>
 
       <p>
@@ -93,11 +98,11 @@ export const InputField: React.FC<InputFieldProps> = ({ onValidityChange }) => {
           By providing your phone number and checking this box, you consent to receiving text messages from OrderBuddy
           informing you on updates on your order. Message and data rates may apply. Reply HELP for help or STOP to
           cancel. View our{' '}
-          <a href={`${import.meta.env.VITE_MENU_ENDPOINT}/privacy`} target='_blank'>
+          <a href={`${import.meta.env.VITE_MENU_ENDPOINT}/privacy`} target='_blank' className='link-color'>
             Privacy Policy
           </a>{' '}
           and{' '}
-          <a href={`${import.meta.env.VITE_MENU_ENDPOINT}/terms`} target='_blank'>
+          <a href={`${import.meta.env.VITE_MENU_ENDPOINT}/terms`} target='_blank' className='link-color'>
             Terms of Service
           </a>
           .

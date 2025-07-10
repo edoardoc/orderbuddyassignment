@@ -15,28 +15,127 @@ import {
   IonLabel,
   IonSegment,
   IonSegmentButton,
+  IonText,
 } from '@ionic/react';
 import { getUserLang, t } from '@/utils/localization';
-import { appStore } from '../../../../../store';
 import ObjectID from 'bson-objectid';
 import { MenuItemType, Modifier, ModifierOption, SelectedModifier } from '../types/menu';
-
+type OrderItem = {
+  id: string;
+  menuItemId: string;
+  name: string;
+  price: number;
+  variants: Array<{
+    id: string;
+    name: string;
+    priceCents: number;
+  }>;
+  modifiers: Array<{
+    id: string;
+    name: string;
+    options: Array<{
+      id: string;
+      name: string;
+      priceCents: number;
+    }>;
+  }>;
+  stationTags: string[];
+};
 export interface MenuItemModalProps {
   selectedItem: MenuItemType | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-import './modal.css';
+import { useOrderStore } from '@/stores/orderStore';
+import _ from 'lodash';
+import './../../../../../style.css';
+const initialOrderState: OrderItem = {
+  id: '',
+  menuItemId: '',
+  name: '',
+  price: 0,
+  variants: [],
+  modifiers: [],
+  stationTags: [],
+};
 
 const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, isOpen }) => {
-  const [quantity, setQuantity] = useState(1);
+  if (!selectedItem) return null;
   const [selectedModifiers, setSelectedModifiers] = useState<SelectedModifier[]>([]);
   const [selectedVariant, setSelectedVariant] = useState(selectedItem?.variants?.[0]);
 
-  const appState = appStore();
+  const addOrderItem = useOrderStore((s) => s.addOrderItem);
   const currentLang = getUserLang();
+  const calculateTotalPrice = (): number => {
+    let totalCents = selectedItem.priceCents;
 
+    if (selectedVariant) {
+      totalCents = selectedVariant.priceCents;
+    }
+
+    if (selectedModifiers) {
+      totalCents += _.sumBy(selectedModifiers, 'totalPrice');
+    }
+
+    return totalCents;
+  };
+
+  const [orderItem, setOrderItem] = useState<OrderItem>(initialOrderState);
+  useEffect(() => {
+    if (selectedItem && isOpen) {
+      setOrderItem({
+        id: new ObjectID().toString(),
+        menuItemId: selectedItem.id,
+        name: t(selectedItem.name, currentLang),
+        price: selectedItem.priceCents,
+        variants: [],
+        modifiers: [],
+        stationTags: selectedItem.stationTags || [],
+      });
+
+      setSelectedModifiers([]);
+      if (selectedItem.variants && selectedItem.variants.length > 0) {
+        const defaultVariant = selectedItem.variants.find((v) => v.default);
+        setSelectedVariant(defaultVariant || selectedItem.variants[0]);
+      }
+    }
+  }, [selectedItem, isOpen]);
+  useEffect(() => {
+    if (orderItem.id) {
+      setOrderItem((prev) => ({
+        ...prev,
+        price: calculateTotalPrice(),
+        variants: selectedVariant
+          ? [
+              {
+                id: selectedVariant.id,
+                name: selectedVariant.name,
+                priceCents: selectedVariant.priceCents,
+              },
+            ]
+          : [],
+        modifiers: selectedModifiers
+          .map((mod) => {
+            const modifier = selectedItem?.modifiers?.find((m) => m.id === mod.modifierId);
+            if (!modifier) return null;
+            return {
+              id: modifier.id,
+              name: t(modifier.name || { en: '' }, currentLang),
+              options: mod.selectedOptions.map((optionId) => {
+                const option = modifier.options.find((o) => o.id === optionId);
+                return {
+                  id: optionId,
+                  name: t(option?.name || { en: '' }, currentLang),
+                  priceCents: option?.priceCents || 0,
+                };
+              }),
+            };
+          })
+          .filter(Boolean) as OrderItem['modifiers'],
+      }));
+    }
+  }, [selectedVariant, selectedModifiers]);
   useEffect(() => {
     if (selectedItem && isOpen) {
       if (selectedItem.variants && selectedItem.variants.length > 0) {
@@ -51,16 +150,20 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
   const calculateModifierPrice = (modifier: Modifier, selectedOptions: string[], options: ModifierOption[]): number => {
     const freeCount = modifier.freeChoices;
 
-    return selectedOptions.reduce((total, optionId, index) => {
-      const option = options.find((opt) => opt.id === optionId);
-      if (!option) return total;
+    return _.reduce(
+      selectedOptions,
+      (total, optionId, index) => {
+        const option = _.find(options, { id: optionId });
+        if (!option) return total;
 
-      let price = option.priceCents;
-      if (freeCount > 0 && index >= freeCount) {
-        price += modifier.extraChoicePriceCents;
-      }
-      return total + price;
-    }, 0);
+        let price = option.priceCents;
+        if (freeCount > 0 && index >= freeCount) {
+          price += modifier.extraChoicePriceCents;
+        }
+        return total + price;
+      },
+      0
+    );
   };
 
   const handleModifierChange = (modifier: Modifier, optionId: string, isChecked: boolean) => {
@@ -102,62 +205,32 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
     });
   };
 
-  const calculateTotalPrice = (): number => {
-    let totalCents = selectedItem.priceCents;
-
-    if (selectedVariant) {
-      totalCents = selectedVariant.priceCents;
-    }
-
-    if (selectedModifiers) {
-      totalCents += selectedModifiers.reduce((sum, mod) => sum + mod.totalPrice, 0);
-    }
-
-    return totalCents;
-  };
-
   const handleAddToCart = () => {
-    const orderItem = {
-      id: new ObjectID().toString(),
-      menuItemId: selectedItem.id,
-      name: t(selectedItem.name, currentLang),
-      price: calculateTotalPrice(),
-      variants: selectedVariant
-        ? [
-            {
-              id: selectedVariant.id,
-              name: selectedVariant.name,
-            },
-          ]
-        : [],
-      modifiers: selectedModifiers.map((mod) => {
-        const modifier = selectedItem.modifiers?.find((m) => m.id === mod.modifierId);
-        return {
-          id: modifier?.id || new ObjectID().toString(),
-          name: t(modifier?.name || { en: '' }, currentLang),
-          options: mod.selectedOptions.map((optionId) => {
-            const option = modifier?.options.find((o) => o.id === optionId);
-            return {
-              id: optionId,
-              name: t(option?.name || { en: '' }, currentLang),
-            };
-          }),
-        };
-      }),
-      stationTags: selectedItem.stationTags || [],
-    };
-    appState.addOrderItem(orderItem);
+    addOrderItem(orderItem);
     setSelectedVariant(undefined);
     setSelectedModifiers([]);
-
     onClose();
   };
+
+  useEffect(() => {
+    const handleHardwareBackButton = (ev: any) => {
+      ev.detail.register(-1, () => {
+        onClose();
+      });
+    };
+
+    document.addEventListener('ionBackButton', handleHardwareBackButton as EventListener);
+
+    return () => {
+      document.removeEventListener('ionBackButton', handleHardwareBackButton as EventListener);
+    };
+  }, [onClose]);
 
   return (
     <IonModal
       isOpen={isOpen}
       onDidDismiss={() => {
-        setSelectedVariant(undefined);
+        setOrderItem(initialOrderState);
         setSelectedModifiers([]);
         onClose();
       }}
@@ -165,9 +238,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
       <IonHeader className='ion-no-border'>
         <IonToolbar>
           <IonButtons slot='start'>
-            <IonButton onClick={onClose} color='primary'>
-              Cancel
-            </IonButton>
+            <IonButton onClick={onClose}>Cancel</IonButton>
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -186,8 +257,13 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
           </div>
 
           <div className='item-details'>
-            <h1>{t(selectedItem.name, currentLang)}</h1>
-            <p>{t(selectedItem.description, currentLang)}</p>
+            <IonText>{t(selectedItem.name, currentLang)}</IonText>
+            <p>
+              <sub>
+                {' '}
+                <IonText>{t(selectedItem.description, currentLang)}</IonText>
+              </sub>
+            </p>
           </div>
 
           {selectedItem.variants && selectedItem.variants.length > 0 && (
@@ -268,12 +344,12 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
         <IonGrid>
           <IonRow>
             <IonCol size='8'>
-              <IonButton expand='block' onClick={handleAddToCart} className='add-to-cart-button'>
+              <IonButton expand='block' onClick={handleAddToCart} className='solid-button'>
                 Add to cart
               </IonButton>
             </IonCol>
             <IonCol size='4' className='ion-text-end ion-align-self-center'>
-              <div className='total-price'>${(calculateTotalPrice() / 100).toFixed(2)}</div>
+              <div className='font-size-14'>${(calculateTotalPrice() / 100).toFixed(2)}</div>
             </IonCol>
           </IonRow>
         </IonGrid>

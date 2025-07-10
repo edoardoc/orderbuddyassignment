@@ -1,56 +1,32 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  HttpException,
-  HttpStatus,
-  Param,
-  Post,
-  Req,
-  Res,
-} from '@nestjs/common';
+import { Body, Controller, HttpException, HttpStatus, Param, Post, Req, Res } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreateOrderDto, GetStoreInfoDto } from './dtos/payments.controller.dto';
-import { Response } from 'express';
-import { ObjectId } from 'mongodb';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import e, { Response } from 'express';
+import { logger } from 'src/logger/pino.logger';
 
 @Controller('payments')
 export class PaymentsController {
-  constructor(
-    private readonly paymentsService: PaymentsService,
-    @InjectPinoLogger(PaymentsController.name)
-    private readonly logger: PinoLogger
-  ) {
-    this.logger.setContext('PaymentsController');
+  private readonly logger: typeof logger;
+
+  constructor(private readonly paymentsService: PaymentsService) {
+    this.logger = logger.child({ context: 'PaymentsController' });
   }
 
   @Post('start-transaction/:restaurantId')
-  async getStore(@Param() params: GetStoreInfoDto, @Res() res: Response, @Req() req: Request) {
+  async startTranscation(@Param() params: GetStoreInfoDto, @Res() res: Response, @Req() req: Request) {
     const requestId = req['requestId'];
-
     try {
-      this.logger.trace(
-        {
-          module: 'payment',
-          event: 'start-transaction',
-          restaurantId: params.restaurantId,
-          correlationId: requestId,
-        },
-        'Payment transaction initiated'
-      );
       const transactionToken = await this.paymentsService.startTransaction(params.restaurantId);
-      this.logger.trace(
-        {
-          module: 'payment',
-          event: 'transaction-token-generated',
-          restaurantId: params.restaurantId,
-          correlationId: requestId,
-          tokenId: transactionToken.transactionToken,
-        },
-        'Transaction token generated successfully'
-      );
-
+      if (transactionToken)
+        this.logger.trace(
+          {
+            module: 'payment',
+            event: 'start-transaction',
+            restaurantId: params.restaurantId,
+            correlationId: requestId,
+          },
+          'Payment initiated'
+        );
       return res.status(HttpStatus.OK).json(transactionToken);
     } catch (error: any) {
       this.logger.error(
@@ -62,7 +38,18 @@ export class PaymentsController {
           error: error.message,
           stack: error.stack,
         },
-        'Transaction failed'
+        'Exception - Payment failed to initiate'
+      );
+      this.logger.trace(
+        {
+          module: 'payment',
+          event: 'start-transaction',
+          restaurantId: params.restaurantId,
+          correlationId: requestId,
+          error: error.message,
+          stack: error.stack,
+        },
+        'Exception - Payment failed to initiate'
       );
 
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -74,25 +61,7 @@ export class PaymentsController {
     const requestId = req['requestId'];
 
     try {
-      this.logger.trace(
-        {
-          module: 'payment',
-          event: 'complete-transaction',
-          correlationId: requestId,
-        },
-        'Payment completion initiated'
-      );
-
       const data = await this.paymentsService.completeTranscation(body, requestId);
-      this.logger.trace(
-        {
-          module: 'payment',
-          event: 'transaction-completed',
-          correlationId: requestId,
-        },
-        'Transaction completed successfully'
-      );
-
       return res.status(HttpStatus.OK).json(data);
     } catch (error: any) {
       this.logger.error(
@@ -103,7 +72,17 @@ export class PaymentsController {
           error: error.message,
           stack: error.stack,
         },
-        'Transaction failed'
+        'Exception - Payment failed to complete'
+      );
+      this.logger.trace(
+        {
+          module: 'payment',
+          event: 'complete-transaction',
+          correlationId: requestId,
+          error: error.message,
+          stack: error.stack,
+        },
+        'Exception - Payment failed to complete'
       );
 
       console.error('EmergePay transaction failed:', error);

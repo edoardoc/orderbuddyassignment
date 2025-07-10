@@ -8,29 +8,30 @@ import axios from 'axios';
 import { CreateOrderDto, OrderItemDto } from './dtos/payments.controller.dto';
 import { MenuService } from '../menu/menu.service';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { COLLECTIONS } from 'src/db/collections';
+import { logger } from 'src/logger/pino.logger';
 
 @Injectable()
 export class PaymentsService {
-  private readonly restaurantCollection;
+  private readonly locationCollection;
+  private readonly logger: typeof logger;
 
   constructor(
     private readonly menuService: MenuService,
     private readonly configService: ConfigService,
-    @InjectClient() private readonly db: Db,
-    @InjectPinoLogger(PaymentsService.name)
-    private readonly logger: PinoLogger
+    @InjectClient() private readonly db: Db
   ) {
-    this.restaurantCollection = db.collection('locations');
-    this.logger.setContext('PaymentsService');
+    this.locationCollection = db.collection(COLLECTIONS.LOCATIONS);
+    this.logger = logger.child({ context: 'PaymentsService' });
   }
 
   async startTransaction(restaurantId: string) {
     let emergepay: any;
     const projection = { payment: 1 };
-    const PaymentDetails = await this.restaurantCollection.findOne({ restaurantId: restaurantId }, { projection });
+    const PaymentDetails = await this.locationCollection.findOne({ restaurantId: restaurantId }, { projection });
     const oid = PaymentDetails.payment.oid;
     const authToken = PaymentDetails.payment.auth;
-    const environmentUrl = process.env.EMERGEPAY_ENVIRONMENT_URL;
+    const environmentUrl = this.configService.get<string>('EMERGEPAY_ENVIRONMENT_URL');
     if (!oid || !authToken) {
       throw new Error('EmergePay credentials not found');
     }
@@ -60,10 +61,10 @@ export class PaymentsService {
   async completeTranscation(body: CreateOrderDto, requestId: string) {
     let emergepay: any;
     const projection = { payment: 1 };
-    const PaymentDetails = await this.restaurantCollection.findOne({ restaurantId: body.restaurantId }, { projection });
+    const PaymentDetails = await this.locationCollection.findOne({ restaurantId: body.restaurantId }, { projection });
     const oid = PaymentDetails.payment.oid;
     const authToken = PaymentDetails.payment.auth;
-    const environmentUrl = process.env.EMERGEPAY_ENVIRONMENT_URL;
+    const environmentUrl = this.configService.get<string>('EMERGEPAY_ENVIRONMENT_URL');
     if (!environmentUrl) {
       throw new Error('EmergePay environment URL not found');
     }
@@ -104,30 +105,20 @@ export class PaymentsService {
           amount: totalPriceWithTax,
           transactionId: body.paymentId,
         },
-        'Payment processed successfully'
+        'Payment completed'
       );
 
       orderId = await this.menuService.createOrder(body, requestId);
-      this.logger.trace(
-        {
-          module: 'payment',
-          event: 'order_created',
-          correlationId: requestId,
-          orderId,
-          restaurantId: body.restaurantId,
-        },
-        'Order created after successful payment'
-      );
     } else {
-      this.logger.error(
+      this.logger.trace(
         {
           module: 'payment',
           event: 'payment_failed',
           restaurantId: body.restaurantId,
           correlationId: requestId,
-          error: response.data,
+          error: response.data.resultMessage,
         },
-        'Payment processing failed'
+        'Payment failed'
       );
     }
     return { transaction: response.data, orderId: orderId };
@@ -135,10 +126,10 @@ export class PaymentsService {
 
   async completeTranscationUpi(body: CreateOrderDto) {
     const projection = { payment: 1 };
-    const PaymentDetails = await this.restaurantCollection.findOne({ _id: body.restaurantId }, { projection });
+    const PaymentDetails = await this.locationCollection.findOne({ _id: body.restaurantId }, { projection });
     const oid = PaymentDetails.payment.oid;
     const authToken = PaymentDetails.payment.auth;
-    const environmentUrl = process.env.EMERGEPAY_ENVIRONMENT_URL;
+    const environmentUrl = this.configService.get<string>('EMERGEPAY_ENVIRONMENT_URL');
     const url = `${environmentUrl}/orgs/${oid}/transactions/wallets`;
 
     const orderTotalPrice = body.items.reduce(

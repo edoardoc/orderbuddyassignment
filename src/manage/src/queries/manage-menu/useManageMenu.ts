@@ -8,11 +8,33 @@ interface UseManageMenuProps {
   locationId: string;
   menuId: string;
 }
+const multilingualSchema = z.object({
+  en: z.string().min(1, 'Modifier name is required'),
+  es: z.string().optional().nullable(),
+  pt: z.string().optional().nullable(),
+});
 const variantSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Variant name is required'),
-  priceCents: z.number().min(0, 'Price must be positive'),
+  priceCents: z.number().min(1, 'Price must be greater than 0'),
   default: z.boolean().optional(),
+});
+const modifierOptionSchema = z.object({
+  id: z.string().optional(),
+  name: multilingualSchema,
+  priceCents: z.number().min(0, 'Price must be non-negative'),
+});
+
+const modifierSchema = z.object({
+  id: z.string().optional(),
+  name: multilingualSchema,
+  type: z.enum(['standard', 'upsell']),
+  required: z.boolean(),
+  selectionMode: z.enum(['single', 'max', 'multiple']),
+  maxChoices: z.number().optional(),
+  freeChoices: z.number().optional(),
+  extraChoicePriceCents: z.number().optional(),
+  options: z.array(modifierOptionSchema).optional(),
 });
 export const menuItemSchema = z.object({
   id: z.string().optional(),
@@ -26,10 +48,11 @@ export const menuItemSchema = z.object({
     es: z.string().optional(),
     pt: z.string().optional(),
   }),
-  price: z.number().min(0, 'Price must be positive'),
+  price: z.number().min(1, 'Price must be greater than 0'),
   categoryId: z.string().min(1, 'Category is required'),
   stationTags: z.array(z.string()).optional(),
   imageUrls: z.array(z.string()).optional(),
+  modifiers: z.array(modifierSchema).optional(),
 
   //   makingCostCents: z.number().min(0, 'Making cost must be positive'),
   //   isAvailable: z.boolean().default(true),
@@ -49,11 +72,13 @@ export const menuItemSchemaPriceInCents = z.object({
     es: z.string().optional(),
     pt: z.string().optional(),
   }),
-  priceCents: z.number().min(0, 'Price must be positive'),
+  isAvailable: z.boolean().optional(),
+  priceCents: z.number().min(1, 'Price must be greater than 0'),
   categoryId: z.string().min(1, 'Category is required'),
   stationTags: z.array(z.string()).optional(),
   variants: z.array(variantSchema).optional(),
   imageUrls: z.array(z.string()).optional(),
+  modifiers: z.array(modifierSchema).optional(),
 
   //   makingCostCents: z.number().min(0, 'Making cost must be positive'),
   //   isAvailable: z.boolean().default(true),
@@ -63,6 +88,7 @@ export const menuItemSchemaPriceInCents = z.object({
 export type MenuItemFormData = z.infer<typeof menuItemSchema>;
 export type menuItemSchemaPriceInCentsType = z.infer<typeof menuItemSchemaPriceInCents>;
 export type menuItemSchema = z.infer<typeof menuItemSchema>;
+export type modifierSchema = z.infer<typeof modifierSchema>;
 
 export const useManageMenu = ({ restaurantId, locationId, menuId }: UseManageMenuProps) => {
   const queryClient = useQueryClient();

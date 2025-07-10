@@ -13,6 +13,7 @@ export interface Menu {
   menuSlug: string;
   name: MultilingualName;
   categories: categoriesItem[];
+  items: any[]; //todo construct this type
   schedule: {
     type: 'time' | 'location' | 'manual';
     rules?: Record<string, any>;

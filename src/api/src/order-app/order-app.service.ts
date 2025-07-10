@@ -21,8 +21,7 @@ export class OrderAppService {
   //todo: @Inject('MONGO_DB') private readonly db: Db
   constructor(@InjectClient() private readonly db: Db) {}
 
-  async getEntryInfo(restaurantId: string, locationId: string, originId: string) {    
-
+  async getEntryInfo(restaurantId: string, locationId: string, originId: string) {
     const restaurantPromise = this.db
       .collection<Restaurant>(COLLECTIONS.RESTAURANTS)
       .findOne({ _id: restaurantId }, { projection: { _id: 1, name: 1, concept: 1, logo: 1 } });
@@ -35,8 +34,9 @@ export class OrderAppService {
           locationSlug: 1,
           name: 1,
           isActive: 1,
+          'payment.acceptPayment': 1,
         },
-      }
+      },
     );
 
     const originPromise = this.db.collection<Origin>(COLLECTIONS.ORIGINS).findOne(
@@ -46,7 +46,7 @@ export class OrderAppService {
           _id: 1,
           label: 1,
         },
-      }
+      },
     );
 
     const [restaurant, location, origin] = await Promise.all([restaurantPromise, locationPromise, originPromise]);
@@ -54,10 +54,13 @@ export class OrderAppService {
     if (!restaurant) throw new NotFoundException('INVALID_RESTAURANT');
     if (!location) throw new NotFoundException('INVALID_LOCATION');
     if (!origin) throw new NotFoundException('INVALID_ORIGIN');
-
+    const transformedLocation = {
+      ...location,
+      acceptPayment: location.payment?.acceptPayment || false,
+    };
     return {
       restaurant,
-      location,
+      location: transformedLocation,
       origin,
     };
   }
@@ -68,8 +71,11 @@ export class OrderAppService {
     if (!menu) {
       throw new NotFoundException('Invalid menu');
     }
-
-    return menu;
+    const filteredItems = menu.items?.filter((item) => item.isAvailable === true) || [];
+    return {
+      ...menu,
+      items: filteredItems,
+    };
   }
 
   async getMenus(restaurantId: string, locationId: string): Promise<MenuSummaryDto[]> {
@@ -88,7 +94,7 @@ export class OrderAppService {
             name: 1,
             available: 1,
           },
-        }
+        },
       )
       .toArray();
     return menus;
@@ -120,7 +126,7 @@ export class OrderAppService {
     const createdAt = new Date().toISOString();
 
     // TODO: create `orders` collection & schema
-    await this.db.collection('orders').insertOne({
+    await this.db.collection(COLLECTIONS.ORDERS).insertOne({
       _id: orderId,
       originId: dto.originId,
       menuId: dto.menuId,
@@ -139,7 +145,7 @@ export class OrderAppService {
   }
 
   async getOrderStatus(orderId: string): Promise<OrderStatusDto> {
-    const order = await this.db.collection('orders').findOne({ _id: new ObjectId(orderId) });
+    const order = await this.db.collection(COLLECTIONS.ORDERS).findOne({ _id: new ObjectId(orderId) });
     if (!order) throw new NotFoundException('Order not found');
 
     return {

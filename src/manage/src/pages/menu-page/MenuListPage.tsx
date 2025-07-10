@@ -36,11 +36,8 @@ export const MenuListPage: React.FC = () => {
                     to={`/${restaurantId}/${locationId}/apps/menu/${menu._id}/categories`}
                     className='menu-item-link'
                   >
-                    <IonItem className='ion-activatable'>
-                      <IonLabel>
-                        {menu.name.en}
-                        <p className='ion-text-wrap ion-text-secondary'>{menu.menuSlug}</p>
-                      </IonLabel>
+                    <IonItem className='ion-activatable' style={{ fontSize: '14px' }}>
+                      <IonLabel>{menu.name.en}</IonLabel>
                       <IonIcon icon={chevronForwardOutline} slot='end' color='medium' />
                     </IonItem>
                   </Link>

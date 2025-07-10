@@ -1,20 +1,21 @@
-import { Controller, Post, Param } from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseInterceptors, Param, Body } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AzureStorageService } from './storage.service';
 
 @Controller('storage')
 export class StorageController {
   constructor(private readonly storageService: AzureStorageService) {}
 
-  @Post('sas-token/:restaurantId')
-  async getSasToken(@Param('restaurantId') restaurantId: string) {
-    console.log(`Generating SAS token for restaurant: ${restaurantId}`);
-    const sasToken = await this.storageService.generateSasToken(restaurantId);
-    // return { sasToken };
-    return {
-      success: true,
-      data: {
-        sasToken,
-      },
-    };
+  @Post('upload/:restaurantId')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Param('restaurantId') restaurantId: string,
+    @Body('folder') folder: string
+  ) {
+    console.log('Received file:', file);
+    const imageUrl = await this.storageService.uploadImage(file.buffer, file.originalname, restaurantId, folder);
+
+    return { imageUrl };
   }
 }

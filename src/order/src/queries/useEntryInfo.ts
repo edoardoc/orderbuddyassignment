@@ -17,6 +17,7 @@ const restaurantResponseSchema = z.object({
     locationSlug: z.string(),
     name: z.string(),
     isActive: z.boolean(),
+    acceptPayment: z.boolean(),
   }),
   origin: z.object({
     _id: z.string(),
@@ -27,13 +28,11 @@ const restaurantResponseSchema = z.object({
 export type RestaurantResponse = z.infer<typeof restaurantResponseSchema>;
 
 export function useEntryInfo(restaurantId: string, locationId: string, originId: string) {
-  logger.debug({ restaurantId, locationId, originId }, 'useRestaurant called');
-
   return useQuery<RestaurantResponse>({
     queryKey: ['restaurant', restaurantId, locationId, originId],
     queryFn: async () => {
       const response = await axiosInstance.get<ApiResponse<RestaurantResponse>>(
-        `order-app/restaurants/${restaurantId}/locations/${locationId}/origins/${originId}/entry-info`
+        `order-app/restaurants/${restaurantId}/locations/${locationId}/origins/${originId}/entry-info`,
       );
       const data = handleApiResponse(response);
       const parsedData = restaurantResponseSchema.safeParse(data);
@@ -41,7 +40,6 @@ export function useEntryInfo(restaurantId: string, locationId: string, originId:
         console.error('useRestaurant response schema error: ', parsedData.error);
         throw new Error('Invalid response schema');
       }
-      logger.debug('useRestaurant returned');
       return restaurantResponseSchema.parse(data);
     },
     enabled: !!restaurantId && !!locationId && !!originId,

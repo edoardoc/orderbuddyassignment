@@ -1,14 +1,7 @@
-import { IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle } from '@ionic/react';
+import { IonCard, IonCardHeader, IonCardSubtitle, IonCardTitle, IonText } from '@ionic/react';
 import React from 'react';
 import { getUserLang, t } from '@/utils/localization';
-
 import { MenuItemType } from './components/types/menu';
-
-interface SelectedModifier {
-  modifierId: string;
-  selectedOptions: string[];
-  totalPrice: number;
-}
 
 export interface MenuItemProps {
   item: MenuItemType;
@@ -46,8 +39,10 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, onClick }) => {
           />
         </div>
         <IonCardHeader>
-          <IonCardTitle>{t(item.name, currentLang)}</IonCardTitle>
-          <IonCardSubtitle>${(item?.priceCents / 100).toFixed(2)}</IonCardSubtitle>
+          <IonCardTitle>
+            <IonText className='font-size-14'> {t(item.name, currentLang)}</IonText>
+          </IonCardTitle>
+          <IonCardSubtitle className='font-size-14'>${(item?.priceCents / 100).toFixed(2)}</IonCardSubtitle>
         </IonCardHeader>
       </IonCard>
     </div>

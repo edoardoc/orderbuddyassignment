@@ -32,7 +32,7 @@ export class GetRestaurantLocationsParamDto {
   @IsString()
   restaurantId: string;
 }
-export class getActiveOrdersDto {
+export class getTodayOrdersDto {
   @IsNotEmpty()
   @IsString()
   restaurantId: string;
@@ -168,6 +168,18 @@ export class MultilingualDto {
   @IsOptional()
   pt: string;
 }
+
+export class MultilingualModifiersDtoName {
+  @IsNotEmpty()
+  @IsString()
+  en: string;
+  @IsOptional()
+  @IsString()
+  es?: string;
+  @IsOptional()
+  @IsString()
+  pt?: string;
+}
 export class MenuSummaryDto {
   @IsNotEmpty()
   @Type(() => ObjectId)
@@ -228,6 +240,10 @@ export class LocationDto {
   @IsNotEmpty()
   @IsString()
   name: string;
+
+  @IsNotEmpty()
+  @IsBoolean()
+  isMobile: boolean;
 }
 
 export class VariantDto {
@@ -249,13 +265,13 @@ export class VariantDto {
 }
 
 export class ModifierOptionDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   id: string;
 
   @ValidateNested()
-  @Type(() => MultilingualDto)
-  name: MultilingualDto;
+  @Type(() => getMultilingualDto)
+  name: getMultilingualDto;
 
   @IsNotEmpty()
   @IsNumber()
@@ -263,27 +279,34 @@ export class ModifierOptionDto {
 }
 
 export class ModifierDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   id: string;
 
   @ValidateNested()
-  @Type(() => MultilingualDto)
-  name: MultilingualDto;
+  @Type(() => MultilingualModifiersDtoName)
+  name: MultilingualModifiersDtoName;
 
-  @IsNotEmpty()
+  @IsString()
+  type: string;
+
+  @IsBoolean()
+  required: boolean;
+
+  @IsString()
+  selectionMode: string;
+
   @IsNumber()
   maxChoices: number;
 
-  @IsNotEmpty()
   @IsNumber()
   freeChoices: number;
 
-  @IsNotEmpty()
   @IsNumber()
   extraChoicePriceCents: number;
 
   @IsArray()
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => ModifierOptionDto)
   options: ModifierOptionDto[];

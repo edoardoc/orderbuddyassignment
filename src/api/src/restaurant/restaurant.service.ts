@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectClient } from 'nest-mongodb-driver';
-import { Db, ObjectId } from 'mongodb';
+import { Collection, Db, ObjectId } from 'mongodb';
 import { OrderStatus } from '../constants';
 import { CategoryDto, GetMenuItemDto, LocationDto, MenuSummaryDto, RestaurantDto } from './dto/restaurant.dto';
 import { User } from 'src/models/users';
 import { COLLECTIONS } from 'src/db/collections';
 import { Menu, Restaurant } from 'src/db/models';
-import { Location } from 'src/db/models';
+import { Location } from 'src/db/models/location.model';
+import { DateTime } from 'luxon';
 interface Station {
   id: string;
   name: string;
@@ -17,10 +18,12 @@ interface Station {
 export class RestaurantService {
   private readonly restaurantsCollection: any;
   private readonly ordersCollection: any;
+  private readonly locationCollection: Collection<Location>;
 
   constructor(@InjectClient() private readonly db: Db) {
-    this.restaurantsCollection = db.collection('restaurants');
-    this.ordersCollection = db.collection('orders');
+    this.restaurantsCollection = db.collection(COLLECTIONS.RESTAURANTS);
+    this.ordersCollection = db.collection(COLLECTIONS.ORDERS);
+    this.locationCollection = this.db.collection<Location>(COLLECTIONS.LOCATIONS);
   }
 
   async getOrder(orderId: string) {
@@ -44,7 +47,16 @@ export class RestaurantService {
 
     return user.restaurants;
   }
+  async getRestaurantById(restaurantId: string): Promise<RestaurantDto> {
+    const result = await this.restaurantsCollection.findOne({
+      _id: restaurantId,
+    });
+    if (!result) {
+      throw new Error('Restaurant not found');
+    }
 
+    return result;
+  }
   async getRestaurantDetailsByIds(restaurantIds: string[]): Promise<RestaurantDto[]> {
     const restaurantDetails = await this.db
       .collection<Restaurant>(COLLECTIONS.RESTAURANTS)
@@ -90,6 +102,7 @@ export class RestaurantService {
             _id: 1,
             locationSlug: 1,
             name: 1,
+            isMobile: 1,
           },
         }
       )
@@ -102,16 +115,65 @@ export class RestaurantService {
     return locations;
   }
 
-  async getActiveOrders(restaurantId: string, locationId: string) {
+  async getTodayOrders(restaurantId: string, locationId: string) {
+    const location = await this.locationCollection.findOne(
+      {
+        _id: new ObjectId(locationId),
+        restaurantId: restaurantId,
+      },
+      {
+        projection: {
+          'opening_hours.timezone': 1,
+          name: 1,
+          _id: 1,
+        },
+      }
+    );
+
+    if (!location) {
+      throw new NotFoundException(`Location ${locationId} not found for restaurant ${restaurantId}`);
+    }
+
+    if (!location.opening_hours?.timezone) {
+      throw new Error('Store opening hours or timezone not configured');
+    }
+
+    const timeZone = location.opening_hours.timezone;
+    const localToday = DateTime.now().setZone(timeZone).startOf('day');
+
+    const startUTC = localToday.toUTC().toJSDate();
+    const endUTC = localToday.endOf('day').toUTC().toJSDate();
+
+    if (!localToday.isValid) {
+      throw new Error(`Invalid localDate: ${localToday.invalidReason}`);
+    }
+
     const orders = await this.ordersCollection
       .find({
         restaurantId,
         locationId: new ObjectId(locationId),
-        status: { $ne: 'COMPLETED' },
+        startedAt: {
+          $gte: startUTC,
+          $lt: endUTC,
+        },
       })
       .toArray();
 
     return orders;
+  }
+
+  async getSingleOrder(restaurantId: string, locationId: string, orderId: string) {
+    const order = await this.ordersCollection.findOne({
+      _id: new ObjectId(orderId),
+      restaurantId,
+      locationId: new ObjectId(locationId),
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    return order;
   }
   async updateOrderStatus({ orderId, orderStatus }: { orderId: string; orderStatus: string }) {
     let result;
@@ -212,9 +274,26 @@ export class RestaurantService {
         priceCents: Number(variant.priceCents),
         default: variant.default || false,
       })) || [];
+    const processedModifiers =
+      itemDataWithoutPrice.modifiers?.map((modifier) => ({
+        ...modifier,
+        id: modifier.id || new ObjectId().toString(),
+        extraChoicePriceCents: Number(modifier.extraChoicePriceCents),
+        maxChoices: Number(modifier.maxChoices),
+        freeChoices: Number(modifier.freeChoices),
+        required: modifier.required || false,
+        options:
+          modifier.options?.map((option) => ({
+            ...option,
+            id: option.id || new ObjectId().toString(),
+            priceCents: Number(option.priceCents),
+          })) || [],
+      })) || [];
     const itemDataInCents = {
       ...itemDataWithoutPrice,
+      isAvailable: itemData.isAvailable,
       variants: processedVariants,
+      modifiers: processedModifiers,
       priceCents: Math.round(Number(price) * 100),
       makingCostCents: itemData.makingCostCents ? Math.round(Number(itemData.makingCostCents) * 100) : 0,
     };
@@ -312,5 +391,33 @@ export class RestaurantService {
       )
       .toArray();
     return menus;
+  }
+
+  async updateItemAvailability(
+    restaurantId: string,
+    locationId: string,
+    menuId: string,
+    itemId: string,
+    isAvailable: boolean
+  ): Promise<boolean> {
+    const result = await this.db.collection(COLLECTIONS.MENUS).updateOne(
+      {
+        _id: new ObjectId(menuId),
+        restaurantId,
+        locationId: new ObjectId(locationId),
+        'items.id': itemId,
+      },
+      {
+        $set: {
+          'items.$.isAvailable': isAvailable,
+        },
+      }
+    );
+
+    if (!result.matchedCount) {
+      throw new NotFoundException('Menu item not found');
+    }
+
+    return result.acknowledged;
   }
 }

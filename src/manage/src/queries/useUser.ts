@@ -48,7 +48,6 @@ export type User = z.infer<typeof userSchema>;
 export const fetchUserSession = async (): Promise<User> => {
   try {
     const response = await axiosInstance.get<ApiResponse<User>>('restaurant/user/session');
-    console.log('Response:', response);
 
     const userData = response.data;
 

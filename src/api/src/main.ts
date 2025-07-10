@@ -1,17 +1,23 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { Logger, LoggerErrorInterceptor } from 'nestjs-pino';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as appInsights from 'applicationinsights';
+import { logger } from './logger/pino.logger';
 
+if (!appInsights.defaultClient) {
+  appInsights.setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING).setAutoCollectConsole(false).start();
+}
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
-  const logger = app.get(Logger);
-
-  app.useLogger(logger);
-  app.useGlobalInterceptors(new LoggerErrorInterceptor());
-
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, logger: false });
+  app.useLogger({
+    log: (msg) => logger.info(msg),
+    error: (msg) => logger.error(msg),
+    warn: (msg) => logger.warn(msg),
+    debug: (msg) => logger.debug(msg),
+    verbose: (msg) => (logger.trace ? logger.trace(msg) : logger.debug(msg)),
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -35,12 +41,12 @@ async function bootstrap() {
   const storeEndpoint = configService.get('STORE_ENDPOINT');
   const menuEndpoint = configService.get('MENU_ENDPOINT');
   const useEmulator = configService.get('USEEMULATOR');
+  const LOCALHOST_URL = configService.get('LOCALHOST_URL');
 
   const allowedOrigins = [storeEndpoint, menuEndpoint];
 
   if (useEmulator === 'true') {
-    const LOCALHOSTURL = process.env.LOCALHOSTURL;
-    allowedOrigins.push(LOCALHOSTURL);
+    allowedOrigins.push(LOCALHOST_URL);
   }
 
   app.enableCors({
@@ -58,7 +64,7 @@ async function bootstrap() {
   const port = configService.get('PORT');
   await app.listen(port);
 
-  logger.log(`OrderBuddy API running on port ${port}`);
+  logger.info(`OrderBuddy API running on port ${port}`);
 }
 
 bootstrap().catch((err) => {

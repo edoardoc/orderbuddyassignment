@@ -14,6 +14,7 @@ import {
   IonReorderGroup,
   IonRow,
   IonSpinner,
+  IonText,
   ItemReorderEventDetail,
   useIonRouter,
 } from '@ionic/react';
@@ -25,8 +26,6 @@ import { useManageMenu } from '../../queries/manage-menu/useManageMenu';
 import { CategoryFormData, MenuCategoryModal } from './components/modals/MenuCategoryModel';
 import { useMenu } from '../../queries/useMenu';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
-
-// import { Category } from '../../../types/menu';
 
 export const MenuCategoriesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -105,9 +104,9 @@ export const MenuCategoriesPage: React.FC = () => {
                       onClick={(e) => isReordering && e.preventDefault()}
                     >
                       <IonItem disabled={isReordering}>
-                        <IonLabel>
+                        <IonText style={{ fontSize: '14px' }}>
                           {category.emoji} {category.name.en}
-                        </IonLabel>
+                        </IonText>
                         <IonReorder slot='start'></IonReorder>
                         {isReordering && <IonSpinner slot='end' name='dots' />}
                         {!isReordering && (
@@ -121,7 +120,7 @@ export const MenuCategoriesPage: React.FC = () => {
                               }}
                               slot='end'
                             >
-                              <IonIcon icon={createOutline} color={'primary'} />
+                              <IonIcon icon={createOutline} />
                             </IonButton>
                             <IonIcon icon={chevronForwardOutline} slot='end' color='medium' />
                           </>
@@ -145,7 +144,7 @@ export const MenuCategoriesPage: React.FC = () => {
           />
         </IonGrid>
         <IonFab slot='fixed' vertical='bottom' horizontal='end'>
-          <IonFabButton color='primary' onClick={() => setIsModalOpen(true)}>
+          <IonFabButton onClick={() => setIsModalOpen(true)}>
             <IonIcon icon={add} />
           </IonFabButton>
         </IonFab>

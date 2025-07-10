@@ -13,13 +13,13 @@ import {
   IonSegmentButton,
   IonIcon,
   IonCard,
+  IonText,
 } from '@ionic/react';
 import { useState } from 'react';
 import { mailOutline, phonePortraitOutline } from 'ionicons/icons';
 import { createCode, consumeCode, clearLoginAttemptInfo } from 'supertokens-web-js/recipe/passwordless';
-import './LoginPage.css';
-import { createUserApi, useCreateUser } from '../../queries/useUser';
-
+import { createUserApi } from '../../queries/useUser';
+import '../../../style.css';
 type AuthMethod = 'phone' | 'email';
 
 const LoginPage: React.FC = () => {
@@ -163,7 +163,9 @@ const LoginPage: React.FC = () => {
       <IonContent className='ion-padding'>
         <div className='login-container'>
           <IonCard className='auth-card'>
-            <h1>Welcome to OrderBuddy</h1>
+            <h3>
+              <IonText>Welcome to OrderBuddy</IonText>
+            </h3>
             <p>Choose your authentication method</p>
 
             <IonSegment
@@ -197,12 +199,22 @@ const LoginPage: React.FC = () => {
                           onIonChange={(e) =>
                             authMethod === 'phone' ? setPhoneNumber(e.detail.value!) : setEmail(e.detail.value!)
                           }
+                          enterKeyHint='send'
+                          onKeyUp={(e) => {
+                            if (e.key === 'Enter') {
+                              const canSubmit = authMethod === 'phone' ? phoneNumber : email;
+                              if (canSubmit && !loading) {
+                                handleLogin();
+                              }
+                            }
+                          }}
                         />
                       </IonItem>
 
                       <IonButton
+                        fill='solid'
                         expand='block'
-                        className='ion-margin-top'
+                        className='ion-margin-top solid-button'
                         onClick={handleLogin}
                         disabled={(authMethod === 'phone' ? !phoneNumber : !email) || loading}
                       >
@@ -223,12 +235,21 @@ const LoginPage: React.FC = () => {
                           value={otp}
                           onIonChange={(e) => setOtp(e.detail.value!)}
                           class='otp-input'
+                          enterKeyHint='done'
+                          onKeyUp={(e) => {
+                            if (e.key === 'Enter') {
+                              if (otp && !loading) {
+                                handleOTPVerification();
+                              }
+                            }
+                          }}
                         />
                       </IonItem>
 
                       <IonButton
+                        fill='solid'
                         expand='block'
-                        className='ion-margin-top'
+                        className='ion-margin-top solid-button'
                         onClick={handleOTPVerification}
                         disabled={!otp || loading}
                       >

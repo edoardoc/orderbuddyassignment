@@ -6,4 +6,15 @@ export const COLLECTIONS = {
   STATIONS: 'stations',
   ORDERS: 'orders',
   USERS: 'users',
+  SUBSCRIPTIONS: 'subscriptions',
 };
+// export const COLLECTIONS = {
+//   RESTAURANTS: 'restaurants_prod',
+//   LOCATIONS: 'locations_prod',
+//   MENUS: 'menus_prod',
+//   ORIGINS: 'origins_prod',
+//   STATIONS: 'stations_prod',
+//   ORDERS: 'orders',
+//   USERS: 'users_prod',
+//   SUBSCRIPTIONS: 'subscriptions_prod',
+// };

@@ -4,16 +4,17 @@ import {
   Post,
   Body,
   Param,
-  Delete,
   UseGuards,
   Res,
   HttpStatus,
   BadRequestException,
   Put,
   NotFoundException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { OriginsService } from './origins.service';
-import { CreateOriginDto, CreateOriginsParamsDto, OriginsParamsDto } from './dto/create-origin.dto';
+import { CreateOriginsParamsDto, LogoUploadParamsDto, OriginsParamsDto } from './dto/create-origin.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { GetOriginsParamsDto, OriginDto } from './dto/get-origin.dtos';
 import { AuthGuard } from 'src/auth/auth.guard';
@@ -24,6 +25,7 @@ import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
 import * as QC from 'qrcode';
 import { UpdateQrStyleParamsDto, UpdateQrStyleDto } from './dto/update-origin.dtos';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @UseGuards(AuthGuard)
 @ApiTags('Origins')
@@ -64,7 +66,10 @@ export class OriginsController {
       if (!restaurant) {
         throw new BadRequestException('Restaurant not found');
       }
-
+      const location = await this.originsService.getLocationDetails(params.restaurantId, params.locationId);
+      if (!location) {
+        throw new BadRequestException('Location not found');
+      }
       const origin = await this.originsService.createOrigin(params.restaurantId, params.locationId, {
         name: createOriginDto.name,
         qrCode: '',
@@ -73,7 +78,7 @@ export class OriginsController {
       });
 
       const redirectUrl =
-        `${menuEndPoint}/entry/${params.restaurantId}/${params.locationId}?` +
+        `${menuEndPoint}/entry/${params.restaurantId}/${location.locationSlug}/${params.locationId}?` +
         `originId=${origin._id}&` +
         `name=${encodeURIComponent(restaurant.name)}`;
 
@@ -124,6 +129,29 @@ export class OriginsController {
         throw new NotFoundException(error.message);
       }
       throw new BadRequestException('Failed to update QR style: ' + error.message);
+    }
+  }
+
+  @Post(':restaurantId/:locationId/logo')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadLogo(
+    @Param() params: LogoUploadParamsDto,
+    @UploadedFile() file: Express.Multer.File,
+    @Res() res: Response
+  ): Promise<Response<ApiResponse<string>>> {
+    if (!file) {
+      throw new BadRequestException('No file uploaded');
+    }
+
+    try {
+      const imageUrl = await this.originsService.uploadLogo(file, params.restaurantId);
+
+      return res.status(HttpStatus.OK).json({
+        data: imageUrl,
+        message: 'Logo uploaded successfully',
+      });
+    } catch (error) {
+      throw new BadRequestException('Failed to upload logo: ' + error.message);
     }
   }
 }

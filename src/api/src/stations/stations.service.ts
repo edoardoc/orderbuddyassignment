@@ -10,36 +10,45 @@ import {
 } from './dto/create-station.dto';
 import { COLLECTIONS } from '../db/collections';
 import { Stations } from 'src/db/models/station.model';
+import { DateTime } from 'luxon';
+
 export interface OrderItem {
   id: string;
   menuItemId: string;
   name: string;
-  price: number;
+  priceCents: number;
   stationTags: string[];
   isStarted?: boolean;
   isCompleted?: boolean;
   variants?: any[];
   modifiers?: any[];
   remarks?: string;
-  totalPrice: string;
 }
 
 export interface Order {
   _id: ObjectId;
+  orderCode: string;
+  meta: {
+    correlationId: string;
+  };
   status: string;
   createdAt: Date;
   startedAt: Date;
-  locationId: string;
+  locationId: ObjectId;
   items: OrderItem[];
   customer: any;
-  totalPrice: number;
+  totalPriceCents: number;
 }
 
 export interface MatchedOrder {
   _id: ObjectId;
+  orderCode: string;
+  meta: {
+    correlationId: string;
+  };
   status: string;
   createdAt: Date;
-  locationId: string;
+  locationId: ObjectId;
   items: OrderItem[];
 }
 @Injectable()
@@ -89,21 +98,44 @@ export class StationsService {
     }
 
     // Get location details
-    const location = await this.locationsCollection.findOne({
-      restaurantId,
-      _id: new ObjectId(locationId),
-    });
+    const location = await this.locationsCollection.findOne(
+      {
+        restaurantId,
+        _id: new ObjectId(locationId),
+      },
+      {
+        projection: {
+          name: 1,
+          'opening_hours.timezone': 1,
+        },
+      }
+    );
 
     if (!location) {
       throw new NotFoundException('Location not found');
     }
+    if (!location.opening_hours?.timezone) {
+      throw new Error('Store opening hours or timezone not configured');
+    }
+    const timeZone = location.opening_hours.timezone;
+    const localToday = DateTime.now().setZone(timeZone).startOf('day');
 
+    if (!localToday.isValid) {
+      throw new Error(`Invalid localDate: ${localToday.invalidReason}`);
+    }
+
+    const startUTC = localToday.toUTC().toJSDate();
+    const endUTC = localToday.endOf('day').toUTC().toJSDate();
     // Get orders with matching station tags
     const orders = await this.ordersCollection
       .find<Order>({
         restaurantId,
-        locationId,
+        locationId: new ObjectId(locationId),
         status: { $ne: 'COMPLETED' },
+        startedAt: {
+          $gte: startUTC,
+          $lt: endUTC,
+        },
         items: {
           $elemMatch: {
             stationTags: {
@@ -118,9 +150,13 @@ export class StationsService {
     const matchedOrders: MatchedOrder[] = orders
       .map((order) => ({
         _id: order._id,
+        orderCode: order.orderCode,
         status: order.status,
         createdAt: order.createdAt,
         locationId: order.locationId,
+        meta: {
+          correlationId: order.meta?.correlationId,
+        },
         items: order.items.filter(
           (item) =>
             Array.isArray(item.stationTags) &&
@@ -168,7 +204,7 @@ export class StationsService {
     const order = await this.ordersCollection.findOne({
       _id: new ObjectId(orderId),
       restaurantId,
-      locationId,
+      locationId: new ObjectId(locationId),
       items: {
         $elemMatch: {
           stationTags: {
@@ -184,11 +220,15 @@ export class StationsService {
     const filteredItems = order.items.filter((item) => item.stationTags.some((tag) => stationTags.includes(tag)));
     return {
       _id: order._id.toString(),
+      orderCode: order.orderCode,
+      meta: {
+        correlationId: order.meta?.correlationId,
+      },
       status: order.status,
       startedAt: order.startedAt,
       customer: order.customer,
       items: filteredItems,
-      totalPrice: order.totalPrice,
+      totalPriceCents: order.totalPriceCents,
     };
   }
 
@@ -222,6 +262,6 @@ export class StationsService {
       throw new NotFoundException('Order or item not found');
     }
 
-    return true;
+    return result.modifiedCount > 0;
   }
 }

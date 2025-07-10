@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { use, useEffect, useRef, useState } from 'react';
 import {
   IonButton,
   IonCol,
@@ -11,26 +11,28 @@ import {
   IonRow,
   IonText,
   IonToolbar,
+  useIonActionSheet,
 } from '@ionic/react';
 import { useParams } from 'react-router-dom';
-import { appStore } from '../../../store';
 
 import { Link } from 'react-router-dom';
 import { chevronForward } from 'ionicons/icons';
-import './menu.css';
 import { getUserLang, t } from '@/utils/localization';
 import { useMenu } from '@/queries/useMenu';
 import { useEntryInfo } from '@/queries/useEntryInfo';
 import Banner from './components/banner/Banner';
-import Categories from './components/categories/categories';
 import MenuItemModal from './components/menuItemModal/MenuItemModal';
 import MenuItem from './MenuItem';
 import { useOrderStore } from '@/stores/orderStore';
-
+import { Paths } from '@/routes/paths';
+import { CategoriesButton } from './components/categories/categories';
+import '../../../style.css';
 type MenuParams = {
   restaurantId: string;
   locationId: string;
   menuId: string;
+  locationSlug: string;
+  menuSlug: string;
 };
 
 type LocalizedString = {
@@ -78,7 +80,9 @@ interface MenuItemStructure {
 }
 
 const MenuPage: React.FC = () => {
-  const { restaurantId, locationId, menuId } = useParams<MenuParams>();
+  const { restaurantId, locationId, menuId, locationSlug, menuSlug } = useParams<MenuParams>();
+  const [presentActionSheet] = useIonActionSheet();
+
   const searchParams = new URLSearchParams(window.location.search);
   let originId = searchParams.get('originId');
   if (!originId) {
@@ -88,8 +92,7 @@ const MenuPage: React.FC = () => {
   const setRestaurant = useOrderStore((s) => s.setRestaurant);
   const setMenuId = useOrderStore((s) => s.setMenuId);
   const setSalesTax = useOrderStore((s) => s.setSalesTax);
-
-  const appState = appStore();
+  const cartItems = useOrderStore((s) => s.cart.items);
 
   const { data: entryInfo } = useEntryInfo(restaurantId, locationId, originId);
   const { data: menuData, isLoading, isError } = useMenu(restaurantId, locationId, menuId);
@@ -97,13 +100,14 @@ const MenuPage: React.FC = () => {
 
   const [selectedItem, setSelectedItem] = useState<MenuItemStructure | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
-
-  //reset session if coming back after a long time
   // const validateSession = useOrderStore((s) => s.validateSession);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+
   // useEffect(() => {
   //   const isValid = validateSession();
   //   if (!isValid) {
+  //     console.warn('Session is invalid, resetting state');
   //     const newUrl = new URL(window.location.href);
   //     newUrl.searchParams.set('originId', 'web');
   //     window.history.replaceState({}, '', newUrl.toString());
@@ -119,20 +123,37 @@ const MenuPage: React.FC = () => {
 
   useEffect(() => {
     if (entryInfo) {
-      setRestaurant(entryInfo);
+      const transformedData = {
+        restaurant: {
+          _id: entryInfo.restaurant._id,
+          name: entryInfo.restaurant.name,
+          logo: entryInfo.restaurant.logo,
+        },
+        location: {
+          _id: entryInfo.location._id,
+          name: entryInfo.location.name,
+          acceptPayment: entryInfo.location.acceptPayment,
+        },
+        origin: {
+          _id: entryInfo.origin._id,
+          name: entryInfo.origin.label,
+        },
+      };
+
+      setRestaurant(transformedData);
     }
-  }, [entryInfo]);
+  }, [entryInfo, setRestaurant]);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  // Add useEffect for scroll detection
   useEffect(() => {
     if (!menuData?.categories) return;
+    const headerHeight = document.querySelector('ion-header')?.clientHeight || 0;
 
     const options = {
       root: document.querySelector('ion-content'),
-      rootMargin: '-40px 0px 0px 0px', // Adjust based on your header height
-      threshold: 0.2,
+      rootMargin: `-${headerHeight}px 0px -70% 0px`,
+      threshold: [0.1, 0.5, 0.8],
     };
 
     const handleIntersection = (entries: IntersectionObserverEntry[]) => {
@@ -146,7 +167,6 @@ const MenuPage: React.FC = () => {
 
     observerRef.current = new IntersectionObserver(handleIntersection, options);
 
-    // Observe all category sections
     menuData.categories.forEach((category) => {
       const element = document.getElementById(`category-${category.id}`);
       if (element) {
@@ -154,29 +174,11 @@ const MenuPage: React.FC = () => {
       }
     });
 
-    // Cleanup
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
       }
     };
-  }, [menuData?.categories]);
-
-  useEffect(() => {
-    if (menuData?.categories && menuData.categories.length > 0) {
-      setSelectedCategory(menuData.categories[0].id);
-
-      // Optional: Scroll to first category
-      const element = document.getElementById(`category-${menuData.categories[0].id}`);
-      if (element) {
-        const ionContent = document.querySelector('ion-content');
-        if (ionContent) {
-          const headerHeight = 64;
-          const elementTop = element.offsetTop - headerHeight;
-          ionContent.scrollToPoint(0, elementTop, 500);
-        }
-      }
-    }
   }, [menuData?.categories]);
 
   if (isLoading) {
@@ -190,7 +192,7 @@ const MenuPage: React.FC = () => {
     if (element) {
       const ionContent = document.querySelector('ion-content');
       if (ionContent) {
-        const headerHeight = 64; // Reduced from 80px
+        const headerHeight = 10;
         const elementTop = element.offsetTop - headerHeight;
         ionContent.scrollToPoint(0, elementTop, 500);
       }
@@ -206,42 +208,71 @@ const MenuPage: React.FC = () => {
     setIsModalOpen(false);
     setSelectedItem(null);
   };
+  const showCategoriesActionSheet = async () => {
+    if (!menuData) return;
+    setIsActionSheetOpen(true);
 
+    const sortedCategories = [...menuData.categories].sort((a, b) => a.sortOrder - b.sortOrder);
+
+    await presentActionSheet({
+      header: 'Select Category',
+      buttons: [
+        ...sortedCategories.map((category) => ({
+          text: `${category.emoji} ${t(category.name, currentLang)}`,
+          role: selectedCategory === category.id ? 'selected' : undefined,
+          handler: () => {
+            handleCategorySelect(category.id);
+          },
+        })),
+        {
+          text: 'Cancel',
+          role: 'cancel',
+          handler: () => {
+            setIsActionSheetOpen(false);
+          },
+        },
+      ],
+      onDidDismiss: () => setIsActionSheetOpen(false),
+
+      cssClass: 'custom-action-sheet',
+    });
+  };
   return (
     <IonPage>
       <IonHeader>
-        <IonGrid class='navbar-violet'>
+        <IonGrid class='navbar-color'>
           <Banner
             restaurantName={entryInfo?.restaurant.name!}
             restaurantLogo={entryInfo?.restaurant.logo}
             origin={entryInfo?.origin.label!}
             restaurantId={entryInfo?.restaurant._id!}
+            locationName={entryInfo?.location.name!}
           />
         </IonGrid>
+
+        <CategoriesButton
+          categories={menuData?.categories || []}
+          selectedCategory={selectedCategory}
+          onShowCategories={showCategoriesActionSheet}
+          isOpen={isActionSheetOpen}
+        />
       </IonHeader>
 
       <IonContent class='hidescrollall'>
-        <div className='menu-container'>
-          {menuData && (
-            <Categories
-              categories={menuData.categories}
-              onSelectCategory={handleCategorySelect}
-              selectedCategory={selectedCategory}
-            />
-          )}
-
-          <div className='menu-sections-container'>
-            {menuData?.categories.map((category) => (
-              <div key={category.id} className='category-section' id={`category-${category.id}`}>
-                <div className='category-header'>
-                  <h2 className='category-title'>
+        <div className='ion-padding'>
+          {menuData?.categories
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((category) => (
+              <div key={category.id} id={`category-${category.id}`} className='menu-category ion-padding-top'>
+                <div>
+                  <IonText>
                     {category.emoji}
                     {t(category.name, currentLang)}
-                  </h2>
-                  <p className='category-description'>{t(category.description, currentLang)}</p>
+                  </IonText>{' '}
                 </div>
+                <sub>{t(category.description, currentLang)}</sub>
 
-                <div className='menu-items-grid'>
+                <div>
                   {menuData.items
                     .filter((item) => item.categoryId === category.id)
                     .map((item) => (
@@ -250,47 +281,46 @@ const MenuPage: React.FC = () => {
                 </div>
               </div>
             ))}
-          </div>
         </div>
       </IonContent>
 
       <MenuItemModal selectedItem={selectedItem} onClose={closeModal} isOpen={isModalOpen} />
 
-      {appState.order.items.length > 0 && (
+      {cartItems && cartItems.length > 0 && (
         <IonFooter className='ion-no-border'>
           <IonToolbar>
-            {appState.order.items?.length > 0 && (
-              <Link to={`/cart/${restaurantId}/${locationId}/${menuId}?originId=${originId}`}>
+            {cartItems?.length > 0 && (
+              <Link
+                to={Paths.cart(restaurantId, locationSlug, locationId, menuSlug, menuId, originId)}
+                style={{ textDecoration: 'none' }}
+              >
                 <IonButton
                   expand='block'
-                  className='violet-background ion-no-padding menufooterbutton'
+                  className=' ion-no-padding  solid-button'
                   style={{ paddingLeft: '10px', paddingRight: '10px' }}
                 >
                   <IonGrid className='ion-padding-start ion-padding-end'>
                     <IonRow class='ion-align-items-center'>
-                      <IonCol size='10' className='ion-text-start'>
-                        <IonText color={'light'} style={{ fontWeight: '700' }}>
-                          {appState.order.items.length} item(s) added
+                      <IonCol size='10' className='ion-text-start' style={{ textTransform: 'capitalize' }}>
+                        <IonText style={{ color: '#ffff' }}>
+                          {cartItems.length} item(<IonText style={{ color: '#ffff', fontSize: '11px' }}>s</IonText>)
+                          added
                         </IonText>
                       </IonCol>
                       <IonCol size='2' className='ion-align-items-center ion-text-center'>
                         <IonText
-                          color={'light'}
                           style={{
-                            fontWeight: '600',
-                            fontSize: '20px',
                             display: 'inline-flex',
                             alignItems: 'center',
+                            textTransform: 'capitalize',
+                            color: '#ffff',
                           }}
                         >
                           Cart
                           <IonIcon
                             icon={chevronForward}
                             style={{
-                              fontSize: '20px',
-                              fontWeight: '510px',
-                              marginLeft: '4px',
-                              height: '19px',
+                              color: '#ffff',
                             }}
                           />
                         </IonText>

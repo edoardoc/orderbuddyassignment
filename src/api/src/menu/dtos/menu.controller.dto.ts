@@ -1,5 +1,14 @@
 import { Expose, Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsDate,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 
 // Basic DTOs without dependencies first
 export class GetOrderInfoDto {
@@ -8,15 +17,99 @@ export class GetOrderInfoDto {
   orderId!: string;
 }
 
-export class OrderStatusDto {
+export class OrderVariantDto {
   @IsString()
-  orderTime!: Date;
+  id: string;
+
+  @IsString()
+  name: string;
+}
+
+export class GetOrderItemDto {
+  @IsString()
+  id: string;
+
+  @IsString()
+  menuItemId: string;
+
+  @IsString()
+  name: string;
 
   @IsNumber()
-  waitTime!: number;
+  price: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => OrderVariantDto)
+  variants: OrderVariantDto[];
+
+  @IsArray()
+  stationTags: string[];
+
+  @IsDate()
+  startedAt: Date;
+
+  @IsDate()
+  completedAt: Date;
+}
+
+export class OrderCustomerDto {
+  @IsString()
+  name: string;
 
   @IsString()
-  status!: string;
+  @IsOptional()
+  phone?: string;
+}
+
+export class OrderOriginDto {
+  @IsString()
+  id: string;
+
+  @IsString()
+  name: string;
+}
+
+export class OrderStatusResponseDto {
+  @IsString()
+  _id: string;
+
+  @IsString()
+  paymentId: string;
+
+  @IsString()
+  restaurantId: string;
+
+  @IsString()
+  locationId: string;
+
+  @IsString()
+  locationSlug: string;
+
+  @ValidateNested()
+  @Type(() => OrderCustomerDto)
+  customer: OrderCustomerDto;
+
+  @ValidateNested()
+  @Type(() => OrderOriginDto)
+  origin: OrderOriginDto;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GetOrderItemDto)
+  items: GetOrderItemDto[];
+
+  @IsString()
+  status: 'ORDER_PLACED' | 'READY_FOR_PICKUP' | 'COMPLETED';
+
+  @IsDate()
+  startedAt: Date;
+
+  @IsNumber()
+  totalPriceCents: number;
+
+  @IsOptional()
+  getSms?: boolean;
 }
 
 export class CustomerDto {
@@ -29,7 +122,7 @@ export class CustomerDto {
   phone!: string;
 }
 
-export class StationDto {
+export class OriginDto {
   @IsString()
   @IsNotEmpty()
   id!: string;
@@ -59,6 +152,10 @@ export class ModifierOptionDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  priceCents!: number;
 }
 export class OrderItemModifierDto {
   @IsString()
@@ -80,6 +177,10 @@ export class OrderItemVariantDto {
   @IsString()
   @IsNotEmpty()
   name!: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  priceCents!: number;
 }
 
 export class OrderItemDto {
@@ -288,13 +389,17 @@ export class CreateOrderDto {
   locationId!: string;
 
   @IsString()
+  @IsNotEmpty()
+  locationSlug!: string;
+
+  @IsString()
   @IsOptional()
   paymentId?: string;
 
   @ValidateNested()
   @IsNotEmpty()
-  @Type(() => StationDto)
-  station!: StationDto;
+  @Type(() => OriginDto)
+  origin!: OriginDto;
 
   @ValidateNested()
   @IsNotEmpty()

@@ -4,15 +4,17 @@ import { axiosInstance } from './axiosInstance';
 import { STATIONS_ORDERS_QUERY_KEY } from './useStationsOrder';
 import { c } from 'vite/dist/node/types.d-aGj9QkWt';
 import { client } from '../Client';
+import { OrderItemStatus } from '../constants';
 //todo: add types for axiosInstance
 // Zod schemas for validation
 const OrderItemStatusSchema = z.object({
   orderId: z.string(),
   itemId: z.string(),
-  orderItemStatus: z.enum(['STARTED', 'COMPLETED']),
+  orderItemStatus: z.string(),
+  correlationId: z.string(),
 });
 
-type OrderItemStatus = z.infer<typeof OrderItemStatusSchema>;
+type OrderItemStatustype = z.infer<typeof OrderItemStatusSchema>;
 
 export const useStatusMutation = (
   restaurantId: string,
@@ -28,7 +30,7 @@ export const useStatusMutation = (
     console.log('itemId:', itemId);
     console.log('orderItemStatus:', orderItemStatus);
 
-    if (orderItemStatus === 'STARTED') {
+    if (orderItemStatus === OrderItemStatus.Started) {
       console.log('Emitting order_item_started event');
       client.emit('order_item_started', {
         restaurantId,
@@ -37,7 +39,7 @@ export const useStatusMutation = (
         itemId,
         stationTags: stationTags,
       });
-    } else if (orderItemStatus === 'COMPLETED') {
+    } else if (orderItemStatus === OrderItemStatus.Completed) {
       console.log('Emitting order_item_completed event');
       client.emit('order_item_completed', {
         restaurantId,
@@ -50,10 +52,19 @@ export const useStatusMutation = (
   };
 
   return useMutation({
-    mutationFn: async (orderItem: OrderItemStatus) => {
+    mutationFn: async (orderItem: OrderItemStatustype) => {
       // Validate input
       const validatedData = OrderItemStatusSchema.parse(orderItem);
-      const response = await axiosInstance.post('/stations/order-item/', validatedData);
+      const orderItemData = {
+        orderId: validatedData.orderId,
+        itemId: validatedData.itemId,
+        orderItemStatus: validatedData.orderItemStatus,
+      };
+      const response = await axiosInstance.post('/stations/order-item/', orderItemData, {
+        headers: {
+          'X-Request-Id': validatedData.correlationId,
+        },
+      });
 
       return response.data;
     },
@@ -73,13 +84,13 @@ export const useStatusMutation = (
                       if (item.id === variables.itemId) {
                         const now = new Date().toISOString();
 
-                        if (variables.orderItemStatus === 'STARTED') {
+                        if (variables.orderItemStatus === OrderItemStatus.Started) {
                           return {
                             ...item,
                             startedAt: now,
                             completedAt: null,
                           };
-                        } else if (variables.orderItemStatus === 'COMPLETED') {
+                        } else if (variables.orderItemStatus === OrderItemStatus.Completed) {
                           return {
                             ...item,
                             completedAt: now,

@@ -1,18 +1,6 @@
 import { Redirect, Route, Switch } from 'react-router-dom';
-import {
-  IonApp,
-  IonContent,
-  IonIcon,
-  IonLabel,
-  IonRouterOutlet,
-  IonSpinner,
-  IonTabBar,
-  IonTabButton,
-  IonTabs,
-  setupIonicReact,
-} from '@ionic/react';
+import { IonApp, IonContent, IonRouterOutlet, IonSpinner, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { ellipse, square, triangle } from 'ionicons/icons';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -46,25 +34,16 @@ import './theme/variables.css';
 import { Suspense, useEffect, useState } from 'react';
 import PWAPrompt from 'react-ios-pwa-prompt';
 import PWAInstallPrompt from './pwa';
-import DashboardPage from './pages/dashboard-page/DashboardPage';
 import React from 'react';
 
-// import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
-// import Passwordless from "supertokens-auth-react/recipe/passwordless";
-// import Session, { SessionAuth } from "supertokens-auth-react/recipe/session";
-// import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
-// import { PasswordlessPreBuiltUI } from "supertokens-auth-react/recipe/passwordless/prebuiltui";
-import * as reactRouterDom from 'react-router-dom';
 import RootPage from './root';
 
-//custom imports for supertokens-ui
 import SuperTokens from 'supertokens-web-js';
 import Session from 'supertokens-web-js/recipe/session';
 import Passwordless from 'supertokens-web-js/recipe/passwordless';
 import LoginPage from './pages/login/login';
 import { checkSessionStatus } from './pages/checksession';
 import StationsPage from './pages/stations/stations';
-import IndividualStationPage from './pages/stations/individual-station/station';
 import RestaurantsPage from './pages/restaurants-page/RestaurantsPage';
 import LocationsPage from './pages/location-page/LocationsPage';
 import OriginsPage from './pages/origin-page/OriginPage';
@@ -73,6 +52,10 @@ import { MenuCategoriesPage } from './pages/menu-page/MenuCategoryPage';
 import { MenuItemsPage } from './pages/menu-page/MenuItemsPage';
 import { ManageMenuItem } from './pages/menu-page/ManageMenuItem';
 import LaunchPadPage from './pages/launch-pad/LaunchPadPage';
+import IndividualKdsPage from './pages/kds/individual-kds/individualKds';
+import KdsPage from './pages/kds/kds';
+import PrintersPage from './pages/printers/PrintersPage';
+import OrdersPage from './pages/orders-page/OrdersPage';
 setupIonicReact();
 const apiEndPoint = import.meta.env.VITE_API_ENDPOINT as string;
 
@@ -86,17 +69,24 @@ SuperTokens.init({
 });
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const verifySession = async () => {
-      const hasSession = await checkSessionStatus();
-      setIsAuthenticated(hasSession);
+      try {
+        const hasSession = await checkSessionStatus();
+        setIsAuthenticated(hasSession);
+      } catch (error) {
+        console.error('Session verification failed:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     verifySession();
   }, []);
-
-  if (isAuthenticated === null) {
+  if (isLoading) {
     return (
       <IonApp>
         <IonContent className='ion-padding ion-text-center'>
@@ -128,7 +118,7 @@ const App: React.FC = () => {
 
               <Route
                 path='/:restaurantId/:locationId/apps/orders'
-                render={(props) => (isAuthenticated ? <DashboardPage /> : <Redirect to='/login' />)}
+                render={(props) => (isAuthenticated ? <OrdersPage /> : <Redirect to='/login' />)}
               />
 
               <Route
@@ -143,7 +133,17 @@ const App: React.FC = () => {
               />
               <Route
                 path='/:restaurantId/:locationId/apps/kds'
+                render={(props) => (isAuthenticated ? <KdsPage /> : <Redirect to='/login' />)}
+              />
+
+              <Route
+                path='/:restaurantId/:locationId/apps/stations'
                 render={(props) => (isAuthenticated ? <StationsPage /> : <Redirect to='/login' />)}
+              />
+
+              <Route
+                path='/:restaurantId/:locationId/apps/printers'
+                render={(props) => (isAuthenticated ? <PrintersPage /> : <Redirect to='/login' />)}
               />
               <Route
                 path='/:restaurantId/:locationId/apps/menu/list'
@@ -168,11 +168,7 @@ const App: React.FC = () => {
                 render={(props) => (isAuthenticated ? <RootPage /> : <Redirect to='/login' />)}
               />
 
-              <Route
-                exact
-                path='/:restaurantId/:locationId/apps/station/:stationId'
-                component={IndividualStationPage}
-              />
+              <Route exact path='/:restaurantId/:locationId/apps/station/:stationId' component={IndividualKdsPage} />
 
               <Route
                 path='/:restaurantId/:locationId/apps/origins'

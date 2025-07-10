@@ -8,7 +8,7 @@ const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 // Define the schema for location data
 const locationSchema = z.object({
   _id: z.string().regex(objectIdRegex, 'Invalid MongoDB ObjectId format'),
-
+  isMobile: z.boolean(),
   locationSlug: z.string(),
   name: z.string(),
 });
@@ -41,6 +41,6 @@ export function useLocations(restaurantId: string) {
       }
     },
     enabled: Boolean(restaurantId),
-    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }

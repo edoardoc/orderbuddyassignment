@@ -9,6 +9,9 @@ import {
   IonInput,
   IonButtons,
   IonText,
+  IonGrid,
+  IonRow,
+  IonCol,
 } from '@ionic/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -160,11 +163,15 @@ export const MenuCategoryModal: React.FC<MenuCategoryModalProps> = ({ isOpen, on
             {errors.description?.en && <IonText color='danger'>{errors.description.en.message}</IonText>}
           </IonItem>
 
-          {/* Add similar input fields for Spanish (es) and Portuguese (pt) versions */}
-
-          <IonButton type='submit' expand='block' className='ion-margin-top'>
-            {category ? 'Update Category' : 'Create Category'}
-          </IonButton>
+          <IonGrid>
+            <IonRow>
+              <IonCol size='12' className='ion-text-center'>
+                <IonButton type='submit' fill='solid' className='solid-button'>
+                  {category ? 'Update Category' : 'Create Category'}
+                </IonButton>
+              </IonCol>
+            </IonRow>
+          </IonGrid>
         </form>
       </IonContent>
     </IonModal>

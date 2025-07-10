@@ -34,7 +34,7 @@ const modifierSchema = z.object({
   maxChoices: z.number(),
   freeChoices: z.number(),
   extraChoicePriceCents: z.number(),
-  options: z.array(modifierOptionSchema),
+  options: z.array(modifierOptionSchema).optional().default([]),
 });
 
 const categorySchema = z.object({
@@ -74,18 +74,15 @@ const menuResponseSchema = z.object({
 export type Menu = z.infer<typeof menuResponseSchema>;
 
 export function useMenu(restaurantId: string, locationId: string, menuId: string) {
-  logger.debug({ restaurantId, locationId }, 'useMenu called');
   return useQuery<Menu>({
     queryKey: ['menu', restaurantId, locationId, menuId],
     queryFn: async () => {
       const response = await axiosInstance.get<ApiResponse<Menu>>(
         `order-app/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`
       );
-      console.log('useMenu response:', response.data);
       const data = handleApiResponse(response);
       try {
         const validatedData = menuResponseSchema.parse(data);
-        logger.debug('useMenu returned');
         return {
           ...validatedData,
         };

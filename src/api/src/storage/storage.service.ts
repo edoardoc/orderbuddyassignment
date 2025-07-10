@@ -1,58 +1,74 @@
-import { BlobServiceClient, ContainerClient, ContainerSASPermissions, SASProtocol } from '@azure/storage-blob';
-import { DefaultAzureCredential } from '@azure/identity';
+import { BlobServiceClient } from '@azure/storage-blob';
+import { ConfigService } from '@nestjs/config';
+import { Injectable } from '@nestjs/common';
+import { extname } from 'path';
+import { ObjectId } from 'mongodb';
 
+@Injectable()
 export class AzureStorageService {
   private blobServiceClient: BlobServiceClient;
-
-  constructor() {
-    const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-
-    if (connectionString) {
-      this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-    } else {
-      const accountName = process.env.AZURE_STORAGE_ACCOUNT_NAME;
-      const url = `https://${accountName}.blob.core.windows.net`;
-      const credential = new DefaultAzureCredential();
-      this.blobServiceClient = new BlobServiceClient(url, credential);
-    }
-  }
-  async generateSasToken(restaurantId: string): Promise<string> {
-    try {
-      const containerClient = await this.getOrCreateContainer(restaurantId);
-
-      const permissions = ContainerSASPermissions.parse('racwdl'); // Read, Add, Create, Write, Delete, List
-
-      const expiryTime = new Date();
-      expiryTime.setMinutes(expiryTime.getMinutes() + 30);
-
-      const startTime = new Date();
-      startTime.setMinutes(startTime.getMinutes() - 5);
-
-      const sasOptions = {
-        containerName: containerClient.containerName,
-        permissions: permissions,
-        startsOn: startTime,
-        expiresOn: expiryTime,
-        protocol: SASProtocol.Https,
-      };
-
-      const sasToken = await containerClient.generateSasUrl(sasOptions);
-
-      return sasToken;
-    } catch (error) {
-      console.error('Error generating SAS token:', error);
-      throw error;
-    }
+  private readonly containerName = 'assets';
+  constructor(private readonly configService: ConfigService) {
+    const connectionString = this.configService.getOrThrow<string>('AZURE_STORAGE_CONNECTION_STRING');
+    this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
   }
 
-  private async getOrCreateContainer(restaurantId: string): Promise<ContainerClient> {
-    const containerName = restaurantId.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    const containerClient = this.blobServiceClient.getContainerClient(containerName);
+  async uploadImage(fileBuffer: Buffer, originalName: string, restaurantId: string, folder: string): Promise<string> {
+    const extension = extname(originalName);
+    const blobName = `${restaurantId}/${folder}/${new ObjectId()}${extension}`;
+    const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await containerClient.createIfNotExists({
-      access: 'blob',
+    await blockBlobClient.uploadData(fileBuffer, {
+      blobHTTPHeaders: { blobContentType: this.getMimeType(extension) },
     });
 
-    return containerClient;
+    return blockBlobClient.url;
+  }
+
+  async uploadLogoImage(
+    fileBuffer: Buffer,
+    originalName: string,
+    restaurantId: string,
+    folder: string
+  ): Promise<string> {
+    try {
+      const containerClient = this.blobServiceClient.getContainerClient(this.containerName);
+      const folderPath = `${restaurantId}/${folder}/`;
+      const blobList = containerClient.listBlobsFlat({ prefix: folderPath });
+
+      for await (const blob of blobList) {
+        if (blob.name.startsWith(folderPath + 'logo.')) {
+          await containerClient.deleteBlob(blob.name);
+        }
+      }
+
+      const extension = extname(originalName);
+      const blobName = `${restaurantId}/${folder}/logo${extension}`;
+      const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+      await blockBlobClient.uploadData(fileBuffer, {
+        blobHTTPHeaders: {
+          blobContentType: this.getMimeType(extension),
+        },
+      });
+
+      return blockBlobClient.url;
+    } catch (error) {
+      throw new Error(`Failed to upload logo: ${error.message}`);
+    }
+  }
+  private getMimeType(extension: string): string {
+    switch (extension.toLowerCase()) {
+      case '.png':
+        return 'image/png';
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.webp':
+        return 'image/webp';
+      default:
+        return 'application/octet-stream';
+    }
   }
 }

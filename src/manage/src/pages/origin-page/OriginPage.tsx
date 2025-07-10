@@ -27,6 +27,10 @@ import {
   IonPopover,
   IonText,
   IonFabButton,
+  IonList,
+  IonItem,
+  IonProgressBar,
+  IonCardContent,
 } from '@ionic/react';
 import { Link, useParams } from 'react-router-dom';
 import { add, qrCodeOutline } from 'ionicons/icons';
@@ -44,6 +48,10 @@ import { Origin, useOrigins } from '../../queries/origin/useOrigin';
 import { useUpdateQrStyle } from '../../queries/origin/useQrcode';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 import AddOriginModal from './components/AddOriginPage';
+import { useLogoUpload } from '../../queries/origin/useLogo';
+import { azureConfig } from '../../queries/manage-menu/useStorage';
+import { appStore } from '../../store';
+import { display } from 'html2canvas/dist/types/css/property-descriptors/display';
 interface station {
   _id: string;
   stations: stationItem[];
@@ -72,6 +80,10 @@ const OriginsPage: React.FC = () => {
   // const appState = appStore()
   const [colors, setColor] = useState('#fff');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const restaurantLogo =
+    appStore((state) => state.selection.restaurant.logo) || 'https://order.orderbuddyapp.com/logo.png';
+  const { setRestaurantLogo } = appStore();
+
   const [options, setOptions] = useState<Options>({
     width: 200,
     height: 200,
@@ -88,10 +100,10 @@ const OriginsPage: React.FC = () => {
       margin: 1,
       crossOrigin: 'anonymous',
     },
-    image: 'https://hubblestoragedev.blob.core.windows.net/tropical-berry-images/logo.png',
+    image: restaurantLogo,
 
     dotsOptions: {
-      color: '#1A1A1A',
+      color: '#36454F',
 
       type: 'dots' as DotType,
     },
@@ -109,6 +121,40 @@ const OriginsPage: React.FC = () => {
     shape: 'square',
   });
   const [qrCode] = useState<QRCodeStyling>(new QRCodeStyling(options));
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const logoUpload = useLogoUpload(restaurantId, locationId);
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files?.length) return;
+
+    const file = files[0];
+
+    if (file.size > azureConfig.maxFileSize) {
+      return;
+    }
+
+    if (!azureConfig.allowedFileTypes.includes(file.type)) {
+      return;
+    }
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const logoUrl = await logoUpload.mutateAsync(file);
+      setOptions((prev) => ({
+        ...prev,
+        image: logoUrl as string,
+      }));
+      setRestaurantLogo(logoUrl as string);
+    } catch (error) {
+      console.error('Logo upload failed:', error);
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -187,9 +233,9 @@ const OriginsPage: React.FC = () => {
         <IonGrid>
           <IonRow className=' ion-align-items-center'>
             <IonCol size='12' className='ion-text-end'>
-              <IonButton id='qrcode-style'>
+              <IonButton id='qrcode-style' fill='outline'>
                 <IonIcon icon={qrCodeOutline} />
-                <IonText> Style Manager</IonText>
+                <IonText className='ion-padding-start'> Style Manager</IonText>
               </IonButton>
             </IonCol>
           </IonRow>
@@ -205,12 +251,16 @@ const OriginsPage: React.FC = () => {
                 <IonCol size-sm='6' size-md='3' key={index}>
                   <IonCard
                     key={origin._id}
-                    className='border-none ml-2 ion-padding-bottom rounded'
-                    style={{ backgroundColor: 'white', width: '200px' }}
+                    className='ion-padding-bottom '
+                    style={{ backgroundColor: 'white', width: '220px' }}
                   >
                     <IonCardHeader className='ion-no-padding ion-padding-start ion-padding-top'>
-                      <IonCardTitle className='ion-text-start'>{origin.label}</IonCardTitle>
-                      <IonCardSubtitle className='ion-text-start'>{origin.type}</IonCardSubtitle>
+                      <IonCardTitle className='ion-text-start'>
+                        <IonText style={{ fontSize: '14px' }}>{origin.label}</IonText>
+                      </IonCardTitle>
+                      <IonCardSubtitle className='ion-text-start'>
+                        <IonText>{origin.type}</IonText>
+                      </IonCardSubtitle>
                     </IonCardHeader>
 
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -226,7 +276,7 @@ const OriginsPage: React.FC = () => {
                             window.open(`${smartScanUrl}/${origin.qrCodeId}`, '_blank', 'noopener,noreferrer');
                           }}
                         >
-                          <IonButton aria-label='Scan QR' size='small' className='violet-background'>
+                          <IonButton aria-label='Scan QR' size='small' fill='outline'>
                             <BsQrCodeScan size={15} style={{ color: 'white' }} />
                             <IonText style={{ textTransform: 'Capitalize', paddingLeft: '5px' }}>Scan</IonText>
                           </IonButton>
@@ -235,10 +285,10 @@ const OriginsPage: React.FC = () => {
 
                       <div className='tooltipdown'>
                         <IonButton
+                          fill='outline'
                           size='small'
                           aria-label='Download QR'
                           type='button'
-                          className='violet-background'
                           onClick={() => generateQrCode(origin)}
                         >
                           <IoDownloadOutline style={{ color: 'white' }} />
@@ -320,6 +370,31 @@ const OriginsPage: React.FC = () => {
                         </IonPopover>
                       </IonCol>
                     </IonRow>
+                    <IonRow>
+                      <IonCol size='12'>
+                        <IonList>
+                          <IonItem lines='none'>
+                            <input
+                              type='file'
+                              accept={azureConfig.allowedFileTypes.join(',')}
+                              onChange={handleLogoUpload}
+                              style={{ display: 'none' }}
+                              id='logo-upload'
+                            />
+                            <IonButton
+                              expand='block'
+                              fill='outline'
+                              slot='end'
+                              onClick={() => document.getElementById('logo-upload')?.click()}
+                              disabled={uploading}
+                            >
+                              {uploading ? 'Uploading...' : 'Upload Logo'}
+                            </IonButton>
+                          </IonItem>
+                          {uploading && <IonProgressBar value={uploadProgress}></IonProgressBar>}
+                        </IonList>
+                      </IonCol>
+                    </IonRow>
                   </IonGrid>
                 </IonCol>
                 <IonCol
@@ -333,12 +408,17 @@ const OriginsPage: React.FC = () => {
                   }}
                   size='6'
                 >
-                  <div>
+                  <div style={{ fontSize: '14px', textAlign: 'center', color: '#424242' }}>
                     Preview
                     <IonCard className='rounded'>
                       <div ref={ref} />
                     </IonCard>
-                    <IonButton className='violet-background' onClick={handleStyleUpdate}>
+                    <IonButton
+                      onClick={handleStyleUpdate}
+                      fill='solid'
+                      className='solid-button'
+                      style={{ display: 'block', marginTop: '20px' }}
+                    >
                       Save
                     </IonButton>
                   </div>

@@ -1,18 +1,56 @@
 import { IonCol, IonContent, IonGrid, IonPage, IonRow, IonSpinner, useIonRouter } from '@ionic/react';
-import { Router, useHistory } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { useUserSession } from './queries/useUser';
+import { useEffect, useState } from 'react';
 import { appStore } from './store';
-// import { signOut } from "supertokens-auth-react/recipe/session";
-
-const RootPage: React.FC = () => {
-  const router = useIonRouter();
+import Session from 'supertokens-web-js/recipe/session';
+export const useAuth = () => {
+  const [jwt, setJwt] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const setAuthToken = appStore((state) => state.setAuthToken);
 
   useEffect(() => {
-    router.push(`/restaurants`);
-    return;
+    const getToken = async () => {
+      try {
+        if (await Session.doesSessionExist()) {
+          const token = await Session.getAccessToken();
+          if (token) {
+            setJwt(token);
+            setAuthToken(token);
+          } else {
+            console.warn('No session token found');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to get session token:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getToken();
   }, []);
+
+  return { jwt, loading };
+};
+const RootPage: React.FC = () => {
+  const router = useIonRouter();
+  const { jwt, loading } = useAuth();
+  const { setLocationName } = appStore();
+  const { setRestaurantName } = appStore();
+
+  useEffect(() => {
+    if (!loading) {
+      if (jwt) {
+        setLocationName('');
+        setRestaurantName('');
+
+        router.push('/restaurants');
+        return;
+      } else {
+        router.push('/login');
+        return;
+      }
+    }
+  }, [loading, jwt, router]);
 
   return (
     <IonPage className='body'>

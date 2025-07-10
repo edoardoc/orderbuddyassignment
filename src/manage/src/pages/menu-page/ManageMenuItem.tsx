@@ -1,16 +1,22 @@
 import {
+  IonAccordion,
+  IonAccordionGroup,
   IonButton,
   IonCard,
   IonCardContent,
   IonCheckbox,
+  IonCol,
   IonContent,
+  IonGrid,
   IonInput,
   IonItem,
   IonLabel,
   IonPage,
   IonProgressBar,
+  IonRow,
   IonText,
-  IonTextarea,
+  IonSelect,
+  IonSelectOption,
 } from '@ionic/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,14 +26,13 @@ import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 import {
   menuItemSchemaPriceInCents,
   menuItemSchemaPriceInCentsType,
+  modifierSchema,
   useManageMenu,
 } from '../../queries/manage-menu/useManageMenu';
 import { useParams } from 'react-router';
 import { useMenu } from '../../queries/useMenu';
 import { useStations } from '../../queries/useStations';
-import { azureConfig, AzureStorageService } from '../../service/azureBob';
-import ObjectID from 'bson-objectid';
-import { useStorage } from '../../queries/manage-menu/useStorage';
+import { azureConfig, useStorage } from '../../queries/manage-menu/useStorage';
 interface Variant {
   id?: string;
   name: string;
@@ -55,13 +60,24 @@ export const ManageMenuItem: React.FC = () => {
     return menu.items.find((item) => item.id === itemId);
   }, [isEdit, itemId, menu]);
   const [variants, setVariants] = useState<Variant[]>(selectedItem?.variants || []);
+  const [modifiers, setModifiers] = useState<modifierSchema[]>(
+    selectedItem?.modifiers?.map((m) => ({
+      ...m,
+      name: {
+        en: m.name.en || '',
+        es: m.name.es || '',
+        pt: m.name.pt || '',
+      },
+      options: m.options || [],
+    })) || []
+  );
+
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageUrls, setImageUrls] = useState<string[]>(selectedItem?.imageUrls || []);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const { uploadImage } = useStorage();
-
   const handleAddVariant = () => {
     setVariants([
       ...variants,
@@ -72,6 +88,11 @@ export const ManageMenuItem: React.FC = () => {
       },
     ]);
   };
+  useEffect(() => {
+    if (selectedItem?.imageUrls) {
+      setImageUrls(selectedItem.imageUrls);
+    }
+  }, [selectedItem]);
   const handleRemoveVariant = (index: number) => {
     const variantToRemove = variants[index];
 
@@ -84,6 +105,12 @@ export const ManageMenuItem: React.FC = () => {
     } else {
       setVariants(variants.filter((_, i) => i !== index));
     }
+  };
+
+  const handleRemoveModifier = (index: number) => {
+    const newModifiers = modifiers.filter((_, i) => i !== index);
+    setModifiers(newModifiers);
+    setValue('modifiers', newModifiers);
   };
   const handleVariantChange = (index: number, field: keyof Variant, value: any) => {
     const newVariants = [...variants];
@@ -112,6 +139,124 @@ export const ManageMenuItem: React.FC = () => {
     setValue('variants', newVariants);
     setVariants(newVariants);
   };
+  const handleAddModifier = () => {
+    const newModifier: modifierSchema = {
+      name: {
+        en: '',
+        es: '',
+        pt: '',
+      },
+      type: 'standard' as const,
+      required: false,
+      selectionMode: 'max' as const,
+      maxChoices: 1,
+      freeChoices: 0,
+      extraChoicePriceCents: 0,
+      options: [],
+      id: '',
+    };
+
+    const newModifiers = [...modifiers, newModifier];
+    setModifiers(newModifiers);
+
+    setValue('modifiers', newModifiers);
+
+    if (errors.modifiers) {
+      clearErrors('modifiers');
+    }
+  };
+  const handleModifierChange = (index: number, field: keyof modifierSchema, value: any) => {
+    const newModifiers = [...modifiers];
+
+    if (field === 'name') {
+      newModifiers[index] = {
+        ...newModifiers[index],
+        name: {
+          en: value.en || '',
+          es: value.es || '',
+          pt: value.pt || '',
+        },
+      };
+    } else {
+      newModifiers[index] = {
+        ...newModifiers[index],
+        [field]: value,
+      };
+    }
+
+    setModifiers(newModifiers);
+    setValue(`modifiers.${index}`, newModifiers[index]);
+  };
+  const handleAddOption = (modifierIndex: number) => {
+    const newModifiers = [...modifiers];
+    if (!newModifiers[modifierIndex].options) {
+      newModifiers[modifierIndex].options = [];
+    }
+
+    newModifiers[modifierIndex].options.push({
+      name: {
+        en: '',
+        es: '',
+        pt: '',
+      },
+      priceCents: 0,
+    });
+
+    setModifiers(newModifiers);
+    setValue(`modifiers.${modifierIndex}`, newModifiers[modifierIndex]);
+  };
+  const handleOptionChange = (modifierIndex: number, optionIndex: number, field: string, value: any) => {
+    const newModifiers = [...modifiers];
+    const options = newModifiers[modifierIndex].options || [];
+
+    if (field === 'name') {
+      options[optionIndex] = {
+        ...options[optionIndex],
+        name: {
+          ...options[optionIndex].name,
+          en: value,
+        },
+      };
+    } else if (field === 'priceCents') {
+      options[optionIndex] = {
+        ...options[optionIndex],
+        priceCents: Math.round(Number(value) * 100),
+      };
+    }
+
+    newModifiers[modifierIndex].options = options;
+    setModifiers(newModifiers);
+    setValue(`modifiers.${modifierIndex}`, newModifiers[modifierIndex]);
+  };
+
+  const handleRemoveOption = (modifierIndex: number, optionIndex: number) => {
+    const newModifiers = [...modifiers];
+    newModifiers[modifierIndex].options =
+      newModifiers[modifierIndex].options?.filter((_, i) => i !== optionIndex) || [];
+    setModifiers(newModifiers);
+    setValue(`modifiers.${modifierIndex}`, newModifiers[modifierIndex]);
+  };
+  useEffect(() => {
+    if (selectedItem?.modifiers) {
+      const transformedModifiers = selectedItem.modifiers.map((modifier) => ({
+        ...modifier,
+        name: {
+          en: modifier.name.en,
+          es: modifier.name.es || '',
+          pt: modifier.name.pt || '',
+        },
+        type: modifier.type || 'standard',
+        required: modifier.required || false,
+        selectionMode: modifier.selectionMode || 'max',
+        maxChoices: modifier.maxChoices || 1,
+        freeChoices: modifier.freeChoices || 0,
+        extraChoicePriceCents: modifier.extraChoicePriceCents || 0,
+        id: modifier.id || '',
+        options: modifier.options || [],
+      }));
+      setModifiers(transformedModifiers);
+    }
+  }, [selectedItem]);
 
   const { upsertMenuItem } = useManageMenu({
     restaurantId,
@@ -126,6 +271,8 @@ export const ManageMenuItem: React.FC = () => {
     reset,
     watch,
     setValue,
+    setError,
+    clearErrors,
   } = useForm<menuItemSchemaPriceInCentsType>({
     resolver: zodResolver(menuItemSchemaPriceInCents),
     defaultValues: {
@@ -140,10 +287,28 @@ export const ManageMenuItem: React.FC = () => {
         es: selectedItem?.description?.es || '',
         pt: selectedItem?.description?.pt || '',
       },
+      isAvailable: selectedItem?.isAvailable || true,
       categoryId: selectedItem?.categoryId || categoryId,
       priceCents: selectedItem?.priceCents ? selectedItem.priceCents / 100 : 0,
       stationTags: selectedItem?.stationTags || [],
       variants: selectedItem?.variants || [],
+      imageUrls: selectedItem?.imageUrls || [],
+      modifiers:
+        selectedItem?.modifiers?.map((m) => ({
+          ...m,
+          name: {
+            en: m.name.en,
+            es: m.name.es || '',
+            pt: m.name.pt || '',
+          },
+          type: m.type || 'standard',
+          required: m.required || false,
+          selectionMode: m.selectionMode || 'max',
+          maxChoices: m.maxChoices || 1,
+          freeChoices: m.freeChoices || 0,
+          extraChoicePriceCents: m.extraChoicePriceCents || 0,
+          options: m.options || [],
+        })) || [],
     },
   });
 
@@ -170,6 +335,7 @@ export const ManageMenuItem: React.FC = () => {
             es: item.description.es ?? undefined,
             pt: item.description.pt ?? undefined,
           },
+          imageUrls: item.imageUrls || [],
           categoryId: item.categoryId,
           priceCents: item.priceCents / 100,
           stationTags: item.stationTags || [],
@@ -181,6 +347,16 @@ export const ManageMenuItem: React.FC = () => {
   }, [menu, itemId, reset]);
 
   const handleFormSubmit = async (data: menuItemSchemaPriceInCentsType) => {
+    const invalidModifiers = modifiers.filter((modifier) => !modifier.name.en.trim());
+    if (invalidModifiers.length > 0) {
+      invalidModifiers.forEach((_, index) => {
+        setError(`modifiers.${index}.name.en`, {
+          type: 'manual',
+          message: 'Modifier name is required',
+        });
+      });
+      return;
+    }
     try {
       const hasDefaultVariant = variants.some((v) => v.default);
       if (variants.length > 0 && !hasDefaultVariant) {
@@ -191,12 +367,12 @@ export const ManageMenuItem: React.FC = () => {
         setVariants(updatedVariants);
         setValue('variants', updatedVariants);
       }
-
       const defaultVariant = variants.find((v) => v.default);
       const submissionData = {
         id: data.id,
         name: data.name,
         description: data.description,
+        isAvailable: selectedItem?.isAvailable ?? true,
         categoryId: data.categoryId,
         price: defaultVariant ? defaultVariant.priceCents / 100 : Number(data.priceCents),
         stationTags: data.stationTags,
@@ -205,7 +381,16 @@ export const ManageMenuItem: React.FC = () => {
           ...v,
           priceCents: Math.round(Number(v.priceCents)),
         })),
+        modifiers: modifiers.map((m) => ({
+          ...m,
+          extraChoicePriceCents: Math.round(Number(m.extraChoicePriceCents)),
+          options: (m.options || []).map((o) => ({
+            ...o,
+            priceCents: Math.round(Number(o.priceCents)),
+          })),
+        })),
       };
+      console.log('Submitting form with data:', submissionData);
       await upsertMenuItem.mutateAsync(submissionData);
       router.push(`/${restaurantId}/${locationId}/apps/menu/${menuId}/${categoryId}/items`);
     } catch (error) {
@@ -222,21 +407,12 @@ export const ManageMenuItem: React.FC = () => {
     setValue('variants', variants);
   }, [variants, setValue]);
 
-  const storageService = useMemo(() => new AzureStorageService(), []);
-
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('handleImageUpload called');
     const files = event.target.files;
     if (!files?.length) return;
 
-    let file = files[0];
-    // const fileExtension = file.name.split('.').pop();
-    console.log('Selected file:', file.name);
-    const newFileName = new ObjectID().toString(); // Generate a new unique file name
-    const fileExtension = file.name.split('.').pop();
-    file = new File([file], `${newFileName}.${fileExtension}`, { type: file.type });
-    console.log('File to upload:', file.name);
-    // Validate file
+    const file = files[0];
+
     if (file.size > azureConfig.maxFileSize) {
       setToastMessage('File size exceeds 5MB limit');
       setShowToast(true);
@@ -253,9 +429,12 @@ export const ManageMenuItem: React.FC = () => {
     setUploadProgress(0);
 
     try {
-      const imageUrl = await uploadImage.mutateAsync({ file, restaurantId });
+      const imageUrl = await uploadImage.mutateAsync({
+        file,
+        restaurantId,
+        folder: 'menu',
+      });
 
-      // Update form state
       const updatedUrls = [...imageUrls, imageUrl];
       setImageUrls(updatedUrls);
       setValue('imageUrls', updatedUrls);
@@ -271,11 +450,15 @@ export const ManageMenuItem: React.FC = () => {
       setUploadProgress(0);
     }
   };
+  const onError = (errors: any) => {
+    console.log('Form validation errors:', errors);
+  };
+
   return (
     <IonPage>
       <LaunchPadNavBar title={isEdit ? 'Edit Menu Item' : 'Add Menu Item'} />
-      <IonContent>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className='ion-padding'>
+      <IonContent style={{ fontSize: '14px' }}>
+        <form onSubmit={handleSubmit(handleFormSubmit, onError)} className='ion-padding'>
           <IonItem lines='none'>
             <IonInput label='Name' labelPlacement='stacked' placeholder='Enter item name' {...register('name.en')} />
           </IonItem>
@@ -286,7 +469,7 @@ export const ManageMenuItem: React.FC = () => {
           )}
 
           <IonItem lines='none'>
-            <IonTextarea
+            <IonInput
               label='Description'
               labelPlacement='stacked'
               placeholder='Enter item description'
@@ -298,6 +481,7 @@ export const ManageMenuItem: React.FC = () => {
               {errors.description?.en && <IonText color='danger'>{errors.description.en.message}</IonText>}
             </IonItem>
           )}
+
           <IonItem lines='none'>
             <IonInput
               label='Price ($)'
@@ -318,99 +502,283 @@ export const ManageMenuItem: React.FC = () => {
             </IonItem>
           )}
           <IonItem lines='none'>
-            <IonLabel>Station Tags</IonLabel>
-          </IonItem>
-          {stations?.map((station) => (
-            <IonItem key={station._id} lines='none'>
-              <IonCheckbox
-                checked={selectedTags.includes(station.tags[0])}
-                onIonChange={() => handleTagToggle(station.tags[0])}
-              >
-                <IonLabel className='ion-padding-start'>{station.name}</IonLabel>
-              </IonCheckbox>
-            </IonItem>
-          ))}
-
-          {/* <IonItem lines='none'>
+            <IonText>Stations</IonText>
             <IonSelect
-              label='Category'
-              labelPlacement='stacked'
-              placeholder='Select a category'
-              {...register('categoryId')}
+              slot='end'
+              aria-label='Stations'
+              placeholder='Select stations'
+              multiple={true}
+              value={selectedTags}
+              onIonChange={(e: CustomEvent) => {
+                const newTags = e.detail.value;
+                setValue('stationTags', newTags);
+              }}
             >
-              {categories?.map((category) => (
-                <IonSelectOption key={category.id} value={category.id}>
-                  {category.name.en}
+              {stations?.map((station) => (
+                <IonSelectOption key={station._id} value={station.tags[0]}>
+                  {station.name}
                 </IonSelectOption>
               ))}
             </IonSelect>
           </IonItem>
+
           <IonItem lines='none'>
-            {errors.categoryId && <IonText color='danger'>{errors.categoryId.message}</IonText>}
-          </IonItem> */}
+            <IonButton slot='end' size='small' onClick={handleAddVariant} fill='outline'>
+              Add Variant
+            </IonButton>
+          </IonItem>
+          {variants.length > 0 && (
+            <IonCard>
+              <IonAccordionGroup>
+                <IonAccordion value='variants'>
+                  <IonItem slot='header' color='light'>
+                    <IonText>Variants ({variants.length})</IonText>
+                  </IonItem>
 
-          <IonCard>
-            <IonItem lines='none'>
-              <IonLabel>Variants</IonLabel>
-              <IonButton slot='end' size='small' onClick={handleAddVariant}>
-                Add Variant
-              </IonButton>
-            </IonItem>
-          </IonCard>
+                  <div className='ion-padding' slot='content'>
+                    {variants.map((variant, index) => (
+                      <IonCard key={index} className='ion-margin-bottom'>
+                        <IonCardContent>
+                          <IonItem lines='none'>
+                            <IonInput
+                              label='Variant Name'
+                              labelPlacement='stacked'
+                              value={variant.name}
+                              onIonChange={(e) => handleVariantChange(index, 'name', e.detail.value!)}
+                              placeholder='Enter variant name'
+                            />
+                          </IonItem>
+                          {errors.variants?.[index]?.name && (
+                            <IonItem lines='none'>
+                              <IonText color='danger'>{errors.variants[index]?.name?.message}</IonText>
+                            </IonItem>
+                          )}
 
-          {variants.map((variant, index) => (
-            <IonCard key={index} className='ion-padding-bottom'>
-              <IonCardContent>
-                <IonText color='medium'>Variant {index + 1}</IonText>
-              </IonCardContent>
-              <IonItem lines='none'>
-                <IonInput
-                  label='Variant Name'
-                  labelPlacement='stacked'
-                  value={variant.name}
-                  onIonChange={(e) => handleVariantChange(index, 'name', e.detail.value!)}
-                  placeholder='Enter variant name'
-                />
-              </IonItem>
-
-              <IonItem lines='none'>
-                <IonInput
-                  label='Price ($)'
-                  labelPlacement='stacked'
-                  type='number'
-                  min='0'
-                  step='0.01'
-                  value={variant.priceCents / 100}
-                  onIonChange={(e) => handleVariantChange(index, 'priceCents', e.detail.value!)}
-                  placeholder='Enter price'
-                />
-              </IonItem>
-
-              <IonItem lines='none'>
-                <IonCheckbox
-                  checked={variant.default}
-                  onIonChange={(e) => handleVariantChange(index, 'default', e.detail.checked)}
-                  labelPlacement='end'
-                  disabled={variant.default && !variants.some((v) => v.default && v.id !== variant.id)}
-                >
-                  Default Variant
-                </IonCheckbox>
-                <IonButton
-                  slot='end'
-                  color='danger'
-                  fill='clear'
-                  onClick={() => handleRemoveVariant(index)}
-                  disabled={variant.default && variants.length > 1}
-                >
-                  Remove
-                </IonButton>
-              </IonItem>
+                          <IonItem lines='none'>
+                            <IonInput
+                              label='Price ($)'
+                              labelPlacement='stacked'
+                              type='number'
+                              min='0'
+                              step='0.01'
+                              value={variant.priceCents / 100}
+                              onIonChange={(e) => handleVariantChange(index, 'priceCents', e.detail.value!)}
+                              placeholder='Enter price'
+                            />
+                          </IonItem>
+                          {errors.variants?.[index]?.priceCents && (
+                            <IonItem lines='none'>
+                              <IonText color='danger'>{errors.variants[index]?.priceCents?.message}</IonText>
+                            </IonItem>
+                          )}
+                          <IonItem lines='none'>
+                            <IonCheckbox
+                              checked={variant.default}
+                              onIonChange={(e) => handleVariantChange(index, 'default', e.detail.checked)}
+                              labelPlacement='end'
+                              disabled={variant.default && !variants.some((v) => v.default && v.id !== variant.id)}
+                            >
+                              Default Variant
+                            </IonCheckbox>
+                            <IonButton
+                              slot='end'
+                              color='danger'
+                              fill='outline'
+                              onClick={() => handleRemoveVariant(index)}
+                              disabled={variant.default && variants.length > 1}
+                            >
+                              Remove
+                            </IonButton>
+                          </IonItem>
+                        </IonCardContent>
+                      </IonCard>
+                    ))}
+                  </div>
+                </IonAccordion>
+              </IonAccordionGroup>
             </IonCard>
-          ))}
+          )}
 
+          {/* modifiers section */}
+          <IonItem lines='none'>
+            <IonButton slot='end' size='small' onClick={handleAddModifier} fill='outline'>
+              Add Modifier
+            </IonButton>
+          </IonItem>
+          {modifiers.length > 0 && (
+            <IonCard>
+              <IonAccordionGroup>
+                <IonAccordion value='modifiers'>
+                  <IonItem slot='header' color='light'>
+                    <IonText>Modifiers ({modifiers.length})</IonText>
+                  </IonItem>
+
+                  <div className='ion-padding' slot='content'>
+                    {modifiers.map((modifier, modifierIndex) => (
+                      <IonCard key={modifierIndex} className='ion-margin-bottom'>
+                        <IonCardContent>
+                          <IonItem lines='none'>
+                            <IonInput
+                              label='Modifier Name'
+                              labelPlacement='stacked'
+                              value={modifier.name.en}
+                              onIonChange={(e) =>
+                                handleModifierChange(modifierIndex, 'name', { ...modifier.name, en: e.detail.value! })
+                              }
+                              placeholder='Enter modifier name'
+                            />
+                          </IonItem>
+                          {errors.modifiers?.[modifierIndex]?.name && (
+                            <IonItem lines='none'>
+                              <IonText color='danger'>Please enter modifier name</IonText>
+                            </IonItem>
+                          )}
+
+                          <IonItem lines='none'>
+                            <IonInput
+                              label='Max Choices'
+                              labelPlacement='stacked'
+                              type='number'
+                              min='1'
+                              value={modifier.maxChoices}
+                              onIonChange={(e) =>
+                                handleModifierChange(modifierIndex, 'maxChoices', parseInt(e.detail.value!))
+                              }
+                            />
+                          </IonItem>
+                          {errors.modifiers?.[modifierIndex]?.maxChoices && (
+                            <div>Please enter modifiers max choices</div>
+                          )}
+
+                          <IonItem lines='none'>
+                            <IonInput
+                              label='Free Choices'
+                              labelPlacement='stacked'
+                              type='number'
+                              min='0'
+                              value={modifier.freeChoices}
+                              onIonChange={(e) =>
+                                handleModifierChange(modifierIndex, 'freeChoices', parseInt(e.detail.value!))
+                              }
+                            />
+                          </IonItem>
+                          {errors.modifiers?.[modifierIndex]?.freeChoices && (
+                            <div>Please enter modifiers free choices</div>
+                          )}
+
+                          <IonItem lines='none'>
+                            <IonInput
+                              label='Extra Choice Price ($)'
+                              labelPlacement='stacked'
+                              type='number'
+                              min='0'
+                              step='0.01'
+                              value={(modifier.extraChoicePriceCents ?? 0) / 100}
+                              onIonChange={(e) =>
+                                handleModifierChange(
+                                  modifierIndex,
+                                  'extraChoicePriceCents',
+                                  Math.round(Number(e.detail.value!) * 100)
+                                )
+                              }
+                            />
+                          </IonItem>
+                          {errors.modifiers?.[modifierIndex]?.extraChoicePriceCents && (
+                            <div>Please enter modifiers extra choice price</div>
+                          )}
+
+                          <IonItem lines='none'>
+                            <IonCheckbox
+                              checked={modifier.required}
+                              onIonChange={(e) => handleModifierChange(modifierIndex, 'required', e.detail.checked)}
+                              labelPlacement='end'
+                            >
+                              Required
+                            </IonCheckbox>
+                            <IonButton
+                              slot='end'
+                              color='danger'
+                              fill='outline'
+                              onClick={() => handleRemoveModifier(modifierIndex)}
+                            >
+                              Remove
+                            </IonButton>
+                          </IonItem>
+                          {errors.modifiers?.[modifierIndex]?.required && <div>please required is required</div>}
+
+                          <IonItem lines='none'>
+                            <IonButton
+                              fill='outline'
+                              slot='end'
+                              size='small'
+                              onClick={() => handleAddOption(modifierIndex)}
+                            >
+                              Add Option
+                            </IonButton>
+                          </IonItem>
+                          {modifier.options?.map((option, optionIndex) => (
+                            <IonCard key={optionIndex} className='ion-margin-start'>
+                              <IonCardContent>
+                                <IonItem lines='none'>
+                                  <IonInput
+                                    label='Option Name'
+                                    labelPlacement='stacked'
+                                    value={option.name.en}
+                                    onIonChange={(e) =>
+                                      handleOptionChange(modifierIndex, optionIndex, 'name', e.detail.value!)
+                                    }
+                                    placeholder='Enter option name'
+                                  />
+                                </IonItem>
+                                {errors.modifiers?.[modifierIndex]?.options?.[optionIndex]?.name && (
+                                  <IonItem lines='none'>
+                                    <IonText color='danger'>Please enter option name</IonText>
+                                  </IonItem>
+                                )}
+
+                                <IonItem lines='none'>
+                                  <IonInput
+                                    label='Price ($)'
+                                    labelPlacement='stacked'
+                                    type='number'
+                                    min='0'
+                                    step='0.01'
+                                    value={option.priceCents / 100}
+                                    onIonChange={(e) =>
+                                      handleOptionChange(modifierIndex, optionIndex, 'priceCents', e.detail.value!)
+                                    }
+                                    placeholder='Enter price'
+                                  />
+                                </IonItem>
+                                {errors.modifiers?.[modifierIndex]?.options?.[optionIndex]?.priceCents && (
+                                  <IonItem lines='none'>
+                                    <IonText color='danger'>Please enter option price</IonText>
+                                  </IonItem>
+                                )}
+                                <IonItem lines='none'>
+                                  <IonButton
+                                    color='danger'
+                                    fill='outline'
+                                    onClick={() => handleRemoveOption(modifierIndex, optionIndex)}
+                                    slot='end'
+                                  >
+                                    Remove Option
+                                  </IonButton>
+                                </IonItem>
+                              </IonCardContent>
+                            </IonCard>
+                          ))}
+                        </IonCardContent>
+                      </IonCard>
+                    ))}
+                  </div>
+                </IonAccordion>
+              </IonAccordionGroup>
+            </IonCard>
+          )}
           <IonCard>
             <IonItem lines='none'>
-              <IonLabel>Images</IonLabel>
+              <IonLabel>Images :</IonLabel>
               <input
                 type='file'
                 accept={azureConfig.allowedFileTypes.join(',')}
@@ -422,6 +790,7 @@ export const ManageMenuItem: React.FC = () => {
                 slot='end'
                 onClick={() => document.getElementById('image-upload')?.click()}
                 disabled={uploading}
+                fill='outline'
               >
                 {uploading ? 'Uploading...' : 'Add Image'}
               </IonButton>
@@ -461,9 +830,16 @@ export const ManageMenuItem: React.FC = () => {
               </div>
             </IonItem>
           </IonCard>
-          <IonButton type='submit' expand='block' className='ion-margin-top'>
-            {isEdit ? 'Update Item' : 'Create Item'}
-          </IonButton>
+          <IonGrid>
+            <IonRow className='ion-justify-content-center'>
+              <IonCol size='12' className='ion-text-center'>
+                {' '}
+                <IonButton type='submit' className=' solid-button'>
+                  {isEdit ? 'Update Item' : 'Create Item'}
+                </IonButton>
+              </IonCol>
+            </IonRow>
+          </IonGrid>
         </form>{' '}
       </IonContent>
     </IonPage>

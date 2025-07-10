@@ -16,6 +16,7 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     url: 'https://manage.dev.orderbuddyapp.com',
+    //url: 'https://6f8a-50-35-91-91.ngrok-free.app',
     cleartext: true,
   },
 };

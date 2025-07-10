@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { appStore } from '../../../store';
-import './paymentform.css';
-import { IonSpinner, useIonRouter } from '@ionic/react';
+import { IonSpinner, IonText, useIonRouter } from '@ionic/react';
 import moment from 'moment-timezone';
 import { useCompletePayment, useToken } from '../../queries/usePayment';
 import { useOrderStore } from '@/stores/orderStore';
+import { v4 as uuid } from 'uuid';
+import { client } from '@/client';
+import { useParams } from 'react-router-dom';
+import '../../../style.css';
 declare global {
   interface Window {
     emergepayFormFields: any;
@@ -16,22 +18,42 @@ declare global {
 
 interface PaymentFormProps {
   amount: number;
+  customerData: {
+    name: string;
+    phone: string;
+    getSms: boolean;
+  };
   onPaymentSuccess: () => void;
   onPaymentError: (error: any) => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSuccess, onPaymentError }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSuccess, onPaymentError, customerData }) => {
+  const [requestUuid] = useState<string>(uuid());
   const hostedRef = useRef<any>(null);
   const initialized = useRef(false);
-  const appState = appStore();
+  const restaurant = useOrderStore((s) => s.restaurant);
+  const location = useOrderStore((s) => s.location);
+  const resetOrderState = useOrderStore((s) => s.resetOrderState);
+  const { locationSlug } = useParams<{ locationSlug: string }>();
+  const initiateOrder = (orderNumber: string) => {
+    const payload = {
+      orderId: orderNumber,
+      restaurantId: restaurant._id,
+      locationId: location._id,
+      stationTags: [...new Set(cartItems.flatMap((item) => item.stationTags))],
+    };
+    client.emit('order_joined', payload);
+  };
+
+  const origin = useOrderStore((s) => s.origin);
+  const cartItems = useOrderStore((s) => s.cart.items);
   const [transcationErrorText, setTranscationErrorText] = useState('');
   const [isDisabledPayment, setIsDisabledPayment] = useState(false);
   const [isFieldsLoading, setIsFieldsLoading] = useState(true);
   const completePaymentMutation = useCompletePayment();
   const router = useIonRouter();
-  const restaurant = useOrderStore((s) => s.restaurant);
-  console.log('restaurant', restaurant);
-  const { data: tokenData, isLoading: tokenLoading, error: tokenError } = useToken('cuppa_co');
+
+  const { data: tokenData } = useToken(restaurant._id, requestUuid);
 
   useEffect(() => {
     const initPaymentFields = async () => {
@@ -44,7 +66,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
   }, [tokenData]);
 
   const completePayment = async (transactionToken: string) => {
-    const orderItems = appState.order.items.map((item) => ({
+    const orderItems = cartItems.map((item) => ({
       id: item.id,
       menuItemId: item.menuItemId,
       name: item.name,
@@ -53,32 +75,40 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
         item.variants?.map((variant) => ({
           id: variant.id,
           name: variant.name,
+          priceCents: variant.priceCents,
         })) || [],
       modifiers:
         item.modifiers?.map((mod) => ({
           id: mod.id,
+          name: mod.name,
           options:
             mod.options?.map((option) => ({
               name: option.name,
+              priceCents: option.priceCents,
             })) || [],
         })) || [],
       stationTags: item.stationTags,
     }));
 
     const createOrder = {
-      restaurantId: appState.RestaurantData.restaurant._id,
-      locationId: appState.RestaurantData.location.locationId, //harcoded value
+      restaurantId: restaurant._id,
+      locationId: location._id,
+      locationSlug: locationSlug,
       paymentId: transactionToken,
-      station: appState.RestaurantData.origin.originId
-        ? { id: appState.RestaurantData.origin.originId, name: appState.RestaurantData.origin.name }
-        : { id: '', name: 'Web' },
-      customer: appState.order.customer,
+      origin: origin._id ? { id: origin._id, name: origin.name } : { id: '', name: 'Web' },
+      customer: {
+        name: customerData.name,
+        phone: customerData.phone,
+      },
       items: orderItems,
-      getSms: appState.order.getSms,
+      getSms: customerData.getSms,
     };
 
     try {
-      const data = await completePaymentMutation.mutateAsync(createOrder);
+      const data = await completePaymentMutation.mutateAsync({
+        order: createOrder,
+        requestUuid,
+      });
       return data;
     } catch (error) {
       console.error('completePayment error:', error);
@@ -110,10 +140,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
               height: '40px',
               minHeight: '40px',
               overflow: 'hidden',
+              color: 'red',
             },
             attributes: {
               placeholder: 'Card Number',
-              maxLength: 19,
+              // maxLength: 16,
               autoComplete: 'cc-number',
             },
           },
@@ -157,21 +188,28 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
               initializePaymentFields();
               setTranscationErrorText('Your payment was declined.');
               setIsDisabledPayment(false);
+              return;
             }
             if (data.transaction.resultMessage === 'Do not honor') {
               initializePaymentFields();
               setTranscationErrorText('Your bank declined the transaction');
               setIsDisabledPayment(false);
+              return;
             }
             if (data.transaction.resultMessage === 'Insufficient funds') {
               initializePaymentFields();
               setTranscationErrorText('Insufficient funds.');
               setIsDisabledPayment(false);
+              return;
             }
             setIsDisabledPayment(false);
-            appState.setOrderId(data.orderId);
-            appState.setPaymentStatus(paymentDetails);
+            if (client.connected) {
+              initiateOrder(data.orderId);
+            }
             onPaymentSuccess();
+            resetOrderState();
+
+            router.push(`/status/${restaurant._id}/${data.orderId}`, 'forward');
           } catch (error) {
             console.log('error', error);
           }
@@ -254,11 +292,17 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
               transition: 'opacity 0.3s',
             }}
           >
-            <div className='payment-label'>Card Number</div>
+            <div className='payment-label'>
+              <IonText>Card Number</IonText>
+            </div>
             <div id='cardNumberContainer'></div>
-            <div className='payment-label'>MM/YY</div>
+            <div className='payment-label'>
+              <IonText>MM/YY</IonText>
+            </div>
             <div id='expirationDateContainer'></div>
-            <div className='payment-label'>CVV</div>
+            <div className='payment-label'>
+              <IonText>CVV</IonText>
+            </div>
             <div id='securityCodeContainer'></div>
             <div style={{ color: 'red', fontWeight: 'bold', textAlign: 'center' }}>{transcationErrorText}</div>
             {!isDisabledPayment && (
@@ -269,11 +313,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
                   width: '300px',
                   height: '40px',
                   marginTop: '10px',
-                  backgroundColor: '#5a189a',
                   border: 'none',
                   borderRadius: '4px',
                   fontWeight: '1000',
                   fontSize: '14px',
+                  color: '#fff',
+                  backgroundColor: '#262626',
                 }}
                 onClick={handlePayButtonClick}
               >

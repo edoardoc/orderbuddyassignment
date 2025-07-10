@@ -14,4 +14,21 @@ export interface Location {
   qrCodeId: string;
   createdAt: Date;
   updatedAt: Date;
+  payment: {
+    acceptPayment: boolean;
+  };
+  opening_hours: {
+    from: string;
+    to: string;
+    timezone: string;
+  };
+  isMobile: boolean;
+  printers: PrinterData[];
+}
+
+export interface PrinterData {
+  id: ObjectId;
+  name: string;
+  ip: string;
+  type?: string;
 }

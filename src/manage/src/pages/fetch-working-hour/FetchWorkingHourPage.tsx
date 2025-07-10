@@ -20,11 +20,10 @@ import {
   IonIcon,
   IonChip,
 } from '@ionic/react';
-import './fetch-working-hour.css';
 import { useMutation } from '@tanstack/react-query';
 import { close } from 'ionicons/icons';
 import { axiosInstance } from '../../queries/axiosInstance';
-
+import '../../../style.css';
 interface WorkingHoursPayload {
   restaurantName: string;
   restaurantAddress: string;

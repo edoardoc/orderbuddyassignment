@@ -1,14 +1,20 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './configuration';
+import { validationSchema } from 'src/utils/config';
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({
-            load: [configuration], 
-            envFilePath: '.env', 
-            isGlobal: true, 
-        })
-    ]
+  imports: [
+    ConfigModule.forRoot({
+      load: [configuration],
+      envFilePath: '.env',
+      isGlobal: true,
+      validationSchema,
+      validationOptions: {
+        abortEarly: false,
+        allowUnknown: true,
+      },
+    }),
+  ],
 })
-export class ApiConfigModule { }
+export class ApiConfigModule {}

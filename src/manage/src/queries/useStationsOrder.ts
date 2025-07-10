@@ -43,6 +43,10 @@ interface OrderItem {
 
 interface MatchedOrder {
   _id: string;
+  orderCode: string;
+  meta: {
+    correlationId: string;
+  };
   status: string;
   createdAt: string;
   items: OrderItem[];

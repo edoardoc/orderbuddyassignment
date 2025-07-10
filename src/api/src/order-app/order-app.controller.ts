@@ -39,8 +39,8 @@ export class OrderAppController {
     @Param() params: GetEntryInfoDto,
     @Res() res: Response
   ): Promise<Response<ApiResponse<EntryInfoDto>>> {
-    if (!ObjectId.isValid(params.locationId)) throw new BadRequestException('INVALID_LOCATION_ID');
-    if (!ObjectId.isValid(params.originId)) throw new BadRequestException('INVALID_ORIGIN_ID');
+    if (!ObjectId.isValid(params.locationId)) throw new BadRequestException('INVALID_LOCATION');
+    if (!ObjectId.isValid(params.originId)) throw new BadRequestException('INVALID_ORIGIN');
 
     const entryInfo = await this.orderAppService.getEntryInfo(params.restaurantId, params.locationId, params.originId);
     return res.status(HttpStatus.OK).json({ data: entryInfo });

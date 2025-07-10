@@ -1,13 +1,15 @@
 import { useMutation } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
 import { client } from '../Client';
+import { fetchDashboardOrder } from './dashboard/useSingleDasboardOrder';
+import { OrderStatus } from '../constants';
 
 interface Customer {
   name: string;
   phone: string;
 }
 
-interface Station {
+interface Origin {
   id: string;
   name: string;
 }
@@ -31,7 +33,7 @@ interface OrderItem {
   id: string;
   menuItemId: string;
   name: string;
-  price: number;
+  priceCents: number;
   modifiers: Modifier[];
   variants: Variant[];
   stationTags: string[];
@@ -41,86 +43,95 @@ interface OrderItem {
 
 interface Order {
   _id: string;
+  orderCode: string;
   paymentId: string;
   restaurant: string;
+  meta: {
+    correlationId: string;
+  };
   customer: Customer;
-  station: Station;
+  origin: Origin;
   items: OrderItem[];
   startedAt: Date;
-  totalPrice: number;
+  totalPriceCents: number;
   getSms: boolean;
   status: string;
 }
 interface OrderStatusInfo {
   orderId: string;
   orderStatus: string;
+  correlationId: string;
 }
 
 interface UseOrderStatusProps {
   activeOrders: Map<string, Order>;
-  setSelectedOrder: (order: Order | null) => void;
   notifyPickupOrder: (orderId: string) => void;
   notifyCompleteOrder: (orderId: string) => void;
+  locationId: string;
+  addCompletedOrderToMap: (key: string, value: Order) => void;
+  removeOrderFromActive: (orderId: string) => void; // Add this
   restaurantId: string;
-  authToken: string;
+  onSuccess?: () => void;
 }
 
 export function useOrderStatus({
   activeOrders,
-  setSelectedOrder,
   restaurantId,
-  authToken,
+  locationId,
+  addCompletedOrderToMap,
+  removeOrderFromActive,
   notifyPickupOrder,
   notifyCompleteOrder,
+  onSuccess,
 }: UseOrderStatusProps) {
   return useMutation({
-    mutationFn: async ({ orderId, orderStatus }: OrderStatusInfo) => {
+    mutationFn: async ({ orderId, orderStatus, correlationId }: OrderStatusInfo) => {
       const orderInfo = {
         orderId,
         orderStatus,
       };
-
       const response = await axiosInstance.post('restaurant/order-status/', orderInfo, {
         headers: {
-          Authorization: `Bearer ${authToken}`,
+          'X-Request-Id': correlationId,
         },
       });
-
       return response.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       const { orderId, orderStatus } = variables;
 
       if (activeOrders.has(orderId)) {
         const order = activeOrders.get(orderId)!;
 
-        if (order.status === 'ORDER_PLACED') {
-          order.status = 'READY_FOR_PICKUP';
+        if (order.status === OrderStatus.OrderPlaced) {
+          order.status = OrderStatus.ReadyForPickup;
           return activeOrders;
         }
 
-        if (order.status === 'READY_FOR_PICKUP' && orderStatus === 'READY_FOR_PICKUP') {
-          order.status = 'COMPLETED';
-          return activeOrders;
-        }
+        if (orderStatus === OrderStatus.Completed) {
+          const orderCorrelationId = order.meta.correlationId;
+          removeOrderFromActive(orderId);
 
-        // Handle order completion
-        const completedOrder = activeOrders.get(orderId);
-        if (completedOrder) {
-          activeOrders.delete(orderId);
-        }
+          // activeOrders.delete(orderId);
 
-        // Set next order as selected
-        const nextOrder = activeOrders.entries().next().value;
-        setSelectedOrder(nextOrder ? nextOrder[1] : null);
+          try {
+            const newOrder = await fetchDashboardOrder(restaurantId, locationId, orderId, orderCorrelationId);
+            if (newOrder && newOrder.status === OrderStatus.Completed) {
+              addCompletedOrderToMap(orderId, newOrder);
+            }
+          } catch (error) {
+            console.error('Error fetching completed order:', error);
+          }
+        }
       }
+      onSuccess?.();
     },
     onSettled: (_, __, variables) => {
       const { orderId, orderStatus } = variables;
 
-      if (orderStatus === 'READY_FOR_PICKUP') {
+      if (orderStatus === OrderStatus.ReadyForPickup) {
         notifyPickupOrder(orderId);
-      } else if (orderStatus === 'COMPLETED') {
+      } else if (orderStatus === OrderStatus.Completed) {
         notifyCompleteOrder(orderId);
       }
     },

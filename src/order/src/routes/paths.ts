@@ -1,0 +1,66 @@
+const assertParam = (name: string, value: string | undefined | null) => {
+  if (!value || value.trim() === '') {
+    throw new Error(`Missing or invalid route param: ${name}`);
+  }
+};
+
+export const Paths = {
+  entry: (restaurantId: string, locationSlug: string, locationId: string): string => {
+    assertParam('restaurantId', restaurantId);
+    assertParam('locationSlug', locationSlug);
+    assertParam('locationId', locationId);
+
+    return `/entry/${restaurantId}/${locationSlug}/${locationId}`;
+  },
+  menu: (
+    restaurantId: string,
+    locationSlug: string,
+    locationId: string,
+    menuSlug: string,
+    menuId: string,
+    originId: string
+  ): string => {
+    assertParam('restaurantId', restaurantId);
+    assertParam('locationSlug', locationSlug);
+    assertParam('locationId', locationId);
+    assertParam('menuSlug', menuSlug);
+    assertParam('menuId', menuId);
+    assertParam('originId', originId);
+
+    return `/menu/${restaurantId}/${locationSlug}/${locationId}/${menuSlug}/${menuId}?originId=${originId}`;
+  },
+  menus(restaurantId: string, locationSlug: string, locationId: string, originId: string): string {
+    assertParam('restaurantId', restaurantId);
+    assertParam('locationSlug', locationSlug);
+    assertParam('locationId', locationId);
+    assertParam('originId', originId);
+
+    return `/menus/${restaurantId}/${locationSlug}/${locationId}?originId=${encodeURIComponent(originId)}`;
+  },
+  cart: (
+    restaurantId: string,
+    locationSlug: string,
+    locationId: string,
+    menuSlug: string,
+    menuId: string,
+    originId: string
+  ): string => {
+    assertParam('restaurantId', restaurantId);
+    assertParam('locationSlug', locationSlug);
+    assertParam('locationId', locationId);
+    assertParam('menuSlug', menuSlug);
+    assertParam('menuId', menuId);
+    assertParam('originId', originId);
+
+    return `/cart/${restaurantId}/${locationSlug}/${locationId}/${menuSlug}/${menuId}?originId=${originId}`;
+  },
+  status: (restaurantId: string, orderId: string): string => {
+    assertParam('restaurantId', restaurantId);
+    assertParam('orderId', orderId);
+
+    return `/status/${restaurantId}/${orderId}`;
+  },
+  terms: (): string => '/terms',
+  privacy: (): string => '/privacy',
+  error: (): string => '/error',
+};

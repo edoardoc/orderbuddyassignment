@@ -22,7 +22,6 @@ export const useRestaurants = (userId: string | undefined) => {
     queryKey: ['restaurants', userId],
     queryFn: async () => {
       const response = await axiosInstance.get<ApiResponse<Restaurant[]>>(`/restaurant/${userId}`);
-      console.log('Restaurants response:', response.data);
       try {
         const validatedData = restaurantsResponseSchema.parse(response.data);
         return validatedData.data;

@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 export class Order {
   paymentId!: string;
   restaurantId!: string;
+  orderCode!: string; // Add the orderCode field
   station!: Station;
   customer!: Customer;
   items!: OrderItem[];
@@ -10,7 +11,7 @@ export class Order {
   endedAt?: Date;
   waitTimeInMinutes!: number;
   status!: string;
-  totalPrice!: number;
+  totalPriceCents!: number;
   isTakeaway!: boolean;
   getSms!: boolean;
 }
@@ -28,7 +29,7 @@ export class OrderItem {
   id: string;
   menuItemId: string;
   name: string;
-  price: number;
+  priceCents: number;
   public modifiers?: any[];
   public variants?: any[];
   public stationTags?: string[];
@@ -49,7 +50,7 @@ export class OrderItem {
     this.id = id;
     this.menuItemId = menuItemId;
     this.name = name;
-    this.price = price;
+    this.priceCents = price;
     this.modifiers = modifiers;
     this.variants = variants;
     this.stationTags = stationTags;

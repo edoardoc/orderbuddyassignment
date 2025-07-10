@@ -6,14 +6,18 @@ import { COLLECTIONS } from '../db/collections';
 import { Origin, Restaurant, Location } from 'src/db/models';
 import { OriginDto } from './dto/get-origin.dtos';
 import { UpdateQrStyleDto } from './dto/update-origin.dtos';
+import { AzureStorageService } from 'src/storage/storage.service';
 
 @Injectable()
 export class OriginsService {
   private readonly originsCollection: Collection<Origin>;
-  private readonly restaurantsCollection: Collection;
+  private readonly restaurantsCollection: Collection<Restaurant>;
   private readonly locationCollection: Collection<Location>;
 
-  constructor(@InjectClient() private readonly db: Db) {
+  constructor(
+    @InjectClient() private readonly db: Db,
+    private readonly storageService: AzureStorageService
+  ) {
     this.originsCollection = this.db.collection<Origin>(COLLECTIONS.ORIGINS);
     this.restaurantsCollection = this.db.collection(COLLECTIONS.RESTAURANTS);
     this.locationCollection = this.db.collection<Location>(COLLECTIONS.LOCATIONS);
@@ -27,6 +31,26 @@ export class OriginsService {
     }
 
     return restaurantdata;
+  }
+  async getLocationDetails(restaurantId: string, locationId: string) {
+    const location = await this.locationCollection.findOne(
+      {
+        restaurantId,
+        _id: new ObjectId(locationId),
+      },
+      {
+        projection: {
+          locationSlug: 1,
+          name: 1,
+        },
+      }
+    );
+
+    if (!location) {
+      throw new NotFoundException(`Location ${locationId} not found`);
+    }
+
+    return location;
   }
   async findAllOrigins(restaurantId: string, locationId: string): Promise<OriginDto[]> {
     const location = await this.locationCollection.findOne(
@@ -117,6 +141,15 @@ export class OriginsService {
 
     if (!result.modifiedCount) {
       throw new Error('Failed to update QR style');
+    }
+  }
+  async uploadLogo(file: Express.Multer.File, restaurantId: string): Promise<string> {
+    try {
+      const imageUrl = await this.storageService.uploadLogoImage(file.buffer, file.originalname, restaurantId, 'logo');
+      await this.restaurantsCollection.updateOne({ _id: restaurantId }, { $set: { logo: imageUrl } });
+      return imageUrl;
+    } catch (error) {
+      throw new Error(`Failed to upload logo: ${error.message}`);
     }
   }
 }

@@ -82,15 +82,19 @@ export class StationOrderResponseDto {
   _id: string;
   status: string;
   startedAt: Date;
+  orderCode: string;
   customer: {
     name: string;
     phone: string;
+  };
+  meta?: {
+    correlationId?: string;
   };
   items: {
     id: string;
     menuItemId: string;
     name: string;
-    price: number;
+    priceCents: number;
     stationTags: string[];
     isStarted?: boolean;
     isCompleted?: boolean;
@@ -98,5 +102,5 @@ export class StationOrderResponseDto {
     modifiers?: any[];
     remarks?: string;
   }[];
-  totalPrice: number;
+  totalPriceCents: number;
 }

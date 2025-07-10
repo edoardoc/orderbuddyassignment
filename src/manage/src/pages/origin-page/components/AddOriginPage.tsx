@@ -12,6 +12,9 @@ import {
   IonText,
   IonRadio,
   IonRadioGroup,
+  IonGrid,
+  IonCol,
+  IonRow,
 } from '@ionic/react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -118,10 +121,15 @@ const AddOriginModal: React.FC<AddOriginModalProps> = ({ isOpen, onClose }) => {
                 <small>{errors.type.message}</small>
               </IonText>
             )}
-
-            <IonButton type='submit' expand='block' className='ion-margin-top'>
-              Add Origin
-            </IonButton>
+            <IonGrid>
+              <IonRow>
+                <IonCol size='12' className='ion-text-center'>
+                  <IonButton type='submit' className='ion-margin-top' fill='outline'>
+                    Add Origin
+                  </IonButton>
+                </IonCol>
+              </IonRow>
+            </IonGrid>
           </form>
         </IonContent>
       </IonModal>

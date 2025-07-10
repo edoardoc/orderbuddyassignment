@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common'
-import { MenuController } from './menu.controller'
-import { MenuService } from './menu.service'
-import { EventsModule } from '../events/events.module'
-import { WebPushModule } from '../web-push/web-push.module'
+import { Module } from '@nestjs/common';
+import { MenuController } from './menu.controller';
+import { MenuService } from './menu.service';
+import { EventsModule } from '../events/events.module';
+import { WebPushModule } from '../web-push/web-push.module';
+import { MessageModule } from 'src/message/message.module';
 // import { EventsGateway } from '../events/events.gateway'
 // import { EventsService } from '../events/events.service'
 // import { EventsModule } from '../events/events.module'
@@ -14,7 +15,7 @@ import { WebPushModule } from '../web-push/web-push.module'
   // controllers: [MenuController],
   // exports: [MenuService],
 
-  imports: [EventsModule, WebPushModule],
+  imports: [EventsModule, WebPushModule, MessageModule],
   providers: [MenuService],
   controllers: [MenuController],
   exports: [MenuService],

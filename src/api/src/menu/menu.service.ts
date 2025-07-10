@@ -1,14 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
-import { CreateOrderDto, OrderItemDto, OrderStatusDto, RestaurantResponseDto } from './dtos/menu.controller.dto';
+import {
+  CreateOrderDto,
+  OrderItemDto,
+  OrderStatusResponseDto,
+  RestaurantResponseDto,
+} from './dtos/menu.controller.dto';
 import { ConfigService } from '@nestjs/config';
 import { Order, OrderItem } from '../models/order';
 import { OrderStatus } from '../constants';
 import { EventsGateway } from '../events/events.gateway';
 import { WebPushService } from '../web-push/web-push.service';
 import { plainToClass } from 'class-transformer';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import { MessageService } from '../message/message.service';
+import { COLLECTIONS } from 'src/db/collections';
+import { logger } from 'src/logger/pino.logger';
 
 @Injectable()
 export class MenuService {
@@ -17,6 +24,7 @@ export class MenuService {
   private readonly ordersCollection;
   private readonly menusCollection: any;
   private readonly restaurantsCollection: any;
+  private readonly logger: typeof logger;
 
   menuService: any;
   private readonly subscriptionsCollection;
@@ -26,13 +34,13 @@ export class MenuService {
     private readonly eventsGateway: EventsGateway,
     private readonly webPushService: WebPushService,
     private readonly configService: ConfigService,
-    @InjectPinoLogger(MenuService.name) private readonly logger: PinoLogger
+    private readonly messageService: MessageService
   ) {
-    this.ordersCollection = db.collection('orders');
-    this.subscriptionsCollection = this.db.collection('subscriptions');
-    this.restaurantsCollection = db.collection('restaurants');
-    this.menusCollection = db.collection('menus');
-    this.logger.setContext('MenuService');
+    this.ordersCollection = db.collection(COLLECTIONS.ORDERS);
+    this.subscriptionsCollection = this.db.collection(COLLECTIONS.SUBSCRIPTIONS);
+    this.restaurantsCollection = db.collection(COLLECTIONS.RESTAURANTS);
+    this.menusCollection = db.collection(COLLECTIONS.MENUS);
+    this.logger = logger.child({ context: 'MenuService' });
   }
 
   async getRestaurantById(restaurantId: string): Promise<RestaurantResponseDto> {
@@ -65,7 +73,7 @@ export class MenuService {
         correlationId,
         restaurantId: body.restaurantId,
       },
-      'Starting order creation'
+      'Order initiated'
     );
 
     const orderTotalPrice = body.items.reduce(
@@ -76,14 +84,24 @@ export class MenuService {
     const taxRate = this.configService.get<number>('TAX_RATE');
     if (!taxRate) throw new Error('TAX_RATE not configured');
     const totalPriceWithTax = Math.round(orderTotalPrice + orderTotalPrice * taxRate);
+
+    const orderId = new ObjectId();
+    const orderCode = orderId.toString().slice(-4).toUpperCase();
+
     const orderToCreate = {
+      _id: orderId,
+      orderCode: orderCode,
       paymentId: body.paymentId,
       restaurantId: body.restaurantId,
-      locationId: body.locationId,
+      locationId: new ObjectId(body.locationId),
+      locationSlug: body.locationSlug,
+      meta: {
+        correlationId: correlationId,
+      },
       customer: body.customer,
-      station: {
-        id: body.station.id ? body.station.id : '',
-        name: body.station.name,
+      origin: {
+        id: body.origin.id ? body.origin.id : '',
+        name: body.origin.name,
       },
       items: body.items.map((item) => {
         return new OrderItem(
@@ -101,27 +119,95 @@ export class MenuService {
 
       status: OrderStatus.OrderPlaced,
       startedAt: new Date(),
-      totalPrice: totalPriceWithTax,
+      totalPriceCents: totalPriceWithTax,
       getSms: body.getSms,
     };
+    // const mockFailedResult = {
+    //   acknowledged: false,
+    //   insertedId: new ObjectId(),
+    // };
+    // const result = mockFailedResult;
 
     const result = await this.ordersCollection.insertOne(orderToCreate);
+    if (result.acknowledged) {
+      this.logger.trace(
+        {
+          module: 'order',
+          event: 'create_order_success',
+          correlationId,
+          restaurantId: body.restaurantId,
+          orderId: orderId.toString(),
+        },
+        'Order created'
+      );
+    }
 
-    const orderId = result.insertedId;
+    if (!result.acknowledged) {
+      this.logger.trace(
+        {
+          module: 'order',
+          event: 'create_order_failed',
+          correlationId,
+          restaurantId: body.restaurantId,
+        },
+        'Order creation failed'
+      );
+      throw new Error('Failed to create order');
+    }
 
-    this.logger.trace(
-      {
-        module: 'order',
-        event: 'order_created',
-        correlationId: correlationId,
-        orderId: orderId.toString(),
-        restaurantId: body.restaurantId,
-        stationTags: [...new Set(body.items.flatMap((item) => item.stationTags))],
-        totalPrice: totalPriceWithTax,
-      },
-      'Order created successfully'
-    );
     const restaurantId = body.restaurantId;
+
+    const restaurantData = await this.getRestaurantById(restaurantId);
+
+    const menuEndpoint = this.configService.get<string>('MENU_ENDPOINT');
+    if (!menuEndpoint) {
+      throw new Error('MENU_ENDPOINT configuration is missing');
+    }
+
+    const statusLink = `${menuEndpoint}/status/${restaurantData._id}/${orderId}`;
+    const message = `OrderBuddy-${restaurantData.name}: your order #${orderCode} has been accepted, track progress here ${statusLink}`; //order number
+
+    if (body.getSms) {
+      try {
+        const result = await this.messageService.sendMessage(body.customer.phone, message);
+        if (!result) {
+          throw new Error('Failed to notify customer');
+        }
+        this.logger.trace(
+          {
+            module: 'order',
+            event: 'sms_sent',
+            correlationId,
+            phone: body.customer.phone,
+          },
+          'Order notified to customer'
+        );
+      } catch (error) {
+        this.logger.error(
+          {
+            module: 'order',
+            event: 'sms_failed',
+            correlationId,
+            error: error.message,
+            phone: body.customer.phone,
+          },
+          'Exception - Failed to notify customer'
+        );
+        this.logger.trace(
+          {
+            module: 'order',
+            event: 'sms_failed',
+            correlationId,
+            error: error.message,
+            phone: body.customer.phone,
+          },
+          'Exception - Failed to notify customer'
+        );
+      }
+    } else {
+      this.logger.debug('SMS not requested');
+    }
+
     const locationId = body.locationId;
     const locationRoom = `${restaurantId}_${locationId}`;
     this.eventsGateway.server.to(locationRoom).emit('order_received', {
@@ -151,7 +237,7 @@ export class MenuService {
     try {
       const notificationPayload = {
         title: 'New Order',
-        body: `Order #${orderId.toString().slice(-4)} received!`,
+        body: `Order #${orderCode} received!`,
         restaurantId: restaurantId,
         platform: 'all' as const, // Explicitly type as 'all'
       };
@@ -163,53 +249,66 @@ export class MenuService {
         },
         notificationPayload
       );
-      this.logger.trace(
-        {
-          module: 'order',
-          event: 'notifications_sent',
-          correlationId: correlationId,
-          orderId: orderId.toString(),
-          restaurantId: body.restaurantId,
-        },
-        'Push notifications sent successfully'
-      );
+      if (response.success) {
+        this.logger.trace(
+          {
+            module: 'order',
+            event: 'notifications_sent',
+            correlationId: correlationId,
+            orderId: orderId.toString(),
+            restaurantId: body.restaurantId,
+          },
+          'Order notified to store'
+        );
+      }
+      if (!response.success) {
+        this.logger.trace(
+          {
+            module: 'order',
+            event: 'notifications_failed',
+            correlationId: correlationId,
+            orderId: orderId.toString(),
+          },
+          'Failed to notify store'
+        );
+      }
+
       this.logger.info('Push notifications sent:', response);
     } catch (error) {
-      // Log error but don't fail the order creation
-      this.logger.error('Failed to send push notifications:', error);
       this.logger.error(
         {
           module: 'order',
-          event: 'notifications_failed',
+          event: 'notifications_error',
           correlationId: correlationId,
           orderId: orderId.toString(),
+          restaurantId: body.restaurantId,
           error: error.message,
         },
-        'Failed to send push notifications'
+        'Failed to notify store'
       );
     }
 
-    if (body.getSms) {
-    } else {
-      this.logger.debug('SMS not sent');
-    }
     return result.insertedId;
   }
 
-  async getOrder(orderId: string): Promise<Order> {
+  async getStatus(orderId: string): Promise<OrderStatusResponseDto> {
     const query = { _id: new ObjectId(orderId) };
-    const order = await this.ordersCollection.findOne(query);
-    return order;
-  }
-  async getStatus(orderId: string) {
-    const order = await this.getOrder(orderId);
-    if (!order) return;
-
-    const statusResponse: OrderStatusDto = {
-      orderTime: order.startedAt,
-      waitTime: order.waitTimeInMinutes,
-      status: order.status,
+    const projection = {
+      _id: 1,
+      orderCode: 1,
+      restaurantId: 1,
+      locationId: 1,
+      locationSlug: 1,
+      customer: 1,
+      origin: 1,
+      items: 1,
+      status: 1,
+      totalPriceCents: 1,
     };
-    return statusResponse;
+
+    const order = await this.ordersCollection.findOne(query, { projection });
+    if (!order) throw new NotFoundException('Order not found');
+
+    return order;
   }
 }

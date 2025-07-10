@@ -1,7 +1,7 @@
-import { IonButton, IonIcon, IonItem, IonLabel } from '@ionic/react';
-import { trashOutline } from 'ionicons/icons';
+import { IonButton, IonIcon, IonItem, IonLabel, IonText } from '@ionic/react';
+import { closeCircleSharp, closeOutline, trashOutline } from 'ionicons/icons';
 import React from 'react';
-import { appStore } from '../../../../../store';
+import { useOrderStore } from '@/stores/orderStore';
 
 interface ModifierOption {
   name: string;
@@ -26,15 +26,16 @@ interface CartItemProps {
 }
 
 export const CartItem: React.FC<CartItemProps> = ({ item }) => {
-  const appState = appStore();
+  const removeOrderItemState = useOrderStore((s) => s.removeOrderItem);
+
   const removeOrderItem = (orderItemId: string) => {
-    appState.removeOrderItem(orderItemId);
+    removeOrderItemState(orderItemId);
   };
-  
+
   return (
     <IonItem key={item.id}>
       <IonLabel>
-        <h2>{item.name}</h2>
+        <IonText className='font-size-14'>{item.name}</IonText>
         {item.variants && <p className='ion-no-margin'>{item.variants.map((variant) => variant.name).join(', ')}</p>}
         {item.modifiers && (
           <div>
@@ -48,10 +49,12 @@ export const CartItem: React.FC<CartItemProps> = ({ item }) => {
       </IonLabel>
       <IonLabel slot='end'>
         {' '}
-        <p>${(item.price / 100).toFixed(2)}</p>
+        <p>
+          <IonText>${(item.price / 100).toFixed(2)}</IonText>
+        </p>
       </IonLabel>
       <IonButton fill='clear' slot='end' onClick={() => removeOrderItem(item.id)}>
-        <IonIcon slot='icon-only' icon={trashOutline} color='danger' />
+        <IonIcon slot='icon-only' icon={closeOutline} />
       </IonButton>
     </IonItem>
   );

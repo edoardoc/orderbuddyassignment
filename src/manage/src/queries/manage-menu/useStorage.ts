@@ -1,70 +1,44 @@
 import { useMutation } from '@tanstack/react-query';
 import { z } from 'zod';
 import { axiosInstance } from '../axiosInstance';
-import { ApiResponse } from '../api-response';
-import { AzureStorageService } from '../../service/azureBob';
-
-// Update schema to match actual API response
-const sasTokenResponseSchema = z.object({
-  sasToken: z.string(),
-});
-
-type SasTokenResponse = z.infer<typeof sasTokenResponseSchema>;
-
+export const azureConfig = {
+  maxFileSize: 5 * 1024 * 1024,
+  allowedFileTypes: ['image/jpeg', 'image/png', 'image/webp'],
+};
 interface UploadImageParams {
   file: File;
   restaurantId: string;
+  folder: string;
 }
 
-const storageService = new AzureStorageService();
+const ResponseImageData = z.object({
+  imageUrl: z.string().url(),
+});
+
+export type ResponseImageData = z.infer<typeof ResponseImageData>;
 
 export const useStorage = () => {
   const uploadImage = useMutation({
-    mutationFn: async ({ file, restaurantId }: UploadImageParams): Promise<string> => {
+    mutationFn: async ({ file, restaurantId, folder }: UploadImageParams): Promise<string> => {
       try {
-        // Get SAS token using axios instance
-        const response = await axiosInstance.post<ApiResponse<SasTokenResponse>>(`/storage/sas-token/${restaurantId}`);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', folder);
 
-        if (!response.data) {
-          throw new Error('No response data received');
-        }
+        const response = await axiosInstance.post<ResponseImageData>(`/storage/upload/${restaurantId}`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        console.debug('Image uploaded successfully:', response.data.imageUrl);
 
-        // Log response for debugging
-        console.log('Raw API Response:', response.data);
-
-        // Check if data exists and extract sasToken
-        if (!response.data.data) {
-          throw new Error('No data received in response');
-        }
-
-        const { sasToken } = response.data.data;
-
-        // Validate sasToken
-        if (!sasToken || typeof sasToken !== 'string') {
-          throw new Error('Invalid SAS token received');
-        }
-
-        // Upload image using the validated SAS token
-        const imageUrl = await storageService.uploadImage(sasToken, file);
-
-        console.log('Upload successful, image URL:', imageUrl);
-        return imageUrl;
+        return response.data.imageUrl;
       } catch (error) {
-        if (error instanceof z.ZodError) {
-          console.error('Validation error:', {
-            errors: error.errors,
-            received: error.format(),
-          });
-          throw new Error('Invalid API response format');
-        }
-
         console.error('Upload failed:', error);
         throw error;
       }
     },
   });
 
-  return {
-    uploadImage,
-  };
+  return { uploadImage };
 };

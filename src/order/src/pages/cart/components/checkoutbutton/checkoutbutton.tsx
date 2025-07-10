@@ -1,4 +1,4 @@
-import { IonButton, IonFooter, IonToolbar } from '@ionic/react';
+import { IonButton, IonFooter, IonText, IonToolbar } from '@ionic/react';
 import React from 'react';
 
 interface CheckoutButtonProps {
@@ -8,21 +8,19 @@ interface CheckoutButtonProps {
 export const CheckoutButton: React.FC<CheckoutButtonProps> = ({ isValidPlaceOrder }) => (
   <IonFooter>
     <IonToolbar>
-      <div className='ion-padding'>
-        <IonButton
-          disabled={!isValidPlaceOrder}
-          expand='block'
-          className='violet-background ion-no-padding place-order'
-          style={{
-            paddingLeft: '10px',
-            paddingRight: '10px',
-            fontWeight: '700',
-          }}
-          id='open-payment'
-        >
-          Check out
-        </IonButton>
-      </div>
+      <IonButton
+        disabled={!isValidPlaceOrder}
+        expand='block'
+        className='solid-button'
+        style={{
+          paddingLeft: '10px',
+          paddingRight: '10px',
+          color: '#ffff',
+        }}
+        id='open-payment'
+      >
+        <IonText style={{ color: '#ffff' }}>Check out</IonText>
+      </IonButton>
     </IonToolbar>
   </IonFooter>
 );

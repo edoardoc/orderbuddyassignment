@@ -1,13 +1,26 @@
-import { IonPage, IonContent, IonGrid, IonRow, IonCard, IonIcon, IonCol, useIonRouter } from '@ionic/react';
+import {
+  IonPage,
+  IonContent,
+  IonGrid,
+  IonRow,
+  IonCard,
+  IonCol,
+  useIonRouter,
+  IonText,
+  IonCardContent,
+} from '@ionic/react';
 import React, { useEffect, useState } from 'react';
 import { useRestaurants } from '../../queries/useRestaurants';
 import Session from 'supertokens-web-js/recipe/session';
-import NavBar from '../../components/NavBar';
 import { appStore } from '../../store';
+import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 
 const RestaurantsPage: React.FC = () => {
   const [userId, setUserId] = useState<string | undefined>();
   const { setRestaurantName } = appStore();
+  const { setLocationName } = appStore();
+  const { setRestaurantLogo } = appStore();
+
   useEffect(() => {
     const getJWT = async () => {
       if (await Session.doesSessionExist()) {
@@ -23,37 +36,41 @@ const RestaurantsPage: React.FC = () => {
   const router = useIonRouter();
 
   const handleRestaurantClick = (restaurantId: string) => {
+    setRestaurantLogo(restaurantsData?.find((r) => r._id === restaurantId)?.logo || '');
     setRestaurantName(restaurantsData?.find((r) => r._id === restaurantId)?.name || '');
     router.push(`/${restaurantId}/locations`);
     return;
   };
   React.useEffect(() => {
+    setRestaurantName('');
+    setLocationName('');
     if (restaurantsData && restaurantsData.length === 1) {
+      setRestaurantLogo(restaurantsData[0].logo || '');
       handleRestaurantClick(restaurantsData[0]._id);
     }
   }, [restaurantsData]);
   return (
     <IonPage className='body'>
-      <NavBar title='Restaurants' showBackButton={false} />
+      <LaunchPadNavBar title='Restaurants' showBackButton={false} />
       <IonContent>
         <IonGrid>
-          <IonRow class=' ion-padding-top ion-align-items-center'>
+          <IonRow class='ion-padding-top ion-align-items-center'>
             {restaurantsData?.map((restaurant) => (
-              <IonCol size-sm='6' size-md='3' className='ion-text-center' key={restaurant._id}>
+              <IonCol size='6' size-md='3' className='ion-text-center' key={restaurant._id}>
                 <IonCard
                   className='card-width ion-padding'
                   onClick={() => handleRestaurantClick(restaurant._id)}
                   key={restaurant._id}
                 >
-                  <div className='ion-text-center'>
-                    {restaurant.logo && (
-                      <img src={restaurant.logo} alt={restaurant.name} style={{ width: '64px', height: '54px' }} />
-                    )}
-                  </div>
-                  <div className='ion-text-center '>
-                    <h3>{restaurant.name}</h3>
-                    {/* <p className='ion-no-margin'>{restaurant.concept}</p> */}
-                  </div>
+                  <IonCardContent>
+                    {restaurant.logo && <img src={restaurant.logo} alt={restaurant.name} style={{ height: '64px' }} />}
+
+                    <IonText
+                      style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
+                    >
+                      {restaurant.name}
+                    </IonText>
+                  </IonCardContent>
                 </IonCard>
               </IonCol>
             ))}

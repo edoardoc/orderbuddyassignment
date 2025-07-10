@@ -1,29 +1,66 @@
-import { IonCard, IonCol, IonContent, IonGrid, IonIcon, IonPage, IonRow } from '@ionic/react';
+import { IonCard, IonCol, IonContent, IonGrid, IonIcon, IonPage, IonRow, IonText, IonTitle } from '@ionic/react';
+import { IconType } from 'react-icons';
 import { Link, useParams } from 'react-router-dom';
-import { useEffect } from 'react';
-import './LaunchPadPage.css';
-import { qrCodeOutline } from 'ionicons/icons';
+import { useEffect, useState } from 'react';
 import React from 'react';
 import { messaging } from '../../firebase/firebase';
 import { onMessage } from 'firebase/messaging';
 import { isPlatform } from '@ionic/react';
 import { useInitializeNotifications } from '../../queries/useNotification';
-import { MdDashboard } from 'react-icons/md';
-import { LuGitBranchPlus } from 'react-icons/lu';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
-import { BiFoodMenu } from 'react-icons/bi';
-
-interface user {
-  _id: string;
-  restaurantId: string;
-  name: string;
-  userId: string;
-  email: string;
-}
+import { getLaunchPadConfig } from './LaunchPadSection';
+import { useLocations } from '../../queries/useLocations';
+import { appStore } from '../../store';
+import Session from 'supertokens-web-js/recipe/session';
+import { useRestaurants } from '../../queries/useRestaurants';
+import '../../../style.css';
+import { usePrinters } from '../../queries/printers/usePrinter';
 
 const LaunchPadPage: React.FC = (props) => {
   const { restaurantId, locationId } = useParams<{ restaurantId: string; locationId: string }>();
   const { mutate: initializeNotifications } = useInitializeNotifications();
+  const { data: locations } = useLocations(restaurantId);
+  const { setLocationName } = appStore();
+  const setPrinters = appStore((state) => state.setPrinters);
+
+  const [userId, setUserId] = useState<string | undefined>();
+  const { setRestaurantName } = appStore();
+  const { data: printers } = usePrinters(restaurantId, locationId);
+  useEffect(() => {
+    if (printers) {
+      setPrinters(printers);
+    }
+  }, [printers, setPrinters]);
+  useEffect(() => {
+    const getJWT = async () => {
+      if (await Session.doesSessionExist()) {
+        const accessToken = await Session.getUserId();
+        setUserId(accessToken);
+      }
+    };
+    getJWT();
+  }, []);
+  const { data: restaurantsData } = useRestaurants(userId);
+  useEffect(() => {
+    if (restaurantsData && restaurantsData.length === 1) {
+      setRestaurantName(restaurantsData[0].name);
+    } else {
+      const currentRestaurant = restaurantsData?.find((restaurant) => restaurant._id === restaurantId);
+      if (currentRestaurant) {
+        setRestaurantName(currentRestaurant.name);
+      }
+    }
+  }, [restaurantsData, setRestaurantName]);
+  useEffect(() => {
+    if (locations && locations.length === 1) {
+      setLocationName(locations[0].name);
+    } else {
+      const currentLocation = locations?.find((location) => location._id === locationId);
+      if (currentLocation) {
+        setLocationName(currentLocation.name);
+      }
+    }
+  }, [locations, locationId, setLocationName]);
   useEffect(() => {
     if (restaurantId) {
       initializeNotifications(restaurantId);
@@ -42,110 +79,51 @@ const LaunchPadPage: React.FC = (props) => {
       <LaunchPadNavBar title='Launch Pad' />
       <IonContent>
         <IonGrid>
-          <IonRow class=' ion-padding-top ion-align-items-center'>
-            <IonCol size-sm='6' size-md='3' className='ion-text-center'>
-              <Link to={`/${restaurantId}/${locationId}/apps/orders`}>
-                <IonCard className='card-width ion-padding'>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRadius: '25%',
-                        padding: '9px',
-                        marginTop: '10px',
-                      }}
-                      className=' icon-back '
-                    >
-                      <MdDashboard size={32} color='white' />
-                    </div>
-                  </div>
-                  <div
-                    style={{ display: 'flex', justifyContent: 'center', fontWeight: '400', color: '#383838' }}
-                    className='ion-padding-top'
-                  >
-                    Orders
-                  </div>
-                </IonCard>
-              </Link>
-            </IonCol>
-            <IonCol size-sm='6' size-md='3' className='ion-text-center'>
-              <Link to={`/${restaurantId}/${locationId}/apps/menu/list`}>
-                <IonCard className='card-width ion-padding'>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRadius: '25%',
-                        padding: '9px',
-                        marginTop: '10px',
-                      }}
-                      className=' icon-back '
-                    >
-                      <BiFoodMenu size={32} color='white' />
-                    </div>
-                  </div>
-                  <div
-                    style={{ display: 'flex', justifyContent: 'center', color: '#383838' }}
-                    className='ion-padding-top'
-                  >
-                    Menu
-                  </div>
-                </IonCard>
-              </Link>
-            </IonCol>
-            <IonCol size-sm='6' size-md='3' className='ion-text-center'>
-              <Link to={`/${restaurantId}/${locationId}/apps/origins`}>
-                <IonCard className='card-width ion-padding'>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <IonIcon
-                      icon={qrCodeOutline}
-                      size='large'
-                      className=' icon-back '
-                      color='light'
-                      style={{ marginTop: '8px' }}
-                    ></IonIcon>
-                  </div>
-                  <div
-                    style={{ display: 'flex', justifyContent: 'center', color: '#383838' }}
-                    className='ion-padding-top'
-                  >
-                    Origins
-                  </div>
-                </IonCard>
-              </Link>
-            </IonCol>
-            <IonCol size-sm='6' size-md='3' className='ion-text-center'>
-              <Link to={`/${restaurantId}/${locationId}/apps/kds`}>
-                <IonCard className='card-width ion-padding'>
-                  <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderRadius: '25%',
-                        padding: '9px',
-                        marginTop: '10px',
-                      }}
-                      className=' icon-back '
-                    >
-                      <LuGitBranchPlus size={32} color='white' />
-                    </div>
-                  </div>
-                  <div
-                    style={{ display: 'flex', justifyContent: 'center', color: '#383838' }}
-                    className='ion-padding-top'
-                  >
-                    Stations
-                  </div>
-                </IonCard>
-              </Link>
-            </IonCol>
-          </IonRow>
+          {getLaunchPadConfig(restaurantId, locationId).map((section, sectionIndex) => (
+            <React.Fragment key={sectionIndex}>
+              <IonRow className='ion-padding-top '>
+                <IonCol size='12'>
+                  <IonTitle className='ion-padding-start' style={{ fontSize: '17px' }}>
+                    {section.name}
+                  </IonTitle>
+                </IonCol>
+              </IonRow>
+              <IonRow className='ion-padding-start  ion-padding-top'>
+                {section.apps.map((app, appIndex) => (
+                  <IonCol key={appIndex} size='6' size-md='3' className='ion-text-center'>
+                    <Link to={app.link}>
+                      <IonCard className='card-width ion-padding'>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              borderRadius: '25%',
+                              padding: '9px',
+                              marginTop: '10px',
+                            }}
+                          >
+                            {app.isIonIcon ? (
+                              <IonIcon icon={app.icon as string} color={app.iconProps?.color} size='large' />
+                            ) : (
+                              React.createElement(app.icon as IconType, {
+                                size: app.iconProps?.size,
+                                color: app.iconProps?.color,
+                              })
+                            )}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'center' }} className='ion-padding-top'>
+                          {app.name}
+                        </div>
+                      </IonCard>
+                    </Link>
+                  </IonCol>
+                ))}
+              </IonRow>
+            </React.Fragment>
+          ))}
         </IonGrid>
       </IonContent>
     </IonPage>

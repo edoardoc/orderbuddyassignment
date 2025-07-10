@@ -1,22 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
+import { OrderStatus } from '../constants';
 
-interface Customer {
+export interface Customer {
   name: string;
   phone: string;
 }
 
-interface Station {
+export interface Origin {
   id: string;
   name: string;
 }
 
-interface Variant {
+export interface Variant {
   id: string;
   name: string;
 }
 
-interface Modifier {
+export interface Modifier {
   id: string;
   name: string;
   options?: Array<{
@@ -26,36 +27,41 @@ interface Modifier {
   }>;
 }
 
-interface OrderItem {
+export interface OrderItem {
   id: string;
   menuItemId: string;
   name: string;
-  price: number;
+  priceCents: number;
   modifiers: Modifier[];
   variants: Variant[];
   stationTags: string[];
   startedAt: Date | null;
   completedAt: Date | null;
 }
-interface Order {
+
+export interface Order {
   _id: string;
+  orderCode: string;
   paymentId: string;
+  meta: {
+    correlationId: string;
+  };
   restaurant: string;
   customer: Customer;
-  station: Station;
+  origin: Origin;
   items: OrderItem[];
   startedAt: Date;
-  totalPrice: number;
+  totalPriceCents: number;
   getSms: boolean;
   status: string;
+  endedAt?: Date;
 }
-// ...existing code...
 
-export function useActiveOrder(
+export function useTodayOrders(
   restaurantId: string,
   locationId: string,
   addItemToMap: (key: string, value: Order) => void,
-  setSelectedOrder: (order: Order) => void,
+  addCompletedOrderToMap: (key: string, value: Order) => void,
   correlationId?: string
 ) {
   if (!restaurantId || !locationId) {
@@ -63,26 +69,32 @@ export function useActiveOrder(
   }
 
   return useQuery<Order[]>({
-    queryKey: ['activeOrders', restaurantId, locationId, correlationId],
+    queryKey: ['todayOrders', restaurantId, locationId, correlationId],
     queryFn: async () => {
-      const res = await axiosInstance.get<Order[]>(`restaurant/active-orders/${restaurantId}/${locationId}`, {
+      const res = await axiosInstance.get<Order[]>(`restaurant/orders/today/${restaurantId}/${locationId}`, {
         headers: {
           'X-Request-Id': correlationId,
         },
       });
-
       if (!res.data) {
-        throw new Error('No active orders found');
+        throw new Error('No today orders found');
       }
-
       // Sort and process orders
       const orders = res.data.sort().reverse();
 
+      let firstActiveOrder: Order | null = null;
+
       if (orders.length > 0) {
         orders.forEach((order) => {
-          addItemToMap(order._id, order);
+          if (order.status === OrderStatus.Completed) {
+            addCompletedOrderToMap(order._id, order);
+          } else {
+            addItemToMap(order._id, order);
+            if (!firstActiveOrder) {
+              firstActiveOrder = order;
+            }
+          }
         });
-        setSelectedOrder(orders[0]);
       }
 
       return orders;

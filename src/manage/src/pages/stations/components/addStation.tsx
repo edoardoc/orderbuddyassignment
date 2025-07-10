@@ -1,8 +1,4 @@
 import {
-  IonCard,
-  IonCardContent,
-  IonIcon,
-  IonLabel,
   IonModal,
   IonHeader,
   IonToolbar,
@@ -13,9 +9,10 @@ import {
   IonItem,
   IonInput,
   IonText,
+  IonGrid,
+  IonRow,
+  IonCol,
 } from '@ionic/react';
-import { addCircleOutline } from 'ionicons/icons';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -90,10 +87,15 @@ const AddStationModal: React.FC<AddStationModalProps> = ({ isOpen, onClose }) =>
                 <small>{errors.name.message}</small>
               </IonText>
             )}
-
-            <IonButton type='submit' expand='block' className='ion-margin-top'>
-              Add Station
-            </IonButton>
+            <IonGrid>
+              <IonRow className='ion-justify-content-center'>
+                <IonCol size='12' className='ion-text-center'>
+                  <IonButton type='submit' className='ion-margin-top solid-button'>
+                    Add Station
+                  </IonButton>
+                </IonCol>
+              </IonRow>
+            </IonGrid>
           </form>
         </IonContent>
       </IonModal>

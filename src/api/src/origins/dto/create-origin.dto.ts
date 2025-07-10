@@ -22,6 +22,14 @@ export class OriginsParamsDto {
 }
 
 // Response
+export class LogoUploadParamsDto {
+  @IsNotEmpty()
+  @IsString()
+  restaurantId: string;
+  @IsNotEmpty()
+  @IsString()
+  locationId: string;
+}
 export class CreateOriginDto {
   @IsNotEmpty()
   @IsString()

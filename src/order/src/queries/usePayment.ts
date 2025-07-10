@@ -1,7 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
-import { v4 as uuid } from 'uuid'; // Import uuid for generating unique request IDs
-import { appStore } from '../../store';
 
 interface OrderItem {
   id: string;
@@ -10,7 +8,7 @@ interface OrderItem {
   price: number;
 }
 
-interface Station {
+interface Origin {
   id: string;
   name: string;
 }
@@ -18,7 +16,7 @@ interface Station {
 interface CreateOrderRequest {
   restaurantId: string;
   paymentId: string;
-  station: Station;
+  origin: Origin;
   customer: Customer;
   items: OrderItem[];
   getSms: boolean;
@@ -39,43 +37,35 @@ interface TokenResponse {
   transactionToken: string;
 }
 
-export function useToken(restaurantId: string) {
-  const setUuid = appStore((state) => state.setUuid);
-  const currentUuid = appStore((state) => state.uuid);
-
+export function useToken(restaurantId: string, requestUuid: string) {
   if (!restaurantId) {
     throw new Error('restaurantId is required');
   }
 
   return useQuery<TokenResponse>({
-    queryKey: ['token', restaurantId],
+    queryKey: ['token', restaurantId, requestUuid],
     queryFn: async () => {
-      const requestId = currentUuid || uuid();
-      if (!currentUuid) {
-        setUuid(requestId);
-      }
       const response = await axiosInstance.post<TokenResponse>(
         `payments/start-transaction/${restaurantId}`,
         {},
         {
           headers: {
-            'X-Request-Id': requestId,
+            'X-Request-Id': requestUuid,
           },
         }
       );
       return response.data;
     },
+    staleTime: Infinity,
   });
 }
 
 export function useCompletePayment() {
-  const currentUuid = appStore((state) => state.uuid);
-
-  return useMutation<TransactionResponse, Error, CreateOrderRequest>({
-    mutationFn: async (createOrder) => {
-      const response = await axiosInstance.post<TransactionResponse>('payments/complete-transaction', createOrder, {
+  return useMutation<TransactionResponse, Error, { order: CreateOrderRequest; requestUuid: string }>({
+    mutationFn: async ({ order, requestUuid }) => {
+      const response = await axiosInstance.post<TransactionResponse>('payments/complete-transaction', order, {
         headers: {
-          'X-Request-Id': currentUuid, // Use the same requestId
+          'X-Request-Id': requestUuid,
         },
       });
       return response.data;

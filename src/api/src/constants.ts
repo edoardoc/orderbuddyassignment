@@ -1,4 +1,3 @@
-export const WAITING_TIME = 10;
 export enum OrderStatus {
   OrderPlaced = 'ORDER_PLACED',
   Preparing = 'PREPARING',

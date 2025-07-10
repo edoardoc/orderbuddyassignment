@@ -115,14 +115,14 @@ export interface StoreProfileSettings {
 }
 export type Order = {
   _id: string;
-  station: Station;
+  origin: Origin;
   customer: Customer;
   items: OrderItem[];
   orderItemCount: number;
   startedAt: string;
   waitTimeInMinutes: number;
   status: string;
-  totalPrice: number;
+  totalPriceCents: number;
   endedAt?: string;
   isDelayed: boolean;
   hasChanged: boolean;
@@ -148,36 +148,33 @@ export type Customer = {
   name: string;
   phone: string;
 };
-export type Station = {
+export type Origin = {
   id: string;
   name: string;
 };
 type State = {
-  selectedRestaurantName?: string;
-  selectedLocationName?: string;
+  selection: {
+    restaurant: {
+      name?: string;
+      logo?: string;
+    };
+    location: {
+      name?: string;
+    };
+  };
+  printers: {
+    id: string;
+    name: string;
+    ip: string;
+    type: string;
+  }[];
   authToken: string;
-  order_item_started: order_item_started;
-  order_item_completed: order_item_completed;
   order_ready_for_pickup: order_ready_for_pickup;
   order_completed: order_completed;
-  // CallByOrderDisplay: boolean
-  // DisplayOrderId: string
-  // isMenuEditing: boolean
-  // store: Store
-  // editMenu: MenuItem
-  // isEditingMenu: boolean
-  // completedOrder: Order[]
-  // storeProfileSettings: StoreProfileSettings
 };
 
 type Action = {
   setAuthToken: (token: string) => void;
-
-  // setOrderItemStarted: (value: order_item_started) => void;
-  // setOrderItemStartedBoolean: (value: boolean) => void;
-
-  // setOrderItemCompleted: (value: order_item_completed) => void;
-  // setOrderItemCompletedBoolean: (value: boolean) => void;
 
   setOrderReadyForPickup: (value: order_ready_for_pickup) => void;
   setOrderReadyForPickupBoolean: (value: boolean) => void;
@@ -187,37 +184,22 @@ type Action = {
 
   setRestaurantName: (name: string) => void;
   setLocationName: (name: string) => void;
-
-  // setDisplayOrderId: (id: string) => void
-  // setDisplayOrderIdFlag: (flag: boolean) => void
-
-  // setMenuEditing: (value: boolean) => void
-
-  // setStore: (store: Store) => void
-
-  // setEditMenu: (menu: MenuItem) => void
-
-  // setIsEditingMenu: (status: boolean) => void
-
-  // setCompletedOrder: (order: Order[]) => void
-  // addCompletedOrder: (order: Order) => void
-  // setStoreProfileSettings: (settings: StoreProfileSettings) => void
+  setRestaurantLogo: (logo: string) => void;
+  setPrinters: (printers: State['printers']) => void;
 
   reset: () => void;
 };
 const initialState: State = {
+  selection: {
+    restaurant: {
+      name: '',
+      logo: '',
+    },
+    location: {
+      name: '',
+    },
+  },
   authToken: '',
-
-  order_item_started: {
-    orderId: '',
-    itemId: '',
-    startedBoolean: false,
-  },
-  order_item_completed: {
-    orderId: '',
-    itemId: '',
-    startedBoolean: false,
-  },
   order_ready_for_pickup: {
     orderId: '',
     startedBoolean: false,
@@ -226,6 +208,7 @@ const initialState: State = {
     orderId: '',
     startedBoolean: false,
   },
+  printers: [],
 };
 
 export const appStore = create<State & Action>()(
@@ -233,17 +216,6 @@ export const appStore = create<State & Action>()(
     (set) => ({
       ...initialState,
       authToken: '',
-
-      order_item_started: {
-        orderId: '',
-        itemId: '',
-        startedBoolean: false,
-      },
-      order_item_completed: {
-        orderId: '',
-        itemId: '',
-        startedBoolean: false,
-      },
       order_ready_for_pickup: {
         orderId: '',
         startedBoolean: false,
@@ -252,34 +224,16 @@ export const appStore = create<State & Action>()(
         orderId: '',
         startedBoolean: false,
       },
-      DisplayOrderId: '',
-      CallByOrderDisplay: false,
-      isMenuEditing: false,
-      store: {
-        id: '',
-        name: '',
-      },
-      editMenu: {
-        id: '',
-        categoryId: '',
-        name: '',
-        code: '',
-        price: 0,
-        imageUrl: '',
-        description: '',
-        toppingsAllowed: [],
-        // maxToppingsAllowed: 0,
-        displayIds: [],
-        addOnsAllowed: [],
-        // maxAddOnsAllowed: 0,
-        sizes: [],
-        freeToppingsAllowed: 0,
-        maxAddOnAllowed: 0,
-      },
-      completedOrder: [],
-      isEditingMenu: false,
+
       reset: () => {
         set(initialState);
+      },
+      setRestaurantLogo: (logo: string) => {
+        set(
+          produce((state: State) => {
+            state.selection.restaurant.logo = logo;
+          })
+        );
       },
       setAuthToken(token: string) {
         set(
@@ -288,9 +242,20 @@ export const appStore = create<State & Action>()(
           })
         );
       },
-      setRestaurantName: (name: string) => set((state) => ({ selectedRestaurantName: name })),
-
-      setLocationName: (name: string) => set((state) => ({ selectedLocationName: name })),
+      setRestaurantName: (name: string) => {
+        set(
+          produce((state: State) => {
+            state.selection.restaurant.name = name;
+          })
+        );
+      },
+      setLocationName: (name: string) => {
+        set(
+          produce((state: State) => {
+            state.selection.location.name = name;
+          })
+        );
+      },
       setOrderReadyForPickup(value: order_ready_for_pickup) {
         set(
           produce((state: State) => {
@@ -323,73 +288,13 @@ export const appStore = create<State & Action>()(
           })
         );
       },
-
-      // setDisplayOrderId(id: string) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.DisplayOrderId = id
-      //     })
-      //   )
-      // },
-      // setDisplayOrderIdFlag(flag: boolean) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.CallByOrderDisplay = flag
-      //     })
-      //   )
-      // },
-      // setMenuEditing(value: boolean) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.isMenuEditing = value
-      //     })
-      //   )
-      // },
-      // setStore(store: any) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.store.id = store._id
-      //       state.store.name = store.name
-      //     })
-      //   )
-      // },
-
-      // setEditMenu(menu: MenuItem) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.editMenu = menu
-      //     })
-      //   )
-      // },
-      // setIsEditingMenu(status: boolean) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.isEditingMenu = status
-      //     })
-      //   )
-      // },
-
-      // setCompletedOrder(order: Order[]) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.completedOrder = order
-      //     })
-      //   )
-      // },
-      // addCompletedOrder(order: Order) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.completedOrder.push(order)
-      //     })
-      //   )
-      // },
-      // setStoreProfileSettings(settings: StoreProfileSettings) {
-      //   set(
-      //     produce((state: State) => {
-      //       state.storeProfileSettings = settings
-      //     })
-      //   )
-      // },
+      setPrinters: (printers: State['printers']) => {
+        set(
+          produce((state: State) => {
+            state.printers = printers;
+          })
+        );
+      },
     }),
 
     {

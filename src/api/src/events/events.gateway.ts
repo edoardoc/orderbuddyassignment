@@ -11,18 +11,15 @@ import { EventsService } from './events.service';
 import { Logger } from '@nestjs/common';
 import {
   JoinStoreDto,
-  JoinDisplayDto,
   OrderItemStartedDto,
   OrderPickupDto,
   OrderCompletedDto,
   UpdateOrderWaitTimeDto,
   OrderItemCompletedDto,
   OrderSubmittedDto,
-  JoinOrderDto,
-  JoinStationDto,
 } from './dtos/events.gateway.dto';
 import * as dotenv from 'dotenv'; // Change import statement
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
+import { logger as pinoLoggerTrace } from 'src/logger/pino.logger';
 
 dotenv.config();
 
@@ -36,26 +33,25 @@ class Events {
   },
 })
 export class EventsGateway implements OnGatewayConnection {
+  private readonly loggerTrace = pinoLoggerTrace.child({ context: 'EventsGateway' });
   @WebSocketServer()
   server!: Socket;
 
   private readonly logger = new Logger(EventsGateway.name);
 
-  constructor(
-    private readonly eventsService: EventsService,
-    @InjectPinoLogger(EventsGateway.name) private readonly traceLogger: PinoLogger
-  ) {}
+  constructor(private readonly eventsService: EventsService) {}
 
   handleConnection(socket: Socket): void {
-    this.traceLogger.trace(
-      {
-        module: 'websocket',
-        event: 'connection',
-        clientId: socket.id,
-        ip: socket.handshake.address,
-      },
-      'Client connected'
-    );
+    // this.traceLogger.trace(
+    //   {
+    //     module: 'websocket',
+    //     event: 'connection',
+    //     clientId: socket.id,
+    //     ip: socket.handshake.address,
+    //   },
+    //   'Client connected'
+    // );
+
     this.logger.debug(`${socket.id} connected`);
 
     socket.on('disconnect', () => {
@@ -63,27 +59,40 @@ export class EventsGateway implements OnGatewayConnection {
     });
   }
 
-  @SubscribeMessage('order_received')
-  onOrderReceived(@MessageBody() data: OrderSubmittedDto): void {
-    if (!data.restaurantId || !data.locationId) {
-      this.logger.error('Restaurant ID or Location ID is missing from order received event');
-      return;
-    }
-
-    const locationRoom = `${data.restaurantId}_${data.locationId}`;
-    this.server.to(locationRoom).emit('order_received', data);
-
-    this.traceLogger.trace(
-      {
-        module: 'websocket',
-        event: 'order_received',
-        restaurantId: data.restaurantId,
-        locationId: data.locationId,
-        orderId: data.orderId,
-      },
-      'Order received event emitted to location room'
-    );
-  }
+  // @SubscribeMessage('order_received')
+  // onOrderReceived(@MessageBody() data: OrderSubmittedDto): void {
+  //   try {
+  //     if (!data.restaurantId || !data.locationId) {
+  //       throw new Error('Restaurant ID or Location ID is missing from order received event');
+  //     }
+  //     try {
+  //       this.loggerTrace.trace(
+  //         {
+  //           module: 'websocket',
+  //           event: 'order_received',
+  //           correlationId: data.correlationId,
+  //           restaurantId: data.restaurantId,
+  //           locationId: data.locationId,
+  //           orderId: data.orderId,
+  //         },
+  //         'Order received event emitted to dashboard'
+  //       );
+  //     } catch (logError) {
+  //       this.loggerTrace.error('Failed to log order received  dashboard trace:', logError.message);
+  //     }
+  //     const locationRoom = `${data.restaurantId}_${data.locationId}`;
+  //     this.server.to(locationRoom).emit('order_received', data);
+  //   } catch (error) {
+  //     this.logger.error({
+  //       message: 'Failed to process order received event',
+  //       error: error.message,
+  //       correlationId: data?.correlationId,
+  //       restaurantId: data?.restaurantId,
+  //       locationId: data?.locationId,
+  //       orderId: data?.orderId,
+  //     });
+  //   }
+  // }
 
   @SubscribeMessage('store_joined')
   onStoreJoined(@ConnectedSocket() socket: Socket, @MessageBody() data: JoinStoreDto): void {
@@ -110,7 +119,7 @@ export class EventsGateway implements OnGatewayConnection {
     @ConnectedSocket() client?: Socket // Make socket optional since it might be called directly
   ) {
     try {
-      this.traceLogger.trace(
+      this.loggerTrace.trace(
         {
           module: 'websocket',
           event: 'order_joined',
@@ -118,7 +127,7 @@ export class EventsGateway implements OnGatewayConnection {
           orderId: data.orderId,
           restaurantId: data.restaurantId,
         },
-        'Order joined to WebSocket room'
+        'Order joined to Station'
       );
       // Add client to room for this specific order
       // client.join(data.orderId)
@@ -128,16 +137,7 @@ export class EventsGateway implements OnGatewayConnection {
 
       // Get all connected stations that match the tags
       const stations = await this.eventsService.getStationsByTags(data.restaurantId, data.locationId, data.stationTags);
-      this.traceLogger.trace(
-        {
-          module: 'websocket',
-          event: 'stations_found',
-          correlationId: data.correlationId,
-          orderId: data.orderId,
-          stationCount: stations.length,
-        },
-        `Found ${stations.length} matching stations`
-      );
+
       this.logger.debug(`Found ${stations.length} matching stations for location ${data.locationId}`);
       // Emit to matching stations
       stations.forEach((station) => {
@@ -145,19 +145,32 @@ export class EventsGateway implements OnGatewayConnection {
           orderId: data.orderId,
           stationTags: station.stationTags,
           locationId: data.locationId,
-          correlationId: data.correlationId, // Pass correlationId to client
+          correlationId: data.correlationId,
         });
-        this.traceLogger.trace(
+        if (stations.length > 0) {
+          this.loggerTrace.trace(
+            {
+              module: 'websocket',
+              event: 'order_routed',
+              correlationId: data.correlationId,
+              orderId: data.orderId,
+              stationId: station.id,
+            },
+            'Order mapped to station'
+          );
+        }
+      });
+      if (stations.length === 0) {
+        this.loggerTrace.trace(
           {
             module: 'websocket',
-            event: 'order_routed',
+            event: 'order_routing_failed',
             correlationId: data.correlationId,
             orderId: data.orderId,
-            stationId: station.id,
           },
-          'Order routed to station'
+          `Failed to map station`
         );
-      });
+      }
 
       // Confirm routing
     } catch (error) {
@@ -169,9 +182,19 @@ export class EventsGateway implements OnGatewayConnection {
           correlationId: data.correlationId,
           orderId: data.orderId,
           error: error.message,
+        },
+        'Exception - Station mapping'
+      );
+      this.loggerTrace.trace(
+        {
+          module: 'websocket',
+          event: 'order_routing_failed',
+          correlationId: data.correlationId,
+          orderId: data.orderId,
+          error: error.message,
           stack: error.stack,
         },
-        'Failed to route order'
+        'Exception - Station mapping '
       );
     }
   }

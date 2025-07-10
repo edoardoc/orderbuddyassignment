@@ -19,6 +19,8 @@ import { AiModule } from './ai/ai.module';
 import { OriginsModule } from './origins/origins.module';
 import { StorageModule } from './storage/storage.module';
 import { AzureInsightsMiddleware } from './middleware/appInsights.middleware';
+import { MessageModule } from './message/message.module';
+import { PrintersModule } from './printers/printers.module';
 
 @Module({
   imports: [
@@ -98,6 +100,7 @@ import { AzureInsightsMiddleware } from './middleware/appInsights.middleware';
         },
       ],
     }),
+
     WebPushModule,
     EventsModule,
     RestaurantModule,
@@ -109,12 +112,14 @@ import { AzureInsightsMiddleware } from './middleware/appInsights.middleware';
     AiModule,
     OriginsModule,
     StorageModule,
+    MessageModule,
+    PrintersModule,
   ],
   controllers: [],
   providers: [MongoIndexInitializer, Logger],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggingMiddleware, AzureInsightsMiddleware).forRoutes('*'); // Apply middleware globally
+    consumer.apply(LoggingMiddleware).forRoutes('*'); // Apply middleware globally
   }
 }

@@ -10,6 +10,7 @@ import { ORDER_SESSION_KEY, ORDER_SESSION_TTL } from '@/constants/app-config';
 import { useMenu } from '@/queries/useMenu';
 import { delay } from '@/utils/delay';
 import { menu } from 'ionicons/icons';
+import { Paths } from '@/routes/paths';
 
 type EntryParams = {
   restaurantId: string;
@@ -17,80 +18,98 @@ type EntryParams = {
 };
 
 export function EntryPage() {
+  const nameParam = useQueryParams().get('name');
+  const restaurantName = nameParam ? decodeURIComponent(nameParam) : null;
+
   const { restaurantId, locationId } = useParams<EntryParams>();
   const router = useIonRouter();
 
   const setOrderOrigin = useOrderStore((s) => s.setOrderOrigin);
-  const setRestaurant = useOrderStore((s) => s.setRestaurant);
+  const setRestaurantName = useOrderStore((s) => s.setRestaurantName);
   const setMenuId = useOrderStore((s) => s.setMenuId);
   const restoreCart = useOrderStore((s) => s.restoreCartFromSession);
-  const persistSession = useOrderStore((s) => s.persistSession);
+  // const persistSession = useOrderStore((s) => s.persistSession);
 
+  //todo:standup
   const originId = useQueryParams().get('originId') || 'web';
-  const nameParam = useQueryParams().get('name');
-  const restaurantName = nameParam ? decodeURIComponent(nameParam) : null;
-
   const { data: entryInfo, isError: entryInfoIsError, error } = useEntryInfo(restaurantId, locationId, originId);
   const { data: menus, isError } = useMenus(restaurantId, locationId);
-  useMenu(restaurantId, locationId, menus?.[0]?._id!);
 
   const start = Date.now();
 
   const init = async () => {
     if (!entryInfo) return;
     if (!menus || menus.length === 0) return;
-
     if (entryInfoIsError) {
       switch (error.message) {
         case 'INVALID_ORIGIN':
           router.push('/error?code=invalid-origin', 'forward');
           return;
+        case 'INVALID_RESTAURANT':
+          router.push('/error?code=invalid-restaurant', 'forward');
+          return;
+        case 'INVALID_LOCATION':
+          router.push('/error?code=invalid-location', 'forward');
+          return;
       }
     }
+    setOrderOrigin({ restaurantId, locationId, originId });
+    setRestaurantName(entryInfo.restaurant.name);
+
+    // Handle session restoration
+    const sessionRaw = localStorage.getItem(ORDER_SESSION_KEY);
+    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
+    const now = Date.now();
+
     if (menus.length > 1) {
-      router.push(
-        `/menus/${restaurantId}/${entryInfo.location.locationSlug}/${locationId}?originId=${originId}`,
-        'forward'
-      );
+      // persistSession();
+      router.push(Paths.menus(restaurantId, entryInfo.location.locationSlug, locationId, originId), 'forward');
       return;
     }
 
     const menuId = menus[0]._id;
     const menuSlug = menus[0].menuSlug;
 
-    const sessionRaw = localStorage.getItem(ORDER_SESSION_KEY);
-    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-    const now = Date.now();
-
     //todo: dupe logic in store.ts
-    if (
-      session &&
-      session.restaurantId === restaurantId &&
-      session.locationId === locationId &&
-      session.originId === originId &&
-      session.menuId === menuId &&
-      now - session.timestamp < ORDER_SESSION_TTL
-    ) {
-      restoreCart(session.cart);
-    }
+    // if (
+    //   session &&
+    //   session.restaurantId === restaurantId &&
+    //   session.locationId === locationId &&
+    //   session.originId === originId &&
+    //   session.menuId === menuId &&
+    //   now - session.timestamp < ORDER_SESSION_TTL
+    // ) {
+    //   // restoreCart(session.cart);
+    // }
+    // persistSession();
     setOrderOrigin({ restaurantId, locationId, originId });
-    setRestaurant(entryInfo);
+    setRestaurantName(entryInfo.restaurant.name);
     setMenuId(menuId);
-    persistSession();
 
     const elapsed = Date.now() - start;
     const MIN_DURATION = 2000;
     if (elapsed < MIN_DURATION) await delay(MIN_DURATION - elapsed);
-    console.log('EntryPage init completed in', elapsed, 'ms');
     router.push(
-      `/menu/${restaurantId}/${entryInfo.location.locationSlug}/${locationId}/${menuSlug}/${menuId}?originId=${originId}`,
+      Paths.menu(restaurantId, entryInfo.location.locationSlug, locationId, menuSlug, menuId, originId),
       'forward'
     );
+    return;
   };
 
   useEffect(() => {
     init();
-  }, [entryInfo, restaurantId, locationId, originId, router, setOrderOrigin, setRestaurant, setMenuId, restoreCart]);
+  }, [
+    menus,
+    entryInfo,
+    restaurantId,
+    locationId,
+    originId,
+    router,
+    setOrderOrigin,
+    setRestaurantName,
+    setMenuId,
+    // persistSession,
+  ]);
 
   if (isError) {
     console.error('Error loading restaurant data:', isError);
@@ -112,7 +131,9 @@ export function EntryPage() {
         <IonSpinner name='crescent' />
       </IonContent>
 
-      <IonFooter className='ion-padding ion-text-end'>Powered by OrderBuddy</IonFooter>
+      <IonFooter className='ion-padding ion-text-end'>
+        <IonText>Powered by OrderBuddy</IonText>
+      </IonFooter>
     </IonPage>
   );
 }

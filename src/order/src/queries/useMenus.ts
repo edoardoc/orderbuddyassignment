@@ -22,8 +22,6 @@ const menusResponseSchema = z.array(
 export type MenusResponse = z.infer<typeof menusResponseSchema>;
 
 export function useMenus(restaurantId: string, locationId: string) {
-  logger.debug({ restaurantId, locationId }, 'useMenus called');
-
   return useQuery<MenusResponse>({
     queryKey: ['menus', restaurantId, locationId],
     queryFn: async () => {
@@ -33,7 +31,6 @@ export function useMenus(restaurantId: string, locationId: string) {
       const data = handleApiResponse(response);
       try {
         const validatedData = menusResponseSchema.parse(data);
-        logger.debug('useMenus returned');
         return validatedData.map((menu) => ({
           ...menu,
         }));

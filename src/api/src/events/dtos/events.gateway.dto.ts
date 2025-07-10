@@ -13,6 +13,7 @@ export class OrderSubmittedDto {
   restaurantId!: string;
   orderId!: string;
   locationId!: string;
+  correlationId?: string;
 }
 
 export class DisplayIdDto {

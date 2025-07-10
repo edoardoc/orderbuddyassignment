@@ -1,21 +1,28 @@
 import React, { useRef } from 'react';
 import { useHistory } from 'react-router-dom';
-import { appStore } from '../../../../../store';
 import { CheckoutButton } from '../checkoutbutton/checkoutbutton';
 import { PaymentModal } from '../payment/paymentmodal';
 
 interface CheckoutContainerProps {
   isValidPlaceOrder: boolean;
-  calculateTotal: () => number;
+  calculateTotal: number;
+  customerData: {
+    name: string;
+    phone: string;
+    getSms: boolean;
+  };
 }
 
-export const CheckoutContainer: React.FC<CheckoutContainerProps> = ({ isValidPlaceOrder, calculateTotal }) => {
+export const CheckoutContainer: React.FC<CheckoutContainerProps> = ({
+  isValidPlaceOrder,
+  calculateTotal,
+  customerData,
+}) => {
   const paymentModal = useRef<HTMLIonModalElement>({} as HTMLIonModalElement);
 
-  const amount = calculateTotal(); // Now we call the function when needed
+  const amount = calculateTotal;
   const handlePaymentSuccess = () => {
     paymentModal.current?.dismiss();
-    // Add your payment success navigation logic here
   };
 
   const handlePaymentError = (error: any) => {
@@ -35,6 +42,7 @@ export const CheckoutContainer: React.FC<CheckoutContainerProps> = ({ isValidPla
         onPaymentSuccess={handlePaymentSuccess}
         onPaymentError={handlePaymentError}
         onCancel={handleCancel}
+        customerData={customerData}
       />
     </>
   );

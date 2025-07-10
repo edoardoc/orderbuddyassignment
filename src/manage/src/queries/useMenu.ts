@@ -33,7 +33,7 @@ const modifierSchema = z.object({
   maxChoices: z.number(),
   freeChoices: z.number(),
   extraChoicePriceCents: z.number(),
-  options: z.array(modifierOptionSchema),
+  options: z.array(modifierOptionSchema).nullable().default([]).optional(),
 });
 
 const categorySchema = z.object({
@@ -52,7 +52,7 @@ const menuItemSchema = z.object({
   categoryId: z.string(),
   priceCents: z.number(),
   makingCostCents: z.number().nullable().default(0),
-  isAvailable: z.boolean().nullable().default(true),
+  isAvailable: z.boolean().default(true).nullable(),
   stationTags: z.array(z.string()).nullable().default([]),
   variants: z.array(variantSchema).nullable().default([]).optional(),
   modifiers: z.array(modifierSchema).nullable().default([]),
@@ -77,7 +77,7 @@ export function useMenu(restaurantId: string, locationId: string, menuId: string
     queryFn: async () => {
       try {
         const response = await axiosInstance.get<ApiResponse<Menu>>(
-          `order-app/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`
+          `restaurant/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`
         );
 
         const { data } = response;

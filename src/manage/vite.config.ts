@@ -1,13 +1,13 @@
 /// <reference types="vitest" />
 
-import legacy from "@vitejs/plugin-legacy";
-import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
-import { VitePWA } from "vite-plugin-pwa";
-import dotenv from "dotenv";
+import legacy from '@vitejs/plugin-legacy';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
+import dotenv from 'dotenv';
 
 dotenv.config();
-// https://vitejs.dev/config/
+
 export default defineConfig({
   define: {
     global: {},
@@ -30,46 +30,43 @@ export default defineConfig({
       //   enabled: true, // Enables manifest.json during `npm run dev`
       // }, // have to disable for production
 
-      registerType: "autoUpdate", // Change from autoUpdate to prompt
+      registerType: 'autoUpdate', // Change from autoUpdate to prompt
       manifest: {
-        short_name:
-          process.env.NODE_ENV === "dev"
-            ? "OrderBuddy Manage-dev"
-            : "OrderBuddy Manage-prod",
-        name: "OrderBuddy Manage",
-        start_url: "/",
-        display: "standalone",
-        theme_color: "#5a199b",
-        background_color: "#5a199b",
+        short_name: process.env.NODE_ENV === 'dev' ? 'OrderBuddy Manage-dev' : 'OrderBuddy Manage',
+        name: 'OrderBuddy Manage',
+        start_url: '/',
+        display: 'standalone',
+        theme_color: '#5a199b',
+        background_color: '#5a199b',
 
         icons: [
           {
-            src: "assets/icon/orderbuddy-192.png",
-            sizes: "192x192",
-            type: "image/png",
+            src: 'assets/icon/orderbuddy-192.png',
+            sizes: '192x192',
+            type: 'image/png',
           },
           {
-            src: "assets/icon/orderbuddy-512.png",
-            type: "image/png",
-            sizes: "512x512",
-            purpose: "any",
+            src: 'assets/icon/orderbuddy-512.png',
+            type: 'image/png',
+            sizes: '512x512',
+            purpose: 'any',
           },
         ],
         screenshots: [
           {
-            src: "assets/screenshots/orderBuddyLanding.png",
-            sizes: "1080x1920",
-            type: "image/png",
-            form_factor: "wide",
+            src: 'assets/screenshots/orderBuddyLanding.png',
+            sizes: '1080x1920',
+            type: 'image/png',
+            form_factor: 'wide',
           },
           {
-            src: "assets/screenshots/orderBuddyLanding.png",
-            sizes: "1080x1920",
-            type: "image/png",
+            src: 'assets/screenshots/orderBuddyLanding.png',
+            sizes: '1080x1920',
+            type: 'image/png',
           },
         ],
       },
-      manifestFilename: "manifest.json",
+      manifestFilename: 'manifest.json',
 
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000,
@@ -78,7 +75,7 @@ export default defineConfig({
   ],
   test: {
     globals: true,
-    environment: "jsdom",
-    setupFiles: "./src/setupTests.ts",
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.ts',
   },
 });
