@@ -1,0 +1,53 @@
+trigger:
+  branches:
+    include:
+      - users/prakash/refactoring-all
+  paths:
+    include:
+      - src/api/**
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  # Install Node.js
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '16.x'
+      checkLatest: true
+
+  # Install dependencies
+  - script: |
+      cd src/api
+      npm install
+      npm install -g @nestjs/cli
+    displayName: 'Install dependencies'
+
+  # Build the project
+  - script: |
+      cd src/api
+      npm run build --if-present
+      mv node_modules dist
+    displayName: 'Build the project'
+
+  # Zip the build output
+  - script: |
+      cd src/api/dist
+      zip -r release.zip ./*
+    displayName: 'Create zip artifact'
+
+  # Publish the zip artifact
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: 'src/api/dist/release.zip'
+      ArtifactName: 'OrderBuddyAPIStage'
+      publishLocation: 'Container'
+
+  # Deploy to Azure App Service
+  - task: AzureWebApp@1
+    inputs:
+      azureSubscription: 'dev-service-connection'
+      appType: 'webApp'
+      appName: 'ob-api-dev'
+      package: '$(System.DefaultWorkingDirectory)/src/api/dist/release.zip'
+      deploymentClean: true
