@@ -78,7 +78,7 @@ const MobileOrderList: React.FC<MobileOrderListProps> = (props) => {
 
   return (
     <>
-      {orders.size && (
+      {!!orders.size && (
         <IonList>
           {[...orders.keys()]
             .sort()

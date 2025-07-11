@@ -45,7 +45,7 @@ const OrdersPage: React.FC = () => {
   const { activeOrders, completedOrders, updateOrderItemStatus, updateOrderStatus } = useOrders(
     restaurantId,
     locationId,
-    printOrder
+    printOrder,
   );
 
   useEffect(() => {
@@ -101,8 +101,8 @@ const OrdersPage: React.FC = () => {
                 subTitle='You’re in control. Orders will appear here the moment they’re placed.'
               />
             )}
-
-            {isMobile && activeOrders.size && (
+            
+            {isMobile && !!activeOrders.size && (
               <MobileOrderList
                 orders={activeOrders}
                 updateOrderStatus={updateOrderStatus}
@@ -115,7 +115,7 @@ const OrdersPage: React.FC = () => {
               />
             )}
 
-            {!isMobile && activeOrders.size && (
+            {!isMobile && !!activeOrders.size && (
               <IonGrid>
                 <IonRow>
                   <IonCol size='4'>
@@ -159,7 +159,7 @@ const OrdersPage: React.FC = () => {
               />
             )}
 
-            {!isMobile && completedOrders.size && (
+            {!isMobile && !!completedOrders.size && (
               <IonGrid>
                 <IonRow>
                   <IonCol size='4'>

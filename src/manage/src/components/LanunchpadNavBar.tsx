@@ -18,6 +18,7 @@ import { personOutline, logOutOutline } from 'ionicons/icons';
 import React, { useEffect, useState } from 'react';
 import { signOut } from 'supertokens-web-js/recipe/session';
 import { appStore } from '../store';
+import { useParams } from 'react-router-dom';
 
 interface NavBarProps {
   title: string;
@@ -32,6 +33,7 @@ const LaunchPadNavBar: React.FC<NavBarProps> = ({ title, showBackButton = true }
   const locationName = appStore((s) => s.selection.location.name);
   const router = useIonRouter();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const { restaurantId, locationId } = useParams<{ restaurantId: string; locationId: string }>();
 
   useEffect(() => {
     const handleResize = () => {
@@ -46,9 +48,9 @@ const LaunchPadNavBar: React.FC<NavBarProps> = ({ title, showBackButton = true }
     <IonHeader>
       {!isMobile && (
         <IonToolbar>
-          {showBackButton && router.canGoBack() && (
+          {showBackButton && (
             <IonButtons slot='start'>
-              <IonBackButton />
+              <IonBackButton defaultHref={`/${restaurantId}/${locationId}/launch-pad`} />
             </IonButtons>
           )}
           <IonGrid>
