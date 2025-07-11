@@ -75,12 +75,12 @@ export function usePrinterService() {
       .width(2)
       .line(`Items: ${order.items.length}`)
       .newline()
-      .line(`Total: $${(order.totalPrice / 100).toFixed(2)}`)
+      .line(`Total: $${(order.totalPriceCents / 100).toFixed(2)}`)
       .newline()
       .width(1);
 
     // 🔲 QR Code
-    const qrText = `https://order.dev.orderbuddyapp.com/menus/${restaurantInfo.restaurantId}/${restaurantInfo.locationName}/${restaurantInfo.locationId}`;
+    const qrText = `https://order.orderbuddyapp.com/menus/${restaurantInfo.restaurantId}/${restaurantInfo.locationName}/${restaurantInfo.locationId}`;
     receipt
       .align('center')
       .bold()
