@@ -71,6 +71,7 @@ interface UseOrderStatusProps {
   addCompletedOrderToMap: (key: string, value: Order) => void;
   removeOrderFromActive: (orderId: string) => void; // Add this
   restaurantId: string;
+  updateOrderToReadyForPickup: (orderId: string) => void; 
   onSuccess?: () => void;
 }
 
@@ -82,6 +83,7 @@ export function useOrderStatus({
   removeOrderFromActive,
   notifyPickupOrder,
   notifyCompleteOrder,
+  updateOrderToReadyForPickup,
   onSuccess,
 }: UseOrderStatusProps) {
   return useMutation({
@@ -104,8 +106,7 @@ export function useOrderStatus({
         const order = activeOrders.get(orderId)!;
 
         if (order.status === OrderStatus.OrderPlaced) {
-          order.status = OrderStatus.ReadyForPickup;
-          return activeOrders;
+          updateOrderToReadyForPickup(orderId);
         }
 
         if (orderStatus === OrderStatus.Completed) {

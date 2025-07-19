@@ -21,19 +21,12 @@ import { OrderStatus } from '../../../constants';
 
 interface SelectedOrderProps {
   selectedOrder: Order | null;
-  restaurantInfo?: {
-    restaurantId: string;
-    restaurantName: string;
-    locationId: string;
-    locationName: string;
-  };
-  printers?: any;
   updateOrderStatus?: (orderId: string, orderStatus: string, correlationId: string) => void;
-  printOrder?: (order: Order, restaurantInfo: any, printers: any) => void;
+  printOrder?: (order: Order) => void;
 }
 
 const OrderDetail: React.FC<SelectedOrderProps> = (props) => {
-  const { selectedOrder, updateOrderStatus, restaurantInfo, printers, printOrder } = props;
+  const { selectedOrder, updateOrderStatus, printOrder } = props;
   return (
     <>
       {selectedOrder && (
@@ -52,8 +45,8 @@ const OrderDetail: React.FC<SelectedOrderProps> = (props) => {
                           fill='clear'
                           style={{ margin: 0, height: '35px' }}
                           onClick={() => {
-                            if (restaurantInfo && printers && selectedOrder && printOrder) {
-                              printOrder(selectedOrder, restaurantInfo, printers);
+                            if (selectedOrder && printOrder) {
+                              printOrder(selectedOrder);
                             }
                           }}
                         >
@@ -106,6 +99,13 @@ const OrderDetail: React.FC<SelectedOrderProps> = (props) => {
                                 <br />
                               </span>
                             ))}
+                            {item.notes && (
+                              <div style={{ maxWidth: '300px' }}>
+                                <span style={{ fontSize: '12px' }}>
+                                  <IonText> {item.notes}</IonText>
+                                </span>
+                              </div>
+                            )}
                           </IonLabel>
                         </IonCol>
                       </IonRow>
@@ -310,8 +310,8 @@ const OrderTimeline: React.FC<{ selectedOrder: Order }> = (props) => {
               title='All Items Completed'
               time={moment(
                 Math.max(
-                  ...selectedOrder.items.map((item) => (item.completedAt ? new Date(item.completedAt).getTime() : 0))
-                )
+                  ...selectedOrder.items.map((item) => (item.completedAt ? new Date(item.completedAt).getTime() : 0)),
+                ),
               ).format('LT')}
             />
           )}

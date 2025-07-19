@@ -30,6 +30,7 @@ export class OrderItem {
   menuItemId: string;
   name: string;
   priceCents: number;
+  notes?: string;
   public modifiers?: any[];
   public variants?: any[];
   public stationTags?: string[];
@@ -45,7 +46,8 @@ export class OrderItem {
     completedAt: Date,
     modifiers?: any[],
     variants?: any[],
-    stationTags?: string[]
+    stationTags?: string[],
+    notes?: string,
   ) {
     this.id = id;
     this.menuItemId = menuItemId;
@@ -56,6 +58,7 @@ export class OrderItem {
     this.stationTags = stationTags;
     this.startedAt = startedAt;
     this.completedAt = completedAt;
+    this.notes = notes;
   }
 }
 

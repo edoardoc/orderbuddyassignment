@@ -15,12 +15,13 @@ import { OrderAppModule } from './order-app/order-app.module';
 import { MongoIndexInitializer } from './db/mongo-index-initializer';
 import { LoggingMiddleware } from './middleware/logging.middleware';
 import { StationsModule } from './stations/stations.module';
-import { AiModule } from './ai/ai.module';
 import { OriginsModule } from './origins/origins.module';
 import { StorageModule } from './storage/storage.module';
 import { AzureInsightsMiddleware } from './middleware/appInsights.middleware';
 import { MessageModule } from './message/message.module';
 import { PrintersModule } from './printers/printers.module';
+import { ReportModule } from './report/report.module';
+import { LocationSettingsModule } from './location-settings/location-settings.module';
 
 @Module({
   imports: [
@@ -109,11 +110,12 @@ import { PrintersModule } from './printers/printers.module';
     OrderAppModule,
     AuthModule,
     StationsModule,
-    AiModule,
     OriginsModule,
     StorageModule,
     MessageModule,
     PrintersModule,
+    ReportModule,
+    LocationSettingsModule,
   ],
   controllers: [],
   providers: [MongoIndexInitializer, Logger],

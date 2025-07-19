@@ -12,6 +12,9 @@ export default defineConfig({
   define: {
     global: {},
   },
+  server: {
+    port: 5174,
+  },
   plugins: [
     // replace({
     //   __FIREBASE_API_KEY__: JSON.stringify(process.env.VITE_FIREBASE_API_KEY),

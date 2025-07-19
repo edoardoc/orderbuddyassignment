@@ -3,6 +3,7 @@ package com.orderbuddy.app;
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.orderbuddy.starprinter.StarPrinterPlugin;
 
 public class MainActivity extends BridgeActivity {
@@ -10,5 +11,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(StarPrinterPlugin.class);
         super.onCreate(savedInstanceState);
+
+
     }
 }

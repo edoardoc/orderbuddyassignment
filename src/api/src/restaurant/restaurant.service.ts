@@ -39,7 +39,7 @@ export class RestaurantService {
           restaurants: 1,
           _id: 0,
         },
-      }
+      },
     );
     if (!user || !user.restaurants) {
       throw new Error('No restaurants found for user');
@@ -69,7 +69,7 @@ export class RestaurantService {
             concept: 1,
             logo: 1,
           },
-        }
+        },
       )
       .toArray();
 
@@ -104,7 +104,7 @@ export class RestaurantService {
             name: 1,
             isMobile: 1,
           },
-        }
+        },
       )
       .toArray();
 
@@ -123,23 +123,23 @@ export class RestaurantService {
       },
       {
         projection: {
-          'opening_hours.timezone': 1,
+          timezone: 1,
           name: 1,
           _id: 1,
         },
-      }
+      },
     );
 
     if (!location) {
       throw new NotFoundException(`Location ${locationId} not found for restaurant ${restaurantId}`);
     }
 
-    if (!location.opening_hours?.timezone) {
+    if (!location.timezone) {
       throw new Error('Store opening hours or timezone not configured');
     }
 
-    const timeZone = location.opening_hours.timezone;
-    const localToday = DateTime.now().setZone(timeZone).startOf('day');
+    const timezone = location.timezone;
+    const localToday = DateTime.now().setZone(timezone).startOf('day');
 
     const startUTC = localToday.toUTC().toJSDate();
     const endUTC = localToday.endOf('day').toUTC().toJSDate();
@@ -177,17 +177,35 @@ export class RestaurantService {
   }
   async updateOrderStatus({ orderId, orderStatus }: { orderId: string; orderStatus: string }) {
     let result;
+    const currentTime = new Date();
 
     if (orderStatus === OrderStatus.ReadyForPickup.toString()) {
+      const order = await this.ordersCollection.findOne({ _id: new ObjectId(orderId) });
+
+      if (!order) {
+        throw new NotFoundException(`Order ${orderId} not found`);
+      }
+
+      const updatedItems = order.items.map((item) => ({
+        ...item,
+        startedAt: order.startedAt,
+        completedAt: item.completedAt || currentTime,
+      }));
+
       result = await this.ordersCollection.updateOne(
         { _id: new ObjectId(orderId) },
-        { $set: { status: orderStatus.toString() } }
+        {
+          $set: {
+            status: orderStatus.toString(),
+            items: updatedItems,
+          },
+        },
       );
     } else {
       const date = new Date();
       result = await this.ordersCollection.updateOne(
         { _id: new ObjectId(orderId) },
-        { $set: { status: orderStatus.toString(), endedAt: date } }
+        { $set: { status: orderStatus.toString(), endedAt: date } },
       );
     }
     return result.acknowledged;
@@ -202,7 +220,7 @@ export class RestaurantService {
 
     if (!menu) {
       throw new NotFoundException(
-        `Menu not found for restaurant: ${restaurantId}, location: ${locationId}, menu: ${menuId}`
+        `Menu not found for restaurant: ${restaurantId}, location: ${locationId}, menu: ${menuId}`,
       );
     }
 
@@ -222,7 +240,7 @@ export class RestaurantService {
           $set: {
             'categories.$': categoryData,
           },
-        }
+        },
       );
 
       if (!result.acknowledged) {
@@ -255,7 +273,7 @@ export class RestaurantService {
           $push: {
             categories: newCategory,
           },
-        }
+        },
       );
       if (!result.acknowledged) {
         throw new NotFoundException('Menu not found or category creation failed');
@@ -310,7 +328,7 @@ export class RestaurantService {
           $set: {
             'items.$': itemDataInCents,
           },
-        }
+        },
       );
 
       if (!result.acknowledged) {
@@ -334,7 +352,7 @@ export class RestaurantService {
           $push: {
             items: newItem,
           },
-        }
+        },
       );
 
       if (!result.acknowledged) {
@@ -349,7 +367,7 @@ export class RestaurantService {
     locationId: string,
     menuId: string,
     categoryId: string,
-    sortOrder: number
+    sortOrder: number,
   ) {
     const result = await this.db.collection(COLLECTIONS.MENUS).updateOne(
       {
@@ -362,7 +380,7 @@ export class RestaurantService {
         $set: {
           'categories.$.sortOrder': sortOrder,
         },
-      }
+      },
     );
 
     if (!result.acknowledged) {
@@ -387,7 +405,7 @@ export class RestaurantService {
             name: 1,
             available: 1,
           },
-        }
+        },
       )
       .toArray();
     return menus;
@@ -398,7 +416,7 @@ export class RestaurantService {
     locationId: string,
     menuId: string,
     itemId: string,
-    isAvailable: boolean
+    isAvailable: boolean,
   ): Promise<boolean> {
     const result = await this.db.collection(COLLECTIONS.MENUS).updateOne(
       {
@@ -411,7 +429,7 @@ export class RestaurantService {
         $set: {
           'items.$.isAvailable': isAvailable,
         },
-      }
+      },
     );
 
     if (!result.matchedCount) {

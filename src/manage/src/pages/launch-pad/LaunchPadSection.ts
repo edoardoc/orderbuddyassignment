@@ -4,6 +4,9 @@ import { BiFoodMenu } from 'react-icons/bi';
 import { TiPrinter } from 'react-icons/ti';
 import { qrCodeOutline } from 'ionicons/icons';
 import { LaunchPadSection } from './types';
+import { GoHistory } from 'react-icons/go';
+import { SlLocationPin } from 'react-icons/sl';
+import { FaChartBar } from "react-icons/fa";
 
 export const getLaunchPadConfig = (restaurantId: string, locationId: string): LaunchPadSection[] => [
   {
@@ -57,6 +60,35 @@ export const getLaunchPadConfig = (restaurantId: string, locationId: string): La
         name: 'Printers',
         icon: TiPrinter,
         link: `/${restaurantId}/${locationId}/apps/printers`,
+        iconProps: {
+          size: 32,
+        },
+      },
+      {
+        name: 'Location',
+        icon: SlLocationPin,
+        link: `/${restaurantId}/${locationId}/apps/location-settings`,
+        iconProps: {
+          size: 32,
+        },
+      },
+    ],
+  },
+  {
+    name: 'Reports',
+    apps: [
+      {
+        name: 'Order History',
+        icon: GoHistory,
+        link: `/${restaurantId}/${locationId}/apps/order_history`,
+        iconProps: {
+          size: 32,
+        },
+      },
+      {
+        name: 'Sales Summary ',
+        icon: FaChartBar,
+        link: `/${restaurantId}/${locationId}/apps/sales_reports`,
         iconProps: {
           size: 32,
         },

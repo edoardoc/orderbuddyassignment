@@ -36,6 +36,7 @@ const CartPage: React.FC = () => {
   const location = useOrderStore((s) => s.location);
   const origin = useOrderStore((s) => s.origin);
   const restaurant = useOrderStore((s) => s.restaurant);
+  const isStoreOpen = useOrderStore((s) => s.location.isOpen);
 
   const [isValidPlaceOrder, setIsValidPlaceOrder] = useState(false);
   const { restaurantId, locationSlug, locationId, menuSlug, menuId } = useParams<{
@@ -88,6 +89,7 @@ const CartPage: React.FC = () => {
       menuItemId: item.menuItemId,
       name: item.name,
       price: item.price,
+      notes: item.notes,
       variants:
         item.variants?.map((variant) => ({
           id: variant.id,
@@ -160,25 +162,6 @@ const CartPage: React.FC = () => {
                 </span>
               </IonCol>
             </IonRow>
-            {/* <IonRow>
-              <IonCol className='font-size-14'>Total</IonCol>
-              <IonCol class='ion-text-end '>
-                <span className='font-size-14'> $ {totalInDollars}</span>
-              </IonCol>
-            </IonRow> */}
-            {/* <IonRow className='ion-no-padding'>
-              <IonCol>
-                <IonText>
-                  <hr
-                    style={{
-                      border: 'none',
-                      height: '1px',
-                      backgroundColor: '#a7a7a7',
-                    }}
-                  />
-                </IonText>
-              </IonCol>
-            </IonRow> */}
           </IonGrid>
         </div>
         <InputField
@@ -186,27 +169,28 @@ const CartPage: React.FC = () => {
           onCustomerDataChange={setCustomerData}
         />{' '}
       </IonContent>
-
-      <IonFooter>
-        {acceptPayment && (
-          <CheckoutContainer
-            isValidPlaceOrder={isValidPlaceOrder}
-            calculateTotal={Number(totalInDollars)}
-            customerData={customerData}
-          />
-        )}
-        {!acceptPayment && (
-          <IonButton
-            disabled={!isValidPlaceOrder}
-            expand='block'
-            className='solid-button'
-            style={{ paddingLeft: '10px', paddingRight: '10px', fontWeight: '700' }}
-            onClick={() => placeOrder()}
-          >
-            Place order
-          </IonButton>
-        )}
-      </IonFooter>
+      {isStoreOpen && (
+        <IonFooter>
+          {acceptPayment && (
+            <CheckoutContainer
+              isValidPlaceOrder={isValidPlaceOrder}
+              calculateTotal={Number(totalInDollars)}
+              customerData={customerData}
+            />
+          )}
+          {!acceptPayment && (
+            <IonButton
+              disabled={!isValidPlaceOrder}
+              expand='block'
+              className='solid-button'
+              style={{ paddingLeft: '10px', paddingRight: '10px', fontWeight: '700' }}
+              onClick={() => placeOrder()}
+            >
+              Place order
+            </IonButton>
+          )}
+        </IonFooter>
+      )}
     </IonPage>
   );
 };

@@ -100,7 +100,7 @@ export class StationOrderResponseDto {
     isCompleted?: boolean;
     variants?: any[];
     modifiers?: any[];
-    remarks?: string;
+    notes?: string;
   }[];
   totalPriceCents: number;
 }

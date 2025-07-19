@@ -21,6 +21,7 @@ import { getUserLang, t } from '@/utils/localization';
 import { useMenu } from '@/queries/useMenu';
 import { useEntryInfo } from '@/queries/useEntryInfo';
 import Banner from './components/banner/Banner';
+import StoreClosedBanner from './components/banner/StoreClosedBanner';
 import MenuItemModal from './components/menuItemModal/MenuItemModal';
 import MenuItem from './MenuItem';
 import { useOrderStore } from '@/stores/orderStore';
@@ -82,6 +83,7 @@ interface MenuItemStructure {
 const MenuPage: React.FC = () => {
   const { restaurantId, locationId, menuId, locationSlug, menuSlug } = useParams<MenuParams>();
   const [presentActionSheet] = useIonActionSheet();
+  const isStoreOpen = useOrderStore((s) => s.location.isOpen);
 
   const searchParams = new URLSearchParams(window.location.search);
   let originId = searchParams.get('originId');
@@ -133,6 +135,7 @@ const MenuPage: React.FC = () => {
           _id: entryInfo.location._id,
           name: entryInfo.location.name,
           acceptPayment: entryInfo.location.acceptPayment,
+          isOpen: entryInfo.location.isOpen,
         },
         origin: {
           _id: entryInfo.origin._id,
@@ -286,7 +289,7 @@ const MenuPage: React.FC = () => {
 
       <MenuItemModal selectedItem={selectedItem} onClose={closeModal} isOpen={isModalOpen} />
 
-      {cartItems && cartItems.length > 0 && (
+      {isStoreOpen && cartItems && cartItems.length > 0 && (
         <IonFooter className='ion-no-border'>
           <IonToolbar>
             {cartItems?.length > 0 && (
@@ -331,6 +334,12 @@ const MenuPage: React.FC = () => {
               </Link>
             )}
           </IonToolbar>
+        </IonFooter>
+      )}
+
+      {!isStoreOpen && (
+        <IonFooter className='ion-no-border'>
+          <StoreClosedBanner />
         </IonFooter>
       )}
     </IonPage>

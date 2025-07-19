@@ -99,20 +99,6 @@ export interface Store {
   name: string;
 }
 
-export interface timeSettings {
-  from: string;
-  to: string;
-  timezone: string;
-}
-
-export interface StoreProfileSettings {
-  name: string;
-  email: string;
-  address: string;
-  phoneNumber: string;
-  opening_hours: timeSettings;
-  daysOpen: string[];
-}
 export type Order = {
   _id: string;
   origin: Origin;
@@ -138,7 +124,7 @@ export type OrderItem = {
   isStarted: boolean;
   isCompleted: boolean;
   completedAt: Date;
-  remarks: string;
+  notes: string;
   size: string;
   isTakeaway: boolean;
   addons: string[];
@@ -232,28 +218,28 @@ export const appStore = create<State & Action>()(
         set(
           produce((state: State) => {
             state.selection.restaurant.logo = logo;
-          })
+          }),
         );
       },
       setAuthToken(token: string) {
         set(
           produce((state: State) => {
             state.authToken = token;
-          })
+          }),
         );
       },
       setRestaurantName: (name: string) => {
         set(
           produce((state: State) => {
             state.selection.restaurant.name = name;
-          })
+          }),
         );
       },
       setLocationName: (name: string) => {
         set(
           produce((state: State) => {
             state.selection.location.name = name;
-          })
+          }),
         );
       },
       setOrderReadyForPickup(value: order_ready_for_pickup) {
@@ -261,14 +247,14 @@ export const appStore = create<State & Action>()(
           produce((state: State) => {
             state.order_ready_for_pickup.orderId = value.orderId;
             state.order_ready_for_pickup.startedBoolean = value.startedBoolean;
-          })
+          }),
         );
       },
       setOrderReadyForPickupBoolean(value: boolean) {
         set(
           produce((state: State) => {
             state.order_ready_for_pickup.startedBoolean = value;
-          })
+          }),
         );
       },
 
@@ -277,7 +263,7 @@ export const appStore = create<State & Action>()(
           produce((state: State) => {
             state.order_completed.orderId = value.orderId;
             state.order_completed.startedBoolean = value.startedBoolean;
-          })
+          }),
         );
       },
 
@@ -285,14 +271,14 @@ export const appStore = create<State & Action>()(
         set(
           produce((state: State) => {
             state.order_completed.startedBoolean = value;
-          })
+          }),
         );
       },
       setPrinters: (printers: State['printers']) => {
         set(
           produce((state: State) => {
             state.printers = printers;
-          })
+          }),
         );
       },
     }),
@@ -300,6 +286,6 @@ export const appStore = create<State & Action>()(
     {
       name: 'storev2-session-storage',
       storage: createJSONStorage(() => sessionStorage),
-    }
-  )
+    },
+  ),
 );
