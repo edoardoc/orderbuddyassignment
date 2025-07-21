@@ -88,12 +88,12 @@ const LaunchPadPage: React.FC = (props) => {
                   </IonTitle>
                 </IonCol>
               </IonRow>
-              <IonRow className='ion-padding-start  ion-padding-top'>
+              <IonRow className='ion-no-padding   ion-padding-top'>
                 {section.apps.map((app, appIndex) => (
-                  <IonCol key={appIndex} size='6' size-md='3' className='ion-text-center'>
+                  <IonCol key={appIndex} size='6' size-md='2'>
                     <Link to={app.link}>
                       <IonCard className='card-width ion-padding'>
-                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <div>
                           <div
                             style={{
                               display: 'flex',

@@ -40,19 +40,20 @@ interface StationOrdersResponse {
     _id: string;
     status: string;
     orderCode: string;
+    startedAt?: Date;
     meta: {
       correlationId?: string;
     };
     items: Array<{
       id: string;
       name: string;
-      isStarted: boolean;
-      isCompleted: boolean;
+      startedAt: Date;
+      completedAt: Date;
       variants?: Array<{
         id: string;
         name: string;
       }>;
-      remarks?: string;
+      notes?: string;
     }>;
   }>;
 }
@@ -105,7 +106,7 @@ const IndividualKdsPage: React.FC = () => {
             locationId,
             orderData.orderId,
             data.stationTags,
-            orderData.correlationId
+            orderData.correlationId,
           );
           console.debug('Fetched order details:', orderDetails);
           // Update the cache with the new order
@@ -133,7 +134,7 @@ const IndividualKdsPage: React.FC = () => {
                 ...oldData,
                 matchedOrders: [...oldData.matchedOrders, orderDetails],
               };
-            }
+            },
           );
         } catch (error) {
           console.error('Error fetching order details:', error);
@@ -186,7 +187,7 @@ const IndividualKdsPage: React.FC = () => {
               return order;
             }),
           };
-        }
+        },
       );
     };
 
@@ -237,7 +238,7 @@ const IndividualKdsPage: React.FC = () => {
               return order;
             }),
           };
-        }
+        },
       );
     };
     const handleOrderCompleted = ({
@@ -264,15 +265,15 @@ const IndividualKdsPage: React.FC = () => {
                     status: OrderStatus.Completed,
                     items: order.items.map((item) => ({
                       ...item,
-                      completedAt: new Date(),
-                      startedAt: new Date(),
+                      startedAt: order.startedAt || new Date(),
+                      completedAt: item.completedAt || new Date(),
                     })),
                   };
                 }
                 return order;
               }),
             };
-          }
+          },
         );
       }
     };
@@ -281,7 +282,7 @@ const IndividualKdsPage: React.FC = () => {
     client.on('new_order', handleNewOrder);
     client.on('order_item_started', handleOrderItemStarted);
     client.on('order_item_completed', handleOrderItemCompleted);
-    client.on('order_completed', handleOrderCompleted);
+    client.on('order_ready_for_pickup', handleOrderCompleted);
 
     // Listen for connection confirmation
     client.on('station_connected', (response) => {
@@ -297,7 +298,7 @@ const IndividualKdsPage: React.FC = () => {
       client.off('new_order', handleNewOrder);
       client.off('order_item_started', handleOrderItemStarted);
       client.off('order_item_completed', handleOrderItemCompleted);
-      client.off('order_completed', handleOrderCompleted);
+      client.off('order_ready_for_pickup', handleOrderCompleted);
       client.off('station_connected');
     };
   }, [data, restaurantId, locationId, stationId]);
@@ -420,12 +421,12 @@ const IndividualKdsPage: React.FC = () => {
                                               </IonCol>
                                             </IonRow>
                                             <IonRow>
-                                              <span
+                                              <IonText
                                                 className='text-xs grid grid-cols-1'
-                                                style={{ color: 'dodgerblue', wordBreak: 'break-word' }}
+                                                style={{ wordBreak: 'break-word', fontSize: '11px' }}
                                               >
-                                                {item.remarks}
-                                              </span>
+                                                {item.notes}
+                                              </IonText>
                                             </IonRow>
                                           </IonGrid>
                                         </IonCol>
@@ -469,7 +470,7 @@ const IndividualKdsPage: React.FC = () => {
                                       </IonRow>
                                     </IonGrid>
                                   </IonItem>
-                                )
+                                ),
                             )}
                           </div>
                         </IonItemGroup>

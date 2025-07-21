@@ -56,6 +56,10 @@ import IndividualKdsPage from './pages/kds/individual-kds/individualKds';
 import KdsPage from './pages/kds/kds';
 import PrintersPage from './pages/printers/PrintersPage';
 import OrdersPage from './pages/orders-page/OrdersPage';
+import HistoryPage from './pages/order-history/OrderHistoryPage';
+import LocationSettingsPage from './pages/location-settings/LocationSettingsPage';
+import SalesSummaryReport from './pages/sales-report/SalesSummaryPage';
+
 setupIonicReact();
 const apiEndPoint = import.meta.env.VITE_API_ENDPOINT as string;
 
@@ -174,7 +178,18 @@ const App: React.FC = () => {
                 path='/:restaurantId/:locationId/apps/origins'
                 render={(props) => (isAuthenticated ? <OriginsPage /> : <Redirect to='/login' />)}
               />
-
+              <Route
+                path='/:restaurantId/:locationId/apps/order_history'
+                render={(props) => (isAuthenticated ? <HistoryPage /> : <Redirect to='/login' />)}
+              />
+              <Route
+                path='/:restaurantId/:locationId/apps/location-settings'
+                render={(props) => (isAuthenticated ? <LocationSettingsPage /> : <Redirect to='/login' />)}
+              />
+                <Route
+                path='/:restaurantId/:locationId/apps/sales_reports'
+                render={(props) => (isAuthenticated ? <SalesSummaryReport /> : <Redirect to='/login' />)}
+              />
               <Route render={() => <Redirect to={isAuthenticated ? '/root-page' : '/login'} />} />
             </Switch>
           </IonRouterOutlet>

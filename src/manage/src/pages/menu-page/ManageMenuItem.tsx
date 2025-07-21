@@ -69,7 +69,7 @@ export const ManageMenuItem: React.FC = () => {
         pt: m.name.pt || '',
       },
       options: m.options || [],
-    })) || []
+    })) || [],
   );
 
   const [uploading, setUploading] = useState(false);
@@ -177,6 +177,30 @@ export const ManageMenuItem: React.FC = () => {
           pt: value.pt || '',
         },
       };
+    } else if (field === 'freeChoices') {
+      if (value > 0 && (newModifiers[index].freeChoices === 0 || !newModifiers[index].freeChoices)) {
+        newModifiers[index] = {
+          ...newModifiers[index],
+          [field]: value,
+          extraChoicePriceCents: newModifiers[index].extraChoicePriceCents || 100,
+
+          options: (newModifiers[index].options || []).map((option) => ({
+            ...option,
+            priceCents: 0,
+          })),
+        };
+      } else if (value === 0) {
+        newModifiers[index] = {
+          ...newModifiers[index],
+          [field]: value,
+          extraChoicePriceCents: 0,
+        };
+      } else {
+        newModifiers[index] = {
+          ...newModifiers[index],
+          [field]: value,
+        };
+      }
     } else {
       newModifiers[index] = {
         ...newModifiers[index],
@@ -218,10 +242,27 @@ export const ManageMenuItem: React.FC = () => {
         },
       };
     } else if (field === 'priceCents') {
-      options[optionIndex] = {
-        ...options[optionIndex],
-        priceCents: Math.round(Number(value) * 100),
-      };
+      if (newModifiers[modifierIndex].freeChoices! > 0) {
+        options[optionIndex] = {
+          ...options[optionIndex],
+          priceCents: 0,
+        };
+      } else {
+        const price = Math.round(Number(value) * 100);
+        options[optionIndex] = {
+          ...options[optionIndex],
+          priceCents: price,
+        };
+
+        if (price === 0) {
+          setError(`modifiers.${modifierIndex}.options.${optionIndex}.priceCents`, {
+            type: 'manual',
+            message: 'Price must be greater than zero when free choices is zero',
+          });
+        } else {
+          clearErrors(`modifiers.${modifierIndex}.options.${optionIndex}.priceCents`);
+        }
+      }
     }
 
     newModifiers[modifierIndex].options = options;
@@ -347,6 +388,7 @@ export const ManageMenuItem: React.FC = () => {
   }, [menu, itemId, reset]);
 
   const handleFormSubmit = async (data: menuItemSchemaPriceInCentsType) => {
+    // Check for empty modifier names
     const invalidModifiers = modifiers.filter((modifier) => !modifier.name.en.trim());
     if (invalidModifiers.length > 0) {
       invalidModifiers.forEach((_, index) => {
@@ -357,6 +399,41 @@ export const ManageMenuItem: React.FC = () => {
       });
       return;
     }
+    // Check for modifiers with freeChoices > 0 but no extraChoicePriceCents
+    const invalidExtraPriceModifiers = modifiers.filter(
+      (modifier) =>
+        modifier.freeChoices! > 0 && (!modifier.extraChoicePriceCents || modifier.extraChoicePriceCents === 0),
+    );
+    if (invalidExtraPriceModifiers.length > 0) {
+      invalidExtraPriceModifiers.forEach((_, index) => {
+        setError(`modifiers.${index}.extraChoicePriceCents`, {
+          type: 'manual',
+          message: 'Extra choice price is required when free choices is set',
+        });
+      });
+      return;
+    }
+
+    // Check for options with zero price when free choices is zero
+    let hasInvalidOptionPrices = false;
+    modifiers.forEach((modifier, modifierIndex) => {
+      if (modifier.freeChoices === 0) {
+        (modifier.options || []).forEach((option, optionIndex) => {
+          if (!option.priceCents || option.priceCents === 0) {
+            setError(`modifiers.${modifierIndex}.options.${optionIndex}.priceCents`, {
+              type: 'manual',
+              message: 'Option price must be greater than zero when free choices is zero',
+            });
+            hasInvalidOptionPrices = true;
+          }
+        });
+      }
+    });
+
+    if (hasInvalidOptionPrices) {
+      return;
+    }
+
     try {
       const hasDefaultVariant = variants.some((v) => v.default);
       if (variants.length > 0 && !hasDefaultVariant) {
@@ -390,7 +467,6 @@ export const ManageMenuItem: React.FC = () => {
           })),
         })),
       };
-      console.log('Submitting form with data:', submissionData);
       await upsertMenuItem.mutateAsync(submissionData);
       router.push(`/${restaurantId}/${locationId}/apps/menu/${menuId}/${categoryId}/items`);
     } catch (error) {
@@ -674,11 +750,12 @@ export const ManageMenuItem: React.FC = () => {
                               min='0'
                               step='0.01'
                               value={(modifier.extraChoicePriceCents ?? 0) / 100}
+                              disabled={modifier.freeChoices === 0}
                               onIonChange={(e) =>
                                 handleModifierChange(
                                   modifierIndex,
                                   'extraChoicePriceCents',
-                                  Math.round(Number(e.detail.value!) * 100)
+                                  Math.round(Number(e.detail.value!) * 100),
                                 )
                               }
                             />
@@ -744,17 +821,19 @@ export const ManageMenuItem: React.FC = () => {
                                     min='0'
                                     step='0.01'
                                     value={option.priceCents / 100}
+                                    disabled={modifier.freeChoices! > 0}
                                     onIonChange={(e) =>
                                       handleOptionChange(modifierIndex, optionIndex, 'priceCents', e.detail.value!)
                                     }
                                     placeholder='Enter price'
                                   />
                                 </IonItem>
-                                {errors.modifiers?.[modifierIndex]?.options?.[optionIndex]?.priceCents && (
-                                  <IonItem lines='none'>
-                                    <IonText color='danger'>Please enter option price</IonText>
-                                  </IonItem>
+                                {modifier.freeChoices === 0 && (
+                                  <IonText slot='helper' color={option.priceCents === 0 ? 'danger' : 'medium'}>
+                                    {option.priceCents === 0 && 'Price is required'}
+                                  </IonText>
                                 )}
+
                                 <IonItem lines='none'>
                                   <IonButton
                                     color='danger'
@@ -776,7 +855,7 @@ export const ManageMenuItem: React.FC = () => {
               </IonAccordionGroup>
             </IonCard>
           )}
-          <IonCard>
+          <IonCard className='ion-padding'>
             <IonItem lines='none'>
               <IonLabel>Images :</IonLabel>
               <input

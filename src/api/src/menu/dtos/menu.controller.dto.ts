@@ -37,6 +37,10 @@ export class GetOrderItemDto {
 
   @IsNumber()
   price: number;
+  
+  @IsOptional()
+  @IsString()
+  notes?: string;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -199,6 +203,10 @@ export class OrderItemDto {
   @IsNumber()
   @IsNotEmpty()
   price!: number;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
 
   @IsArray()
   @IsOptional()

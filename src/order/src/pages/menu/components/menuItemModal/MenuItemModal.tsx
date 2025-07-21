@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import {
   IonModal,
   IonHeader,
@@ -16,6 +16,7 @@ import {
   IonSegment,
   IonSegmentButton,
   IonText,
+  IonTextarea,
 } from '@ionic/react';
 import { getUserLang, t } from '@/utils/localization';
 import ObjectID from 'bson-objectid';
@@ -25,6 +26,7 @@ type OrderItem = {
   menuItemId: string;
   name: string;
   price: number;
+  notes?: string;
   variants: Array<{
     id: string;
     name: string;
@@ -64,8 +66,10 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
   if (!selectedItem) return null;
   const [selectedModifiers, setSelectedModifiers] = useState<SelectedModifier[]>([]);
   const [selectedVariant, setSelectedVariant] = useState(selectedItem?.variants?.[0]);
-
+  const [notes, setNotes] = useState<string | undefined>('');
   const addOrderItem = useOrderStore((s) => s.addOrderItem);
+  const isStoreOpen = useOrderStore((s) => s.location.isOpen);
+
   const currentLang = getUserLang();
   const calculateTotalPrice = (): number => {
     let totalCents = selectedItem.priceCents;
@@ -82,6 +86,16 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
   };
 
   const [orderItem, setOrderItem] = useState<OrderItem>(initialOrderState);
+  const handleIonChange = (e: CustomEvent) => {
+    setNotes(e.detail.value);
+  };
+  useEffect(() => {
+    setOrderItem({
+      ...orderItem,
+      notes: notes,
+    });
+  }, [notes]);
+
   useEffect(() => {
     if (selectedItem && isOpen) {
       setOrderItem({
@@ -91,6 +105,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
         price: selectedItem.priceCents,
         variants: [],
         modifiers: [],
+        notes: notes,
         stationTags: selectedItem.stationTags || [],
       });
 
@@ -162,7 +177,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
         }
         return total + price;
       },
-      0
+      0,
     );
   };
 
@@ -337,6 +352,16 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
               })}
             </div>
           )}
+          <IonTextarea
+            class='ion-no-padding ion-padding-top'
+            maxlength={100}
+            placeholder='Add Special Instructions'
+            onIonInput={handleIonChange}
+            color={'dark'}
+            counter={true}
+            rows={2}
+            style={{ fontSize: '14px' }}
+          />
         </div>
       </IonContent>
 
@@ -344,9 +369,11 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
         <IonGrid>
           <IonRow>
             <IonCol size='8'>
-              <IonButton expand='block' onClick={handleAddToCart} className='solid-button'>
-                Add to cart
-              </IonButton>
+              {isStoreOpen && (
+                <IonButton expand='block' onClick={handleAddToCart} className='solid-button'>
+                  Add to cart
+                </IonButton>
+              )}
             </IonCol>
             <IonCol size='4' className='ion-text-end ion-align-self-center'>
               <div className='font-size-14'>${(calculateTotalPrice() / 100).toFixed(2)}</div>

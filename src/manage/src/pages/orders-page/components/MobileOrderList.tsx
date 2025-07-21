@@ -30,13 +30,6 @@ interface OrderItem {
 interface MobileOrderListProps {
   orders: Map<string, Order>;
   selectedOrder?: Order | null;
-  restaurantInfo?: {
-    restaurantId: string;
-    restaurantName: string;
-    locationId: string;
-    locationName: string;
-  };
-  printers?: any;
   tabValue?: string;
   setSelectedOrder: (order: Order) => void;
   updateOrderStatus?: (orderId: string, orderStatus: string, correlationId: string) => void;
@@ -45,23 +38,14 @@ interface MobileOrderListProps {
     itemId: string,
     orderItemStatus: string,
     stationTags: string[],
-    correlationId: string
+    correlationId: string,
   ) => void;
-  printOrder?: (order: Order, restaurantInfo: any, printers: any) => void;
+  printOrder?: (order: Order) => void;
 }
 
 const MobileOrderList: React.FC<MobileOrderListProps> = (props) => {
-  const {
-    orders,
-    selectedOrder,
-    restaurantInfo,
-    printers,
-    tabValue,
-    setSelectedOrder,
-    updateOrderStatus,
-    updateOrderItemStatus,
-    printOrder,
-  } = props;
+  const { orders, selectedOrder, tabValue, setSelectedOrder, updateOrderStatus, updateOrderItemStatus, printOrder } =
+    props;
   const [showModal, setShowModal] = useState(false);
   useEffect(() => {
     if (!selectedOrder) {
@@ -165,8 +149,6 @@ const MobileOrderList: React.FC<MobileOrderListProps> = (props) => {
               selectedOrder={selectedOrder}
               updateOrderStatus={updateOrderStatus}
               updateOrderItemStatus={updateOrderItemStatus}
-              restaurantInfo={restaurantInfo}
-              printers={printers}
               printOrder={printOrder}
             />
           )}

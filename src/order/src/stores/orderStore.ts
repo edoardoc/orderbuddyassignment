@@ -24,6 +24,7 @@ export type RestaurantData = {
     _id: string;
     name: string;
     acceptPayment: boolean;
+    isOpen: boolean; 
   };
   origin: {
     _id: string;
@@ -39,6 +40,7 @@ export type OrderItem = {
   menuItemId: string;
   name: string;
   price: number;
+  notes?: string;
   variants: {
     id: string;
     name: string;
@@ -77,6 +79,7 @@ type OrderState = {
     _id: string;
     name: string;
     acceptPayment: boolean;
+    isOpen: boolean;
   };
   origin: {
     _id: string;
@@ -113,6 +116,7 @@ const initialState: OrderState = {
   location: {
     _id: '',
     name: '',
+    isOpen: false, 
     acceptPayment: false
   },
   origin: {

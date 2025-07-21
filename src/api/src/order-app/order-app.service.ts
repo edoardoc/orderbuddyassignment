@@ -3,7 +3,7 @@ import { console } from 'inspector';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
 import { COLLECTIONS } from 'src/db/collections';
-import { Origin, Location } from 'src/db/models';
+import { Origin, Location, DayWorkingHours } from 'src/db/models';
 import { Menu } from 'src/db/models/menu.model';
 import { Restaurant } from 'src/db/models/restaurant.model';
 import {
@@ -15,10 +15,11 @@ import {
   OrderConfirmationDto,
   OrderStatusDto,
 } from './dtos/order-app.controller.dto';
+import { DateTime } from 'luxon';
+import { WorkingHourDto } from 'src/location-settings/dto/create-location-setting.dto';
 
 @Injectable()
 export class OrderAppService {
-  //todo: @Inject('MONGO_DB') private readonly db: Db
   constructor(@InjectClient() private readonly db: Db) {}
 
   async getEntryInfo(restaurantId: string, locationId: string, originId: string) {
@@ -34,6 +35,10 @@ export class OrderAppService {
           locationSlug: 1,
           name: 1,
           isActive: 1,
+          workingHours: 1,
+          timezone: 1,
+          'orderTiming.acceptOrdersAfterMinutes': 1,
+          'orderTiming.stopOrdersBeforeMinutes': 1,
           'payment.acceptPayment': 1,
         },
       },
@@ -54,15 +59,70 @@ export class OrderAppService {
     if (!restaurant) throw new NotFoundException('INVALID_RESTAURANT');
     if (!location) throw new NotFoundException('INVALID_LOCATION');
     if (!origin) throw new NotFoundException('INVALID_ORIGIN');
+
+    const isOpen = this.isOpen(
+      location.workingHours,
+      location.timezone,
+      location.orderTiming.acceptOrdersAfterMinutes,
+      location.orderTiming.stopOrdersBeforeMinutes,
+      restaurant._id,
+      location._id.toString(),
+    );
+
     const transformedLocation = {
-      ...location,
+      _id: location._id.toString(),
+      locationSlug: location.locationSlug,
+      name: location.name,
+      isActive: location.isActive,
       acceptPayment: location.payment?.acceptPayment || false,
+      isOpen,
     };
     return {
       restaurant,
       location: transformedLocation,
       origin,
     };
+  }
+
+  isOpen(
+    workingHours: DayWorkingHours[],
+    timezone: string,
+    acceptOrdersAfterMinutes: number,
+    stopOrdersBeforeMinutes: number,
+    restaurantId: string,
+    locationId: string,
+  ): boolean {
+    const now = DateTime.now().setZone(timezone);
+
+    if (!now.isValid) throw new Error(`Invalid timezone: ${timezone}`);
+
+    const currentDay = now.toFormat('cccc').toLowerCase();
+    const dayWorkingHours = workingHours.find((workingHour) => workingHour.day === currentDay);
+
+    if (!dayWorkingHours)
+      throw new Error(`working hours: ${currentDay}, restaurantId: ${restaurantId}, locationId: ${locationId}`);
+
+    const isValidTimeFormat = (time: string): boolean => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
+    if (!dayWorkingHours.isOpen) return false;
+
+    if (!dayWorkingHours.startTime || !dayWorkingHours.endTime) {
+      throw new Error(`Invalid working hours for ${currentDay}: startTime or endTime is null`);
+    }
+    if (!isValidTimeFormat(dayWorkingHours.startTime)) throw new Error('Invalid time format: startTime');
+    if (!isValidTimeFormat(dayWorkingHours.endTime)) throw new Error('Invalid time format: endTime');
+
+    const currentMinutes = now.hour * 60 + now.minute;
+
+    const timeToMinutes = (time: string): number => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const fromMinutes = timeToMinutes(dayWorkingHours.startTime);
+    const toMinutes = timeToMinutes(dayWorkingHours.endTime);
+    return (
+      currentMinutes >= fromMinutes + acceptOrdersAfterMinutes && currentMinutes <= toMinutes - stopOrdersBeforeMinutes
+    );
   }
 
   async getMenu(restaurantId: string, locationId: string, menuId: string): Promise<Menu> {

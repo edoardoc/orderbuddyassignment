@@ -38,7 +38,7 @@ interface OrderItem {
   completedAt: Date;
   variants?: OrderVariant[];
   modifiers?: OrderModifier[];
-  remarks?: string;
+  notes?: string;
 }
 
 interface MatchedOrder {

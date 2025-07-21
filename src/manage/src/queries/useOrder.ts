@@ -32,6 +32,7 @@ export interface OrderItem {
   menuItemId: string;
   name: string;
   priceCents: number;
+  notes?: string; 
   modifiers: Modifier[];
   variants: Variant[];
   stationTags: string[];

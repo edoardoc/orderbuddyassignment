@@ -71,6 +71,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
       menuItemId: item.menuItemId,
       name: item.name,
       price: item.price,
+      notes: item.notes,
       variants:
         item.variants?.map((variant) => ({
           id: variant.id,

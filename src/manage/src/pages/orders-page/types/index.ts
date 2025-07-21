@@ -2,6 +2,7 @@ export interface OrderItem {
   id: string;
   menuItemId: string;
   name: string;
+  notes?: string; 
   priceCents: number;
   modifiers: Modifier[];
   variants: Variant[];

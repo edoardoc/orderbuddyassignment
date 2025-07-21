@@ -52,3 +52,4 @@ export const appInsightsStream = {
     }
   },
 };
+export const appInsightsClient = client;
