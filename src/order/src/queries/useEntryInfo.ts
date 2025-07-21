@@ -18,6 +18,7 @@ const restaurantResponseSchema = z.object({
     name: z.string(),
     isActive: z.boolean(),
     acceptPayment: z.boolean(),
+    isOpen: z.boolean(),
   }),
   origin: z.object({
     _id: z.string(),

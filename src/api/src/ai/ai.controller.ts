@@ -25,7 +25,10 @@ class SingleMessageTranslations {
 }
 
 class TranslateManyResponse {
-  @ApiProperty({ type: [SingleMessageTranslations], description: 'Array of translation results, one for each input message' })
+  @ApiProperty({
+    type: [SingleMessageTranslations],
+    description: 'Array of translation results, one for each input message',
+  })
   messages: SingleMessageTranslations[];
 }
 
@@ -53,14 +56,16 @@ export class AiController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async fetchWorkingHours(@Body() fetchWorkingHoursDto: FetchWorkingHoursDto) {
-    this.logger.log(`Fetching working hours for ${fetchWorkingHoursDto.restaurantName} at ${fetchWorkingHoursDto.restaurantAddress}`);
-    
+    this.logger.log(
+      `Fetching working hours for ${fetchWorkingHoursDto.restaurantName} at ${fetchWorkingHoursDto.restaurantAddress}`,
+    );
+
     try {
       const workingHours = await this.aiService.getWorkingHours(
         fetchWorkingHoursDto.restaurantName,
-        fetchWorkingHoursDto.restaurantAddress
+        fetchWorkingHoursDto.restaurantAddress,
       );
-      
+
       return workingHours;
     } catch (error) {
       this.logger.error('Error fetching working hours', error);
@@ -116,14 +121,12 @@ export class AiController {
   @ApiOperation({ summary: 'Start a job to translate menus' })
   @ApiResponse({ status: 202, description: 'Job accepted for processing', type: TranslateMenuJobResponse }) // 202 Accepted is more appropriate for async jobs
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async translateMenusJob() { 
-    this.logger.log(
-      `Received request to start menu translation job.`,
-    );
+  async translateMenusJob() {
+    this.logger.log(`Received request to start menu translation job.`);
     try {
       const result = await this.jobService.translateMenuJob();
 
-      return result; 
+      return result;
     } catch (error) {
       this.logger.error('Error starting menu translation job in controller', error);
       throw error;

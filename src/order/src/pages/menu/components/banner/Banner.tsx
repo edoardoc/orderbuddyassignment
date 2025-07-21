@@ -16,9 +16,7 @@ interface BannerProps {
 
 const Banner: React.FC<BannerProps> = (props) => {
   const router = useIonRouter();
-  const restaurant = useOrderStore((s) => s.restaurant);
-  const location = useOrderStore((s) => s.location);
-  const origin = useOrderStore((s) => s.origin);
+  const isStoreOpen = useOrderStore((s) => s.location.isOpen);
   const originId = useQueryParams().get('originId') || 'web';
   const cartItems = useOrderStore((s) => s.cart.items);
   const menuId = useOrderStore((s) => s.menuId);
@@ -28,9 +26,8 @@ const Banner: React.FC<BannerProps> = (props) => {
     restaurantId: string;
     locationId: string;
   }>();
-
   const navigateCart = () => {
-    if (cartItems.length > 0) {
+    if (cartItems.length > 0 && isStoreOpen) {
       router.push(Paths.cart(restaurantId, locationSlug, locationId, menuSlug, menuId, originId));
       return;
     }
@@ -66,7 +63,7 @@ const Banner: React.FC<BannerProps> = (props) => {
             >
               <IonIcon icon={bagOutline} style={{ fontSize: '24px' }} />
 
-              {cartItems.length > 0 && (
+              {isStoreOpen && cartItems.length > 0 && (
                 <IonBadge
                   style={{
                     position: 'absolute',

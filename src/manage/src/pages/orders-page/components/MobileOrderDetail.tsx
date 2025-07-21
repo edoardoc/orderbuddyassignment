@@ -21,28 +21,19 @@ import { OrderItemStatus, OrderStatus } from '../../../constants';
 
 interface SelectedOrderProps {
   selectedOrder: Order;
-  restaurantInfo?: {
-    restaurantId: string;
-    restaurantName: string;
-    locationId: string;
-    locationName: string;
-  };
-  printers?: any;
   updateOrderStatus?: (orderId: string, orderStatus: string, correlationId: string) => void;
   updateOrderItemStatus?: (
     orderId: string,
     itemId: string,
     orderItemStatus: string,
     stationTags: string[],
-    correlationId: string
+    correlationId: string,
   ) => void;
-  printOrder?: (order: Order, restaurantInfo: any, printers: any) => void;
+  printOrder?: (order: Order) => void;
 }
 
 const MobileOrderDetail: React.FC<SelectedOrderProps> = ({
   selectedOrder,
-  restaurantInfo,
-  printers,
   updateOrderStatus,
   updateOrderItemStatus,
   printOrder,
@@ -54,7 +45,7 @@ const MobileOrderDetail: React.FC<SelectedOrderProps> = ({
       item.id,
       OrderItemStatus.Completed,
       item.stationTags,
-      selectedOrder.meta.correlationId
+      selectedOrder.meta.correlationId,
     );
   };
 
@@ -76,8 +67,8 @@ const MobileOrderDetail: React.FC<SelectedOrderProps> = ({
                           fill='clear'
                           style={{ margin: 0, height: '35px' }}
                           onClick={() => {
-                            if (restaurantInfo && printers && selectedOrder && printOrder) {
-                              printOrder(selectedOrder, restaurantInfo, printers);
+                            if (selectedOrder && printOrder) {
+                              printOrder(selectedOrder);
                             }
                           }}
                         >
@@ -130,6 +121,14 @@ const MobileOrderDetail: React.FC<SelectedOrderProps> = ({
                                 <br />
                               </span>
                             ))}
+                            {item.notes && (
+                              <div style={{ fontSize: '12px', maxWidth: '200px' }}>
+    <span style={{ fontSize: '12px', }}>
+                                <IonText> {item.notes}</IonText>
+                              </span>
+                              </div>
+                          
+                            )}
                           </IonLabel>
                         </IonCol>
                       </IonRow>
@@ -301,8 +300,8 @@ const OrderTimeline: React.FC<{ selectedOrder: Order }> = ({ selectedOrder }) =>
             title='All Items Completed'
             time={moment(
               Math.max(
-                ...selectedOrder.items.map((item) => (item.completedAt ? new Date(item.completedAt).getTime() : 0))
-              )
+                ...selectedOrder.items.map((item) => (item.completedAt ? new Date(item.completedAt).getTime() : 0)),
+              ),
             ).format('LT')}
           />
         )}

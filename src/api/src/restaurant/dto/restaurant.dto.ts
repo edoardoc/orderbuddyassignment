@@ -40,6 +40,18 @@ export class getTodayOrdersDto {
   @IsString()
   locationId: string;
 }
+export class OrderHistoryDto {
+  @IsNotEmpty()
+  @IsString()
+  restaurantId: string;
+  @IsNotEmpty()
+  @IsString()
+  locationId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  date: string;
+}
 export class getMultilingualDto {
   @IsNotEmpty()
   @IsString()
@@ -384,6 +396,7 @@ export class CategoryDto {
   @MaxLength(4, { message: 'Only one emoji allowed' })
   emoji?: string;
 }
+
 
 export class MenuDto {
   @IsNotEmpty()

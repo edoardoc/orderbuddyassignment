@@ -13,7 +13,7 @@ export const OrderItemSchema = z.object({
   isCompleted: z.date().optional().nullable(),
   variants: z.array(z.any()).optional(),
   modifiers: z.array(z.any()).optional(),
-  remarks: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export const OrderSchema = z.object({

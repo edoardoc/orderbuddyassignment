@@ -16,6 +16,7 @@ import { plainToClass } from 'class-transformer';
 import { MessageService } from '../message/message.service';
 import { COLLECTIONS } from 'src/db/collections';
 import { logger } from 'src/logger/pino.logger';
+import { appInsightsClient } from 'src/logger/appinsightss-transport';
 
 @Injectable()
 export class MenuService {
@@ -24,6 +25,7 @@ export class MenuService {
   private readonly ordersCollection;
   private readonly menusCollection: any;
   private readonly restaurantsCollection: any;
+  private readonly locationsCollection: any;
   private readonly logger: typeof logger;
 
   menuService: any;
@@ -34,12 +36,13 @@ export class MenuService {
     private readonly eventsGateway: EventsGateway,
     private readonly webPushService: WebPushService,
     private readonly configService: ConfigService,
-    private readonly messageService: MessageService
+    private readonly messageService: MessageService,
   ) {
     this.ordersCollection = db.collection(COLLECTIONS.ORDERS);
     this.subscriptionsCollection = this.db.collection(COLLECTIONS.SUBSCRIPTIONS);
     this.restaurantsCollection = db.collection(COLLECTIONS.RESTAURANTS);
     this.menusCollection = db.collection(COLLECTIONS.MENUS);
+    this.locationsCollection = db.collection(COLLECTIONS.LOCATIONS);
     this.logger = logger.child({ context: 'MenuService' });
   }
 
@@ -65,6 +68,29 @@ export class MenuService {
     }
     return result;
   }
+  async getAlertNumbers(restaurantId: string, locationId: string) {
+    const projection = { alertNumbers: 1 };
+
+    try {
+      const location = await this.locationsCollection.findOne(
+        { _id: new ObjectId(locationId), restaurantId: restaurantId },
+        { projection },
+      );
+
+      return location || { alertNumbers: [] };
+    } catch (error) {
+      this.logger.warn({
+        module: 'order',
+        event: 'alert_numbers_query_failed',
+        error: error.message,
+        restaurantId,
+        locationId,
+      });
+
+      return { alertNumbers: [] };
+    }
+  }
+
   async createOrder(body: CreateOrderDto, correlationId: string) {
     this.logger.trace(
       {
@@ -73,12 +99,12 @@ export class MenuService {
         correlationId,
         restaurantId: body.restaurantId,
       },
-      'Order initiated'
+      'Order initiated',
     );
 
     const orderTotalPrice = body.items.reduce(
       (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
-      0
+      0,
     );
     const orderTotalPriceInDollars = orderTotalPrice / 100;
     const taxRate = this.configService.get<number>('TAX_RATE');
@@ -113,7 +139,8 @@ export class MenuService {
           item.completedAt,
           item.modifiers,
           item.variants,
-          item.stationTags
+          item.stationTags,
+          item.notes,
         );
       }),
 
@@ -129,7 +156,21 @@ export class MenuService {
     // const result = mockFailedResult;
 
     const result = await this.ordersCollection.insertOne(orderToCreate);
+    const itemsCount = body.items.length;
     if (result.acknowledged) {
+      appInsightsClient.trackMetric({ name: 'orderCount', value: 1 });
+      appInsightsClient.trackMetric({ name: 'orderTotalCents', value: totalPriceWithTax });
+      appInsightsClient.trackMetric({ name: 'orderItemsCount', value: itemsCount });
+      appInsightsClient.trackEvent({
+        name: 'new_order_placed',
+        properties: {
+          orderItemsCount: itemsCount,
+          orderTotalCents: totalPriceWithTax,
+          restaurantId: body.restaurantId,
+          orderId: orderId.toString(),
+          correlationId,
+        },
+      });
       this.logger.trace(
         {
           module: 'order',
@@ -138,7 +179,7 @@ export class MenuService {
           restaurantId: body.restaurantId,
           orderId: orderId.toString(),
         },
-        'Order created'
+        'Order created',
       );
     }
 
@@ -150,7 +191,7 @@ export class MenuService {
           correlationId,
           restaurantId: body.restaurantId,
         },
-        'Order creation failed'
+        'Order creation failed',
       );
       throw new Error('Failed to create order');
     }
@@ -180,7 +221,7 @@ export class MenuService {
             correlationId,
             phone: body.customer.phone,
           },
-          'Order notified to customer'
+          'Order notified to customer',
         );
       } catch (error) {
         this.logger.error(
@@ -191,7 +232,7 @@ export class MenuService {
             error: error.message,
             phone: body.customer.phone,
           },
-          'Exception - Failed to notify customer'
+          'Exception - Failed to notify customer',
         );
         this.logger.trace(
           {
@@ -201,13 +242,19 @@ export class MenuService {
             error: error.message,
             phone: body.customer.phone,
           },
-          'Exception - Failed to notify customer'
+          'Exception - Failed to notify customer',
         );
       }
     } else {
       this.logger.debug('SMS not requested');
     }
-
+    const alertNumbersData = await this.getAlertNumbers(body.restaurantId, body.locationId);
+    if (alertNumbersData && alertNumbersData.alertNumbers.length > 0) {
+      const orderReadySms = `OrderBuddy- you have received an order #${orderCode}`;
+      for (const alertNumber of alertNumbersData.alertNumbers) {
+        await this.messageService.sendMessage(alertNumber, orderReadySms);
+      }
+    }
     const locationId = body.locationId;
     const locationRoom = `${restaurantId}_${locationId}`;
     this.eventsGateway.server.to(locationRoom).emit('order_received', {
@@ -217,7 +264,7 @@ export class MenuService {
       correlationId,
     });
     const stationTags = [...new Set(body.items.flatMap((item) => item.stationTags))].filter(
-      (tag): tag is string => tag !== undefined
+      (tag): tag is string => tag !== undefined,
     );
     const orderData = {
       orderId: orderId.toString(),
@@ -247,7 +294,7 @@ export class MenuService {
           title: notificationPayload.title,
           body: notificationPayload.body,
         },
-        notificationPayload
+        notificationPayload,
       );
       if (response.success) {
         this.logger.trace(
@@ -258,7 +305,7 @@ export class MenuService {
             orderId: orderId.toString(),
             restaurantId: body.restaurantId,
           },
-          'Order notified to store'
+          'Order notified to store',
         );
       }
       if (!response.success) {
@@ -269,7 +316,7 @@ export class MenuService {
             correlationId: correlationId,
             orderId: orderId.toString(),
           },
-          'Failed to notify store'
+          'Failed to notify store',
         );
       }
 
@@ -284,7 +331,7 @@ export class MenuService {
           restaurantId: body.restaurantId,
           error: error.message,
         },
-        'Failed to notify store'
+        'Failed to notify store',
       );
     }
 

@@ -3,6 +3,7 @@ import { UseMutationResult } from '@tanstack/react-query';
 import { IonItemGroup, IonList, IonItem, IonText } from '@ionic/react';
 import { Order } from '../types';
 import moment from 'moment';
+import { OrderStatus } from '../../../constants';
 
 interface DashboardProps {
   orders: Map<string, Order>;
@@ -18,7 +19,7 @@ const OrderList: React.FC<DashboardProps> = (props) => {
 
   return (
     <div>
-      {orders.size > 0 && (
+      {orders.size && (
         <>
           <IonItemGroup>
             <IonList>
@@ -60,9 +61,12 @@ const OrderList: React.FC<DashboardProps> = (props) => {
                       >
                         {orders.get(key)?.customer.name}
                       </span>
-                      <IonText slot='end' style={{ fontSize: '14px' }}>
-                        {moment().diff(moment(orders.get(key)?.startedAt), 'minutes')} mins{' '}
-                      </IonText>
+
+                      {orders.get(key)!.status !== OrderStatus.Completed && (
+                        <IonText slot='end' style={{ fontSize: '14px' }}>
+                          {moment().diff(moment(orders.get(key)?.startedAt), 'minutes')} mins{' '}
+                        </IonText>
+                      )}
                     </IonItem>
                   ))}
               </div>

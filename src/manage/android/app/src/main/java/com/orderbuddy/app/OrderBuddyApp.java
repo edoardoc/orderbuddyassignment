@@ -4,6 +4,7 @@ import android.app.Application;
 import android.util.Log;
 import java.util.Map;
 import java.util.HashMap;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 public class OrderBuddyApp extends Application {
     public static AzureMonitorClient monitorClient;
@@ -15,13 +16,21 @@ public class OrderBuddyApp extends Application {
         
         initializeAzureMonitor();
         setupExceptionHandler();
-        
+            initializeFirebaseCrashlytics(); 
+
         // Track app launch event
         if (monitorClient != null) {
             monitorClient.trackEvent("AppLaunched", null);
         }
     }
-    
+    private void initializeFirebaseCrashlytics() {
+    try {
+        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
+        Log.i(TAG, "Firebase Crashlytics initialized successfully");
+    } catch (Exception e) {
+        Log.e(TAG, "Failed to initialize Firebase Crashlytics", e);
+    }
+}
     private void initializeAzureMonitor() {
         try {
             String connectionString = getString(R.string.azure_monitor_connection_string);

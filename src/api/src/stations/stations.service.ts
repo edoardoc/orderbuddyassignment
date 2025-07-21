@@ -22,7 +22,7 @@ export interface OrderItem {
   isCompleted?: boolean;
   variants?: any[];
   modifiers?: any[];
-  remarks?: string;
+  notes?: string;
 }
 
 export interface Order {
@@ -106,19 +106,19 @@ export class StationsService {
       {
         projection: {
           name: 1,
-          'opening_hours.timezone': 1,
+          timezone: 1,
         },
-      }
+      },
     );
 
     if (!location) {
       throw new NotFoundException('Location not found');
     }
-    if (!location.opening_hours?.timezone) {
+    if (!location?.timezone) {
       throw new Error('Store opening hours or timezone not configured');
     }
-    const timeZone = location.opening_hours.timezone;
-    const localToday = DateTime.now().setZone(timeZone).startOf('day');
+    const timezone = location.timezone;
+    const localToday = DateTime.now().setZone(timezone).startOf('day');
 
     if (!localToday.isValid) {
       throw new Error(`Invalid localDate: ${localToday.invalidReason}`);
@@ -160,7 +160,7 @@ export class StationsService {
         items: order.items.filter(
           (item) =>
             Array.isArray(item.stationTags) &&
-            item.stationTags.some((tag) => Array.isArray(station.tags) && station.tags.includes(tag))
+            item.stationTags.some((tag) => Array.isArray(station.tags) && station.tags.includes(tag)),
         ),
       }))
       .filter((order) => order.items && order.items.length > 0);
@@ -199,7 +199,7 @@ export class StationsService {
     restaurantId: string,
     locationId: string,
     orderId: string,
-    stationTags: string[]
+    stationTags: string[],
   ): Promise<StationOrderResponseDto> {
     const order = await this.ordersCollection.findOne({
       _id: new ObjectId(orderId),

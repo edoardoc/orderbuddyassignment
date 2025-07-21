@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       open: env.VITE_DEV_LAUNCH_PATH,
+      port: 5173,
     },
     resolve: {
       alias: {

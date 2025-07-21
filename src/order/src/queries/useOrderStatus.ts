@@ -21,6 +21,7 @@ export const orderItemSchema = z.object({
   menuItemId: z.string(),
   name: z.string(),
   priceCents: z.number(),
+  notes: z.string().optional(),
   variants: z.array(orderVariantSchema).optional().default([]),
   modifiers: z.array(modifierSchema).optional().default([]),
   stationTags: z.array(z.string()),

@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - users/prakash/refactoring-all
+      - users/prakash/275-274
   paths:
     include:
       - src/manage/**

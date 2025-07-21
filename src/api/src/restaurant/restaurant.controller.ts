@@ -15,7 +15,6 @@ import {
 } from '@nestjs/common';
 import { RestaurantService } from './restaurant.service';
 import {
-  CategoryDto,
   GetCategoryDtoBody,
   GetMenuItemDto,
   GetMenuParamDto,
@@ -26,6 +25,7 @@ import {
   LocationDto,
   MenuDto,
   MenuSummaryDto,
+  OrderHistoryDto,
   RestaurantDto,
   UpdateCategorySortOrderDto,
 } from './dto/restaurant.dto';
@@ -46,7 +46,7 @@ export class RestaurantController {
 
   constructor(
     private readonly restaurantService: RestaurantService,
-    private readonly messageService: MessageService
+    private readonly messageService: MessageService,
   ) {
     if (!logger) {
       throw new Error('Logger is not initialized');
@@ -58,7 +58,7 @@ export class RestaurantController {
   async getRestaruntByUserId(
     @Param() params: GetRestaurantsDto,
 
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<RestaurantDto>>> {
     const restaurants = await this.restaurantService.getRestaurants(params.userId);
     return res.status(HttpStatus.OK).json({ data: restaurants });
@@ -69,7 +69,7 @@ export class RestaurantController {
   async getRestaurantLocations(
     @Param() params: GetRestaurantLocationsParamDto,
     @Res() res: Response,
-    @Req() req: Request
+    @Req() req: Request,
   ): Promise<Response<ApiResponse<LocationDto[]>>> {
     //         const restaurants = req.restaurants;
     try {
@@ -97,7 +97,7 @@ export class RestaurantController {
           restaurantId: params.restaurantId,
           locationId: params.locationId,
         },
-        'Get today orders'
+        'Get today orders',
       );
       const orders = await this.restaurantService.getTodayOrders(params.restaurantId, params.locationId);
       return res.status(HttpStatus.OK).json(orders);
@@ -111,7 +111,7 @@ export class RestaurantController {
           locationId: params.locationId,
           error: error.message,
         },
-        'Exception - get today orders'
+        'Exception - get today orders',
       );
       this.logger.trace(
         {
@@ -122,18 +122,19 @@ export class RestaurantController {
           locationId: params.locationId,
           error: error.message,
         },
-        'Exception - get today orders'
+        'Exception - get today orders',
       );
       throw new BadRequestException(error.message);
     }
   }
+
   @Get('orders/:restaurantId/:locationId/:orderId')
   async getSingleOrder(
     @Param('restaurantId') restaurantId: string,
     @Param('locationId') locationId: string,
     @Param('orderId') orderId: string,
     @Res() res: Response,
-    @Req() req: Request
+    @Req() req: Request,
   ): Promise<Response<ApiResponse<any>>> {
     const requestId = req['requestId'];
 
@@ -147,7 +148,7 @@ export class RestaurantController {
           restaurantId,
           locationId,
         },
-        'Getting single order'
+        'Getting single order',
       );
 
       const order = await this.restaurantService.getSingleOrder(restaurantId, locationId, orderId);
@@ -163,7 +164,7 @@ export class RestaurantController {
           correlationId: requestId,
           error: error.message,
         },
-        'Error fetching single order'
+        'Error fetching single order',
       );
       throw error;
     }
@@ -172,7 +173,7 @@ export class RestaurantController {
   async updateOrderStatus(
     @Body() updateOrderStatusDto: UpdateOrderStatusDto,
     @Res() res: Response,
-    @Req() req: Request
+    @Req() req: Request,
   ) {
     const correlationId = req['requestId'];
     try {
@@ -184,7 +185,7 @@ export class RestaurantController {
           orderId: updateOrderStatusDto.orderId,
           status: updateOrderStatusDto.orderStatus,
         },
-        `Order - ${updateOrderStatusDto.orderStatus}`
+        `Order - ${updateOrderStatusDto.orderStatus}`,
       );
 
       const order = await this.restaurantService.getOrder(updateOrderStatusDto.orderId);
@@ -212,7 +213,7 @@ export class RestaurantController {
                 orderId: order.id,
                 phone: order.customer.phone,
               },
-              'Ready for pickup notified to customer'
+              'Ready for pickup notified to customer',
             );
           } catch (messageError) {
             this.logger.error(
@@ -224,7 +225,7 @@ export class RestaurantController {
                 orderId: order.id,
                 phone: order.customer.phone,
               },
-              'Exception - Failed to notify ready for pickup'
+              'Exception - Failed to notify ready for pickup',
             );
             this.logger.trace(
               {
@@ -234,7 +235,7 @@ export class RestaurantController {
                 orderId: order.id,
                 phone: order.customer.phone,
               },
-              'Exception - Failed to notify ready for pickup'
+              'Exception - Failed to notify ready for pickup',
             );
           }
         }
@@ -249,7 +250,7 @@ export class RestaurantController {
           correlationId,
           error: error.message,
         },
-        `Exception - Failed to update ${updateOrderStatusDto.orderStatus}`
+        `Exception - Failed to update ${updateOrderStatusDto.orderStatus}`,
       );
       this.logger.trace(
         {
@@ -259,7 +260,7 @@ export class RestaurantController {
           orderId: updateOrderStatusDto.orderId,
           status: updateOrderStatusDto.orderStatus,
         },
-        `Exception - Failed to update ${updateOrderStatusDto.orderStatus}`
+        `Exception - Failed to update ${updateOrderStatusDto.orderStatus}`,
       );
       throw error;
     }
@@ -269,7 +270,7 @@ export class RestaurantController {
   async getMenus(
     @Param() params: GetMenusParamDto,
 
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<MenuSummaryDto[]>>> {
     const menus = await this.restaurantService.getMenus(params.restaurantId, params.locationId);
     return res.status(HttpStatus.OK).json({ data: menus });
@@ -279,7 +280,7 @@ export class RestaurantController {
   async getMenu(
     @Param() params: GetMenuParamDto,
 
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<MenuDto>>> {
     const menu = await this.restaurantService.getMenu(params.restaurantId, params.locationId, params.menuId);
     return res.status(HttpStatus.OK).json({ data: menu });
@@ -289,13 +290,13 @@ export class RestaurantController {
     @Param() params: GetMenuParamDto,
 
     @Body() category: GetCategoryDtoBody,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<boolean>>> {
     const result = await this.restaurantService.upsertCategory(
       params.restaurantId,
       params.locationId,
       params.menuId,
-      category
+      category,
     );
 
     return res.status(HttpStatus.OK).json({
@@ -306,13 +307,13 @@ export class RestaurantController {
   async upsertMenuItem(
     @Param() params: GetMenuParamDto,
     @Body() item: GetMenuItemDto,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<boolean>>> {
     const result = await this.restaurantService.upsertMenuItem(
       params.restaurantId,
       params.locationId,
       params.menuId,
-      item
+      item,
     );
 
     return res.status(HttpStatus.OK).json({
@@ -323,14 +324,14 @@ export class RestaurantController {
   async updateCategorySortOrder(
     @Param() params: GetMenuParamDto,
     @Body() updateData: UpdateCategorySortOrderDto,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<boolean>>> {
     const result = await this.restaurantService.updateCategorySortOrder(
       params.restaurantId,
       params.locationId,
       params.menuId,
       updateData.categoryId,
-      updateData.sortOrder
+      updateData.sortOrder,
     );
 
     return res.status(HttpStatus.OK).json({
@@ -344,7 +345,7 @@ export class RestaurantController {
 
     @Body() body: { isAvailable: boolean },
     @Res() res: Response,
-    @Req() req: Request
+    @Req() req: Request,
   ): Promise<Response<ApiResponse<boolean>>> {
     const requestId = req['requestId'];
 
@@ -354,7 +355,7 @@ export class RestaurantController {
         params.locationId,
         params.menuId,
         params.itemId,
-        body.isAvailable
+        body.isAvailable,
       );
 
       return res.status(HttpStatus.OK).json({
@@ -368,7 +369,7 @@ export class RestaurantController {
           correlationId: requestId,
           error: error.message,
         },
-        'Error updating menu item availability'
+        'Error updating menu item availability',
       );
       throw error;
     }

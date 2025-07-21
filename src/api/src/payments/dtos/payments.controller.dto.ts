@@ -38,6 +38,7 @@ export interface OrderItemDto {
   menuItemId: string;
   name: string;
   price: number;
+  notes?: string;
   startedAt: Date;
   completedAt: Date;
   modifiers?: any[];

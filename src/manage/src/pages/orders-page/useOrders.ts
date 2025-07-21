@@ -8,6 +8,7 @@ import { appStore } from '../../store';
 import { useOrderStatus } from '../../queries/useOrderstatus';
 import { useStatusMutation } from '../../queries/dashboard/useDashboardStatusMutation';
 import { OrderStatus } from '../../constants';
+import { usePrinterService } from '../../hooks/usePrinterService';
 
 interface OrderData {
   orderId: string;
@@ -23,11 +24,9 @@ interface RestaurantInfo {
   locationName: string;
 }
 
-export const useOrders = (
-  restaurantId: string,
-  locationId: string,
-  printOrder: (order: Order, restaurantInfo: RestaurantInfo, printers: any) => void
-) => {
+export const useOrders = (restaurantId: string, locationId: string) => {
+  const { printOrder: printOrderService } = usePrinterService();
+
   const [audio] = useState(new Audio('/sounds/new-order.mp3'));
   const appState = appStore();
 
@@ -40,6 +39,9 @@ export const useOrders = (
     locationId: locationId,
     locationName: appState.selection.location.name!,
   };
+  const printOrder = debounce((order: Order) => {
+    printOrderService(order, restaurantInfo, appState.printers);
+  }, 1000);
 
   const addItemToMap = (key: string, value: Order) => {
     setActiveOrders((prevOrder) => {
@@ -72,10 +74,10 @@ export const useOrders = (
           orderData.restaurantId,
           orderData.locationId,
           orderData.orderId,
-          orderData.correlationId
+          orderData.correlationId,
         );
         if (newOrder) {
-          printOrder(newOrder, restaurantInfo, appState.printers);
+          printOrderService(newOrder, restaurantInfo, appState.printers);
 
           if (newOrder.status === OrderStatus.Completed) {
             addCompletedOrderToMap(orderData.orderId, newOrder);
@@ -103,6 +105,15 @@ export const useOrders = (
         setActiveOrders((prevOrders) => {
           const newOrders = new Map(prevOrders);
           const order = newOrders.get(orderId)!;
+          const currentTime = new Date();
+          order.items.forEach((item) => {
+            if (!item.startedAt) {
+              item.startedAt = order.startedAt;
+            }
+            if (!item.completedAt) {
+              item.completedAt = currentTime;
+            }
+          });
           order.status = OrderStatus.ReadyForPickup;
           return newOrders;
         });
@@ -159,6 +170,34 @@ export const useOrders = (
       return newOrders;
     });
   };
+  const updateOrderToReadyForPickup = (orderId: string) => {
+    setActiveOrders((prevOrders) => {
+      const newOrders = new Map(prevOrders);
+      const order = newOrders.get(orderId)!;
+      const currentTime = new Date();
+      order.status = OrderStatus.ReadyForPickup;
+      order.items.forEach((item) => {
+        if (!item.startedAt) {
+          item.startedAt = order.startedAt;
+        }
+        if (!item.completedAt) {
+          item.completedAt = currentTime;
+        }
+      });
+      return newOrders;
+    });
+  };
+
+  const orderStatusMutation = useOrderStatus({
+    activeOrders,
+    restaurantId,
+    locationId,
+    addCompletedOrderToMap,
+    notifyPickupOrder,
+    notifyCompleteOrder,
+    removeOrderFromActive,
+    updateOrderToReadyForPickup,
+  });
   // Handle item status updates
   useEffect(() => {
     const handleOrderItemStarted = ({
@@ -207,15 +246,6 @@ export const useOrders = (
       client.off('dashboard_order_item_completed', handleOrderItemCompleted);
     };
   }, []);
-  const orderStatusMutation = useOrderStatus({
-    activeOrders,
-    restaurantId,
-    locationId,
-    addCompletedOrderToMap,
-    notifyPickupOrder,
-    notifyCompleteOrder,
-    removeOrderFromActive,
-  });
 
   const updateOrderStatus = (orderId: string, orderStatus: string, correlationId: string) => {
     orderStatusMutation.mutate({
@@ -241,7 +271,7 @@ export const useOrders = (
     itemId: string,
     orderItemStatus: string,
     stationTags: string[],
-    correlationId: string
+    correlationId: string,
   ) => {
     updateOrderItemStatusMutation.mutate({
       orderId,
@@ -254,6 +284,7 @@ export const useOrders = (
 
   return {
     activeOrders,
+    printOrder,
     completedOrders,
     futureOrders,
     notifyPickupOrder,

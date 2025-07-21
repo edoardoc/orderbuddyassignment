@@ -32,24 +32,17 @@ const OrdersPage: React.FC = () => {
   const [selectedCompletedOrder, setSelectedCompletedOrder] = useState<Order | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  const { printOrder } = usePrinterService();
-  const appState = appStore();
-
-  const restaurantInfo = {
-    restaurantId: restaurantId,
-    restaurantName: appState.selection.restaurant.name!,
-    locationId: locationId,
-    locationName: appState.selection.location.name!,
-  };
-
-  const { activeOrders, completedOrders, updateOrderItemStatus, updateOrderStatus } = useOrders(
+  const { activeOrders, completedOrders, updateOrderItemStatus, updateOrderStatus, printOrder } = useOrders(
     restaurantId,
     locationId,
-    printOrder,
   );
 
   useEffect(() => {
-    if (selectedActiveOrder && activeOrders.has(selectedActiveOrder._id)) return;
+    // if (selectedActiveOrder && activeOrders.has(selectedActiveOrder._id)) return;
+    if (selectedActiveOrder && activeOrders.has(selectedActiveOrder._id)) {
+      setSelectedActiveOrder(activeOrders.get(selectedActiveOrder._id)!);
+      return;
+    }
     if (activeOrders.size) {
       const firstActiveOrder = activeOrders.values().next().value!;
       setSelectedActiveOrder(firstActiveOrder);
@@ -109,8 +102,6 @@ const OrdersPage: React.FC = () => {
                 updateOrderItemStatus={updateOrderItemStatus}
                 selectedOrder={selectedActiveOrder}
                 setSelectedOrder={setSelectedActiveOrder}
-                restaurantInfo={restaurantInfo}
-                printers={appState.printers}
                 printOrder={printOrder}
               />
             )}
@@ -129,8 +120,6 @@ const OrdersPage: React.FC = () => {
                     <OrderDetail
                       selectedOrder={selectedActiveOrder}
                       updateOrderStatus={updateOrderStatus}
-                      restaurantInfo={restaurantInfo}
-                      printers={appState.printers}
                       printOrder={printOrder}
                     />
                   </IonCol>
@@ -152,8 +141,6 @@ const OrdersPage: React.FC = () => {
                 orders={completedOrders}
                 selectedOrder={selectedCompletedOrder}
                 setSelectedOrder={setSelectedCompletedOrder}
-                restaurantInfo={restaurantInfo}
-                printers={appState.printers}
                 printOrder={printOrder}
                 tabValue='completed'
               />
@@ -170,12 +157,7 @@ const OrdersPage: React.FC = () => {
                     />
                   </IonCol>
                   <IonCol size='8'>
-                    <OrderDetail
-                      selectedOrder={selectedCompletedOrder}
-                      restaurantInfo={restaurantInfo}
-                      printers={appState.printers}
-                      printOrder={printOrder}
-                    />
+                    <OrderDetail selectedOrder={selectedCompletedOrder} printOrder={printOrder} />
                   </IonCol>
                 </IonRow>
               </IonGrid>

@@ -17,10 +17,10 @@ export interface Location {
   payment: {
     acceptPayment: boolean;
   };
-  opening_hours: {
-    from: string;
-    to: string;
-    timezone: string;
+  workingHours: DayWorkingHours[]; 
+  orderTiming: {
+  acceptOrdersAfterMinutes: number;
+  stopOrdersBeforeMinutes: number;
   };
   isMobile: boolean;
   printers: PrinterData[];
@@ -31,4 +31,11 @@ export interface PrinterData {
   name: string;
   ip: string;
   type?: string;
+}
+
+export interface DayWorkingHours {
+  day: string;
+  startTime: string | null ;
+  endTime: string | null ;
+  isOpen: boolean;
 }

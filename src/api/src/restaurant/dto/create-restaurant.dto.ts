@@ -37,7 +37,7 @@ export type OrderItemDto = {
   price: number;
   toppings: string[];
   addons: string[];
-  remarks: string;
+  notes: string;
   size: string;
   isTakeaway: boolean;
   displayIds: string[];

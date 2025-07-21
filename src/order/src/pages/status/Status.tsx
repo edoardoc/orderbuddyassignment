@@ -24,6 +24,7 @@ import burger from '../../../assets/burger.png';
 import { Paths } from '@/routes/paths';
 import { arrowForwardOutline } from 'ionicons/icons';
 import { OrderStatus } from '@/constants';
+import React from 'react';
 
 const StatusPage: React.FC = () => {
   const { orderId } = useParams<any>();
@@ -165,26 +166,37 @@ const StatusPage: React.FC = () => {
                                     </IonRow>
 
                                     <IonRow style={{ maxWidth: '200px' }}>
-                                      {item?.variants.map((variant, index) => (
-                                        <span
-                                          className='text-xs text-[#873a97] '
-                                          key={index}
-                                          style={{ fontSize: '12px', color: '#873a97' }}
-                                        >
-                                          {variant.name}
-                                          {index !== item.variants.length - 1 && ', '}
-                                        </span>
-                                      ))}
+                                      {item.variants && item.variants.length > 0 && (
+                                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                                          {item.variants.map((variant) => variant.name).join(', ')}
+                                        </div>
+                                      )}{' '}
                                     </IonRow>
                                     <IonRow>
                                       {item.modifiers && (
                                         <div>
-                                          {item.modifiers.map((mod) => (
-                                            <p className='ion-text-wrap ion-no-margin text-small'>
-                                              {`${mod.name}: ${mod.options.map((opt) => opt.name).join(', ')}`}
-                                            </p>
+                                          {item.modifiers?.map((modifiersOptions, index) => (
+                                            <span key={index} style={{ fontSize: '12px' }}>
+                                              <IonText style={{ fontWeight: 'bold' }}>
+                                                {modifiersOptions.name}:{' '}
+                                              </IonText>
+                                              {modifiersOptions.options?.map((option, optIndex) => (
+                                                <React.Fragment key={optIndex}>
+                                                  {option.name}
+                                                  {optIndex !== (modifiersOptions.options?.length || 0) - 1 && ', '}
+                                                </React.Fragment>
+                                              ))}
+                                              <br />
+                                            </span>
                                           ))}
                                         </div>
+                                      )}
+                                    </IonRow>
+                                    <IonRow>
+                                      {item.notes && (
+                                        <span style={{ fontSize: '12px' ,maxWidth: '200px'}}>
+                                          <IonText> {item.notes}</IonText>
+                                        </span>
                                       )}
                                     </IonRow>
                                   </IonCol>
@@ -232,7 +244,7 @@ const StatusPage: React.FC = () => {
                     orderData.restaurantId,
                     orderData?.locationSlug,
                     orderData?.locationId,
-                    orderData?.origin.id
+                    orderData?.origin.id,
                   )}
                   style={{ textDecoration: 'none' }}
                 >
