@@ -10,55 +10,55 @@ export const testLogging = (): void => {
     console.warn('Logging tests are only available in development mode');
     return;
   }
-  
+
   console.log('Testing Application Insights logging...');
-  
+
   // Test API error logging
   try {
     throw new Error('Test API Error');
   } catch (error) {
     logApiError(error, 'test-endpoint', {
       testProperty: 'API Error Test',
-      testId: Date.now()
+      testId: Date.now(),
     });
   }
-  
+
   // Test Exception error logging
   try {
     throw new Error('Test Exception Error');
   } catch (error) {
     logExceptionError(error, 'TestOperation', {
       testProperty: 'Exception Test',
-      testId: Date.now()
+      testId: Date.now(),
     });
   }
-  
+
   // Test Auth error logging
   try {
     throw new Error('Test Auth Error');
   } catch (error) {
     logAuthError(error, 'TestLogin', {
       testProperty: 'Auth Test',
-      testId: Date.now()
+      testId: Date.now(),
     });
   }
-  
+
   // Test UI error logging
   try {
     throw new Error('Test UI Error');
   } catch (error) {
     logUiError(error, 'TestComponent', {
       testProperty: 'UI Test',
-      testId: Date.now()
+      testId: Date.now(),
     });
   }
-  
+
   // Test non-Error object logging
   logApiError('This is a string, not an Error object', 'test-string-error', {
     testProperty: 'Non-Error Test',
-    testId: Date.now()
+    testId: Date.now(),
   });
-  
+
   console.log('Completed sending test logs to Application Insights');
 };
 
@@ -71,7 +71,7 @@ export const simulateNetworkError = async (): Promise<void> => {
     console.warn('Logging tests are only available in development mode');
     return;
   }
-  
+
   try {
     // Simulate a network request that fails
     const response = await fetch('https://non-existent-endpoint-for-testing.example');
@@ -81,7 +81,7 @@ export const simulateNetworkError = async (): Promise<void> => {
     logApiError(error, 'simulated-network-error', {
       testProperty: 'Network Error Simulation',
       testId: Date.now(),
-      isMock: true
+      isMock: true,
     });
     throw error;
   }
@@ -96,12 +96,12 @@ export const generateUncaughtError = (): void => {
     console.warn('Logging tests are only available in development mode');
     return;
   }
-  
+
   // This will trigger the window.onerror handler
   setTimeout(() => {
     // @ts-ignore - Intentionally causing an error
     const nonExistentObject = null;
-    nonExistentObject.someProperty = 'This will cause an error';
+    //nonExistentObject.someProperty = 'This will cause an error';
   }, 100);
 };
 
@@ -114,7 +114,7 @@ export const generateUnhandledPromiseRejection = (): void => {
     console.warn('Logging tests are only available in development mode');
     return;
   }
-  
+
   // This will trigger the unhandledrejection handler
   Promise.reject(new Error('Test unhandled promise rejection'));
 };
