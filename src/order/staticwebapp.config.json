@@ -1,9 +1,9 @@
 {
   "routes": [
     {
-      "route": "/.well-known/apple-developer-merchantid-domain-association.txt",
+      "route": "/.well-known/apple-developer-merchantid-domain-association",
       "allowedRoles": ["anonymous"],
-      "serve": "/.well-known/apple-developer-merchantid-domain-association.txt",      
+      "serve": "/.well-known/apple-developer-merchantid-domain-association",      
       "statusCode": 200,
        "mimeType": "text/plain"
     }
