@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "postbuild": "mkdir -p dist/.well-known && cp public/.well-known/apple-developer-merchantid-domain-association.txt dist/.well-known/",
+    "postbuild": "mkdir -p dist/.well-known && cp public/.well-known/apple-developer-merchantid-domain-association dist/.well-known/",
     "preview": "vite preview",
     "test.e2e": "cypress run",
     "test.unit": "vitest",
