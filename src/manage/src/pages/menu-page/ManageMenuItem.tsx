@@ -33,6 +33,8 @@ import { useParams } from 'react-router';
 import { useMenu } from '../../queries/useMenu';
 import { useStations } from '../../queries/useStations';
 import { azureConfig, useStorage } from '../../queries/manage-menu/useStorage';
+import { logExceptionError } from '../../utils/errorLogger';
+
 interface Variant {
   id?: string;
   name: string;
@@ -470,6 +472,11 @@ export const ManageMenuItem: React.FC = () => {
       await upsertMenuItem.mutateAsync(submissionData);
       router.push(`/${restaurantId}/${locationId}/apps/menu/${menuId}/${categoryId}/items`);
     } catch (error) {
+      logExceptionError(
+        error instanceof Error ? error : new Error(String(error)),
+        'manageMenuItem.handleFormSubmit',
+        { restaurantId, locationId, menuId, categoryId, itemId: data.id }
+      );
       console.error('Error submitting form:', error);
     }
   };
@@ -518,6 +525,11 @@ export const ManageMenuItem: React.FC = () => {
       setToastMessage('Image uploaded successfully');
       setShowToast(true);
     } catch (error) {
+      logExceptionError(
+        error instanceof Error ? error : new Error(String(error)),
+        'manageMenuItem.handleImageUpload',
+        { restaurantId, locationId, menuId, categoryId, fileType: file.type, fileSize: file.size }
+      );
       console.error('Upload failed:', error);
       setToastMessage('Failed to upload image');
       setShowToast(true);

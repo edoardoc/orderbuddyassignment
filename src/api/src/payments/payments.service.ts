@@ -19,7 +19,7 @@ export class PaymentsService {
   constructor(
     private readonly menuService: MenuService,
     private readonly configService: ConfigService,
-    @InjectClient() private readonly db: Db
+    @InjectClient() private readonly db: Db,
   ) {
     this.locationCollection = db.collection(COLLECTIONS.LOCATIONS);
     this.logger = logger.child({ context: 'PaymentsService' });
@@ -76,7 +76,7 @@ export class PaymentsService {
 
     const orderTotalPrice = body.items.reduce(
       (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
-      0
+      0,
     );
     const orderTotalPriceInDollars = orderTotalPrice / 100;
 
@@ -105,7 +105,7 @@ export class PaymentsService {
           amount: totalPriceWithTax,
           transactionId: body.paymentId,
         },
-        'Payment completed'
+        'Payment completed',
       );
 
       orderId = await this.menuService.createOrder(body, requestId);
@@ -118,13 +118,13 @@ export class PaymentsService {
           correlationId: requestId,
           error: response.data.resultMessage,
         },
-        'Payment failed'
+        'Payment failed',
       );
     }
     return { transaction: response.data, orderId: orderId };
   }
 
-  async completeTranscationUpi(body: CreateOrderDto) {
+  async completeTranscationUpi(body: CreateOrderDto, requestId: string) {
     const projection = { payment: 1 };
     const PaymentDetails = await this.locationCollection.findOne({ _id: body.restaurantId }, { projection });
     const oid = PaymentDetails.payment.oid;
@@ -134,7 +134,7 @@ export class PaymentsService {
 
     const orderTotalPrice = body.items.reduce(
       (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
-      0
+      0,
     );
     const orderTotalPriceInDollars = orderTotalPrice / 100;
     const taxRate = this.configService.get<number>('TAX_RATE');
@@ -157,7 +157,36 @@ export class PaymentsService {
     };
     try {
       const response = await axios.post(url, { transactionData }, requestConfig);
-      return response.data;
+
+      let orderId = '';
+      if (response.data && response.data.status === 'APPROVED') {
+        this.logger.trace(
+          {
+            module: 'payment',
+            event: 'upi_payment_successful',
+            correlationId: requestId,
+            restaurantId: body.restaurantId,
+            amount: totalPriceWithTax,
+            transactionId: body.paymentId,
+          },
+          'UPI Payment completed',
+        );
+
+        orderId = await this.menuService.createOrder(body, requestId);
+      } else {
+        this.logger.trace(
+          {
+            module: 'payment',
+            event: 'upi_payment_failed',
+            restaurantId: body.restaurantId,
+            correlationId: requestId,
+            error: response.data,
+          },
+          'UPI Payment failed',
+        );
+      }
+
+      return { transaction: response.data, orderId: orderId };
     } catch (error: any) {
       console.error('EmergePay API error:', error.response?.data || error.message);
       throw new Error('Failed to process payment');

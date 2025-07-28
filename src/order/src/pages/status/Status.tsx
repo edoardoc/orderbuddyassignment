@@ -25,6 +25,7 @@ import { Paths } from '@/routes/paths';
 import { arrowForwardOutline } from 'ionicons/icons';
 import { OrderStatus } from '@/constants';
 import React from 'react';
+import { logExceptionError } from '@/utils/errorLogger';
 
 const StatusPage: React.FC = () => {
   const { orderId } = useParams<any>();
@@ -41,24 +42,31 @@ const StatusPage: React.FC = () => {
 
   useEffect(() => {
     if (client.connected) {
-      // Join order room to receive updates
-      client.emit('order_joined', {
-        orderId: orderId,
-        restaurantId: '', // These fields are required by the DTO but not needed for status updates
-        locationId: '',
-        stationTags: [],
-      });
+      try {
+        // Join order room to receive updates
+        client.emit('order_joined', {
+          orderId: orderId,
+          restaurantId: '', // These fields are required by the DTO but not needed for status updates
+          locationId: '',
+          stationTags: [],
+        });
 
-      // Listen for status updates
-      client.on('order_completed', ({ orderId, restaurantId }) => {
-        console.log('status order completed message received');
-        setCompletedStatus(true);
-      });
+        // Listen for status updates
+        client.on('order_completed', ({ orderId, restaurantId }) => {
+          console.log('status order completed message received');
+          setCompletedStatus(true);
+        });
 
-      client.on('order_ready_for_pickup', ({ orderId, restaurantId }) => {
-        console.log('status orderPickup message received');
-        setReadyForPickUp(true);
-      });
+        client.on('order_ready_for_pickup', ({ orderId, restaurantId }) => {
+          console.log('status orderPickup message received');
+          setReadyForPickUp(true);
+        });
+      } catch (error) {
+        logExceptionError(error, 'StatusPageSocket', {
+          operation: 'setupSocketListeners',
+          orderId,
+        });
+      }
 
       // Cleanup listeners
       return () => {

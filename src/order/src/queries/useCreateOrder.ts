@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ApiResponse } from './api-response';
 import { handleApiResponse } from './apiHandle';
 import { axiosInstance } from './axiosInstance';
-import { logger } from '@/logger';
+import { logApiError } from '@/utils/errorLogger';
 import { v4 as uuid } from 'uuid';
 
 export function useCreateOrder() {
@@ -20,8 +20,21 @@ export function useCreateOrder() {
      
         return response.data;
       } catch (error) {
+        logApiError(error, 'menu-app/restaurant/order', {
+          operation: 'createOrder',
+          restaurantId: orderData.restaurantId,
+          locationId: orderData.locationId,
+          requestId: requestUuid,
+          orderItems: orderData.items?.length
+        });
         throw error;
       }
     },
+    onError: (error) => {
+      logApiError(error, 'menu-app/restaurant/order', { 
+        operation: 'createOrderMutation',
+        requestId: requestUuid
+      });
+    }
   });
 }

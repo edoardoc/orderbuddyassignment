@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { axiosInstance } from '@/queries/axiosInstance';
 import { ApiResponse } from '@/queries/api-response';
 import { handleApiResponse } from './apiHandle';
-import { logger } from '@/logger';
+import { logApiError } from '@/utils/errorLogger';
 
 const menuNameSchema = z.object({
   en: z.string(),
@@ -25,22 +25,44 @@ export function useMenus(restaurantId: string, locationId: string) {
   return useQuery<MenusResponse>({
     queryKey: ['menus', restaurantId, locationId],
     queryFn: async () => {
-      const response = await axiosInstance.get<ApiResponse<MenusResponse>>(
-        `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`
-      );
-      const data = handleApiResponse(response);
       try {
-        const validatedData = menusResponseSchema.parse(data);
-        return validatedData.map((menu) => ({
-          ...menu,
-        }));
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          console.error('Menu data validation failed:', error.errors);
-          throw new Error('Invalid menu data format');
+        const response = await axiosInstance.get<ApiResponse<MenusResponse>>(
+          `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`
+        );
+        const data = handleApiResponse(response);
+        try {
+          const validatedData = menusResponseSchema.parse(data);
+          return validatedData.map((menu) => ({
+            ...menu,
+          }));
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            console.error('Menu data validation failed:', error.errors);
+            logApiError(error, `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`, {
+              operation: 'validateMenuData',
+              restaurantId,
+              locationId,
+              validationErrors: error.errors,
+            });
+            throw new Error('Invalid menu data format');
+          }
+          // Keep existing implicit console.error from the throw
+          logApiError(error, `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`, {
+            operation: 'processMenuData',
+            restaurantId,
+            locationId,
+          });
+          throw error;
         }
+      } catch (error) {
+        // Add Application Insights logging
+        logApiError(error, `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`, {
+          operation: 'fetchMenus',
+          restaurantId,
+          locationId,
+        });
         throw error;
-      } // return data;
+      }
     },
     enabled: !!restaurantId && !!locationId,
     staleTime: 5 * 60 * 1000,

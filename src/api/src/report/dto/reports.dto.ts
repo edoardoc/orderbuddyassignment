@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
 
 export class OrderHistoryDto {
   @IsNotEmpty()
@@ -11,4 +11,35 @@ export class OrderHistoryDto {
   @IsNotEmpty()
   @IsString()
   date: string;
+}
+
+export class SalesItemDto {
+  @IsNotEmpty()
+  @IsString()
+  restaurantId: string;
+  @IsNotEmpty()
+  @IsString()
+  locationId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  date: string;
+}
+
+export class SalesByItemResponse {
+  @IsNotEmpty()
+  @IsString()
+  menuItemId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  itemName: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  soldCount: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  grossSales: number;
 }

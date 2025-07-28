@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ApiResponse } from './api-response';
 import { handleApiResponse } from './apiHandle';
 import { axiosInstance } from './axiosInstance';
-import { logger } from '@/logger';
+import { logApiError } from '@/utils/errorLogger';
 
 // Define schemas for nested structures
 const multilingualSchema = z.object({
@@ -77,20 +77,44 @@ export function useMenu(restaurantId: string, locationId: string, menuId: string
   return useQuery<Menu>({
     queryKey: ['menu', restaurantId, locationId, menuId],
     queryFn: async () => {
-      const response = await axiosInstance.get<ApiResponse<Menu>>(
-        `order-app/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`
-      );
-      const data = handleApiResponse(response);
       try {
-        const validatedData = menuResponseSchema.parse(data);
-        return {
-          ...validatedData,
-        };
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          console.error('Menu data validation failed:', error.errors);
-          throw new Error('Invalid menu data format');
+        const response = await axiosInstance.get<ApiResponse<Menu>>(
+          `order-app/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`
+        );
+        const data = handleApiResponse(response);
+        try {
+          const validatedData = menuResponseSchema.parse(data);
+          return {
+            ...validatedData,
+          };
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            console.error('Menu data validation failed:', error.errors);
+            logApiError(error, `order-app/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`, {
+              operation: 'validateMenuData',
+              restaurantId,
+              locationId,
+              menuId,
+              validationErrors: error.errors
+            });
+            throw new Error('Invalid menu data format');
+          }
+          logApiError(error, `order-app/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`, {
+            operation: 'processMenuData',
+            restaurantId,
+            locationId,
+            menuId
+          });
+          throw error;
         }
+      } catch (error) {
+        // Add Application Insights logging while preserving any console.error from throw
+        logApiError(error, `order-app/restaurants/${restaurantId}/locations/${locationId}/menus/${menuId}`, {
+          operation: 'fetchMenu',
+          restaurantId,
+          locationId,
+          menuId
+        });
         throw error;
       }
     },

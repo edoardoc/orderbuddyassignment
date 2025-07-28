@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
 import moment from 'moment-timezone';
 import { string, z } from 'zod';
-import { logger } from '@/logger';
+import { logApiError } from '@/utils/errorLogger';
 
 const modifierOptionSchema = z.object({
   name: z.string(),
@@ -70,17 +70,34 @@ export function useOrderStatus(orderId: string) {
   return useQuery<OrderStatus>({
     queryKey: ['orderStatus', orderId],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`menu-app/order/${orderId}`);
       try {
-        const parsedData = orderStatusSchema.parse(data);
-        return parsedData;
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          throw new Error(
-            `Order status validation failed: ${error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`
-          );
-        }
+        const { data } = await axiosInstance.get(`menu-app/order/${orderId}`);
+        try {
+          const parsedData = orderStatusSchema.parse(data);
+          return parsedData;
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            const validationError = new Error(
+              `Order status validation failed: ${error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`
+            );
+            logApiError(validationError, `menu-app/order/${orderId}`, { 
+              operation: 'validateOrderStatus',
+              orderId 
+            });
+            throw validationError;
+          }
 
+          logApiError(error, `menu-app/order/${orderId}`, { 
+            operation: 'getOrderStatus',
+            orderId 
+          });
+          throw error;
+        }
+      } catch (error) {
+        logApiError(error, `menu-app/order/${orderId}`, { 
+          operation: 'fetchOrderStatus', 
+          orderId 
+        });
         throw error;
       }
     },

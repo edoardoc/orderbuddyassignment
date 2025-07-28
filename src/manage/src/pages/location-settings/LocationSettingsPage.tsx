@@ -13,6 +13,7 @@ import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 import WorkingHours from './components/WorkingHours';
 import Timezone from './components/Timezone';
 import OrderAcceptance from './components/OrderAcceptance';
+import AlertNumbers from './components/AlertNumbers';
 import { useLocationSettings } from './useLocationSettings';
 
 const LocationSettingsPage: React.FC = () => {
@@ -29,6 +30,13 @@ const LocationSettingsPage: React.FC = () => {
     stopAcceptMinutes,
     updateStartAcceptOrders,
     updateStopAcceptOrders,
+    alertNumbers,
+    addAlertNumber,
+    removeAlertNumber,
+    formatPhoneNumber,
+    phoneNumber,
+    updatePhoneNumber,
+    phoneNumberError,
   } = useLocationSettings();
 
   return (
@@ -70,6 +78,23 @@ const LocationSettingsPage: React.FC = () => {
                       stopAcceptMinutes={stopAcceptMinutes}
                       updateStartAcceptOrders={updateStartAcceptOrders}
                       updateStopAcceptOrders={updateStopAcceptOrders}
+                    />
+                  </div>
+                </IonAccordion>
+                <IonAccordion value='AlertNumbers'>
+                  <IonItem slot='header' color='light'>
+                    <IonLabel>Alert Numbers</IonLabel>
+                  </IonItem>
+                  <div className='ion-padding' slot='content'>
+                    <AlertNumbers
+                      alertNumbers={alertNumbers}
+                      isLoading={isUpdating}
+                      addAlertNumber={addAlertNumber}
+                      removeAlertNumber={removeAlertNumber}
+                      formatPhoneNumber={formatPhoneNumber}
+                      phoneNumber={phoneNumber}
+                      updatePhoneNumber={updatePhoneNumber}
+                      phoneNumberError={phoneNumberError}
                     />
                   </div>
                 </IonAccordion>

@@ -17,6 +17,7 @@ export class LocationSettingsService {
     timezone: 1,
     workingHours: 1,
     orderTiming: 1,
+    alertNumbers: 1,
   };
 
   async findOne(locationId: string, restaurantId: string) {
@@ -34,10 +35,32 @@ export class LocationSettingsService {
       throw new NotFoundException(`Location with ID ${locationId} not found`);
     }
 
+    if (location.alertNumbers && Array.isArray(location.alertNumbers)) {
+      location.alertNumbers = location.alertNumbers.map((alertNumber) => ({
+        ...alertNumber,
+        _id: alertNumber._id ? alertNumber._id.toString() : undefined,
+      }));
+    }
+
     return location;
   }
 
   async update(locationId: string, restaurantId: string, updateLocationSettingDto: UpdateLocationSettingDto) {
+    if (updateLocationSettingDto.alertNumbers) {
+      updateLocationSettingDto.alertNumbers = updateLocationSettingDto.alertNumbers.map((alertNumber) => {
+        const objectId = !alertNumber._id
+          ? new ObjectId()
+          : typeof alertNumber._id === 'string'
+            ? new ObjectId(alertNumber._id)
+            : alertNumber._id;
+
+        return {
+          ...alertNumber,
+          _id: objectId,
+        };
+      });
+    }
+
     const updateResult = await this.db.collection<Location>(COLLECTIONS.LOCATIONS).updateOne(
       {
         restaurantId,

@@ -1,9 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Socket } from 'socket.io';
+import { Db, ObjectId } from 'mongodb';
+import { InjectClient } from 'nest-mongodb-driver';
+import { COLLECTIONS } from 'src/db/collections';
 
 @Injectable()
 export class EventsService {
   private logger = new Logger(EventsService.name);
+  private readonly stationsCollection;
+
+  constructor(@InjectClient() private readonly db: Db) {
+    this.stationsCollection = this.db.collection(COLLECTIONS.STATIONS);
+  }
 
   join(socket: Socket, roomId: string): void {
     socket.join(roomId);
@@ -17,45 +25,28 @@ export class EventsService {
     this.logger.debug(`broadcasting event ${event} to room ${toRoomId}`);
   }
 
-  private stations = new Map<
-    string,
-    {
-      id: string;
-      restaurantId: string;
-      locationId: string;
-      stationTags: string[];
-    }
-  >();
-
-  addStation(station: { id: string; restaurantId: string; locationId: string; stationTags: string[] }) {
-    this.logger.debug('Current stations:');
-    this.stations.set(station.id, station);
-  }
-
-  getStationsByTags(restaurantId: string, locationId: string, tags: string[]) {
+  async getStationsByTags(restaurantId: string, locationId: string, tags: string[]) {
     this.logger.debug(
-      `Finding stations for restaurant=${restaurantId}, location=${locationId}, tags=${tags.join(',')}`
+      `Finding stations for restaurant=${restaurantId}, location=${locationId}, tags=${tags.join(',')}`,
     );
 
-    const stations = Array.from(this.stations.values());
+    const locationObjectId = new ObjectId(locationId);
 
-    const matchingStations = stations.filter((station) => {
-      const isMatchingRestaurant = station.restaurantId === restaurantId;
-      const isMatchingLocation = station.locationId === locationId;
-      const hasMatchingTags = station.stationTags.some((tag) => tags.includes(tag));
+    const stations = await this.stationsCollection
+      .find({
+        restaurantId: restaurantId,
+        locationId: locationObjectId,
+        tags: { $in: tags },
+      })
+      .toArray();
 
-      this.logger.debug(
-        `Station ${station.id} check:`,
-        `\n - Restaurant: ${isMatchingRestaurant} (${station.restaurantId})`,
-        `\n - Location: ${isMatchingLocation} (${station.locationId})`,
-        `\n - Tags: ${hasMatchingTags} (${station.stationTags})`
-      );
+    this.logger.debug(`Found ${stations.length} matching stations for location ${locationId}`);
 
-      return isMatchingRestaurant && isMatchingLocation && hasMatchingTags;
-    });
-
-    this.logger.debug(`Found ${matchingStations.length} matching stations for location ${locationId}`);
-
-    return matchingStations;
+    return stations.map((station) => ({
+      id: station._id.toString(),
+      restaurantId: station.restaurantId,
+      locationId: station.locationId.toString(),
+      stationTags: station.tags,
+    }));
   }
 }

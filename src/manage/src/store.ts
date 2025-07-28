@@ -146,6 +146,7 @@ type State = {
     };
     location: {
       name?: string;
+      locationSlug?: string;
     };
   };
   printers: {
@@ -172,6 +173,7 @@ type Action = {
   setLocationName: (name: string) => void;
   setRestaurantLogo: (logo: string) => void;
   setPrinters: (printers: State['printers']) => void;
+  setLocationSlug: (locationSlug: string) => void;
 
   reset: () => void;
 };
@@ -183,6 +185,7 @@ const initialState: State = {
     },
     location: {
       name: '',
+      locationSlug: '',
     },
   },
   authToken: '',
@@ -210,6 +213,7 @@ export const appStore = create<State & Action>()(
         orderId: '',
         startedBoolean: false,
       },
+      
 
       reset: () => {
         set(initialState);
@@ -225,6 +229,14 @@ export const appStore = create<State & Action>()(
         set(
           produce((state: State) => {
             state.authToken = token;
+          }),
+        );
+      },
+
+      setLocationSlug: (locationSlug: string) => {
+        set(
+          produce((state: State) => {
+            state.selection.location.locationSlug = locationSlug;
           }),
         );
       },

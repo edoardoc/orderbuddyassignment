@@ -7,6 +7,8 @@ import { LaunchPadSection } from './types';
 import { GoHistory } from 'react-icons/go';
 import { SlLocationPin } from 'react-icons/sl';
 import { FaChartBar } from "react-icons/fa";
+import { BiMenuAltLeft } from "react-icons/bi";
+import { MdOutlinePointOfSale } from "react-icons/md";
 
 export const getLaunchPadConfig = (restaurantId: string, locationId: string): LaunchPadSection[] => [
   {
@@ -24,6 +26,14 @@ export const getLaunchPadConfig = (restaurantId: string, locationId: string): La
         name: 'KDS',
         icon: LuGitBranchPlus,
         link: `/${restaurantId}/${locationId}/apps/kds`,
+        iconProps: {
+          size: 32,
+        },
+      },
+      {
+        name: 'POS',
+        icon: MdOutlinePointOfSale,
+        link: `/${restaurantId}/${locationId}/apps/pos`,
         iconProps: {
           size: 32,
         },
@@ -89,6 +99,14 @@ export const getLaunchPadConfig = (restaurantId: string, locationId: string): La
         name: 'Sales Summary ',
         icon: FaChartBar,
         link: `/${restaurantId}/${locationId}/apps/sales_reports`,
+        iconProps: {
+          size: 32,
+        },
+      },
+       {
+        name: 'Sales Item',
+        icon: BiMenuAltLeft,
+        link: `/${restaurantId}/${locationId}/apps/sales_item`,
         iconProps: {
           size: 32,
         },

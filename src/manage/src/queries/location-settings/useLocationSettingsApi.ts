@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ApiResponse } from '../api-response';
 import { handleApiResponse } from '../apiHandle';
 import { axiosInstance } from '../axiosInstance';
+import { logExceptionError } from '../../utils/errorLogger';
 
 // Define schemas for working hours data
 const workingHourSchema = z.object({
@@ -18,6 +19,12 @@ const orderTimingSchema = z.object({
   stopOrdersBeforeMinutes: z.number().default(30),
 });
 
+// Define schema for alert numbers
+const alertNumberSchema = z.object({
+  _id: z.string().optional(),
+  phoneNumber: z.string(),
+});
+
 const locationSettingsSchema = z.object({
   _id: z.string(),
   restaurantId: z.string(),
@@ -26,10 +33,12 @@ const locationSettingsSchema = z.object({
   timezone: z.string().optional(),
   workingHours: z.array(workingHourSchema).nullable().default([]),
   orderTiming: orderTimingSchema.optional(),
+  alertNumbers: z.array(alertNumberSchema).optional().default([]),
 });
 
 export type WorkingHour = z.infer<typeof workingHourSchema>;
 export type OrderTiming = z.infer<typeof orderTimingSchema>;
+export type AlertNumber = z.infer<typeof alertNumberSchema>;
 export type LocationSettings = z.infer<typeof locationSettingsSchema>;
 
 // Get location settings
@@ -42,14 +51,35 @@ export function useLocationSettingsApi(restaurantId: string, locationId: string)
           `location-settings/restaurant/${restaurantId}/location/${locationId}`,
         );
 
-        const { data } = response;
-        const validatedData = locationSettingsSchema.parse(data.data);
+        // Make sure we're accessing the nested data property correctly
+        if (!response.data || !response.data.data) {
+          throw new Error('No location settings data received');
+        }
+
+        // Validate the data
+        const validatedData = locationSettingsSchema.parse(response.data.data);
         return validatedData;
       } catch (error) {
         if (error instanceof z.ZodError) {
           console.error('Location settings data validation failed:', error.errors);
+          // Log validation error
+          logExceptionError(
+            new Error('Invalid location settings data format'),
+            'useLocationSettings.validation',
+            {
+              restaurantId,
+              locationId,
+              zodError: JSON.stringify(error.errors)
+            }
+          );
           throw new Error('Invalid location settings data format');
         }
+        // Log general error
+        logExceptionError(error, 'useLocationSettings.fetch', {
+          restaurantId,
+          locationId,
+          endpoint: `location-settings/${restaurantId}/${locationId}`
+        });
         throw error;
       }
     },
@@ -66,21 +96,29 @@ export function useUpdateLocationSettings() {
       workingHours,
       timezone,
       orderTiming,
+      alertNumbers,
     }: {
       restaurantId: string;
       locationId: string;
       workingHours: WorkingHour[];
       timezone?: string;
       orderTiming?: OrderTiming;
+      alertNumbers?: AlertNumber[];
     }) => {
       try {
         const response = await axiosInstance.patch<ApiResponse<LocationSettings>>(
           `location-settings/restaurant/${restaurantId}/location/${locationId}`,
-          { workingHours, timezone, orderTiming },
+          { workingHours, timezone, orderTiming, alertNumbers },
         );
         return handleApiResponse(response);
       } catch (error) {
         console.error('Failed to update location settings:', error);
+        // Log to Application Insights
+        logExceptionError(error, 'useUpdateLocationSettings', {
+          restaurantId,
+          locationId,
+          endpoint: `location-settings/restaurant/${restaurantId}/location/${locationId}`
+        });
         throw error;
       }
     },
@@ -96,12 +134,14 @@ export function useCreateLocationSettings() {
       workingHours,
       timezone,
       orderTiming,
+      alertNumbers,
     }: {
       restaurantId: string;
       locationId: string;
       workingHours: WorkingHour[];
       timezone?: string;
       orderTiming?: OrderTiming;
+      alertNumbers?: AlertNumber[];
     }) => {
       try {
         const response = await axiosInstance.post<ApiResponse<LocationSettings>>(`location-settings`, {
@@ -110,10 +150,17 @@ export function useCreateLocationSettings() {
           workingHours,
           timezone,
           orderTiming,
+          alertNumbers,
         });
         return handleApiResponse(response);
       } catch (error) {
         console.error('Failed to create location settings:', error);
+        // Log to Application Insights
+        logExceptionError(error, 'useCreateLocationSettings', {
+          restaurantId,
+          locationId,
+          endpoint: 'location-settings'
+        });
         throw error;
       }
     },

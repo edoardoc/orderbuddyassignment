@@ -116,7 +116,7 @@ export class EventsGateway implements OnGatewayConnection {
       stationTags: string[];
       correlationId: string;
     },
-    @ConnectedSocket() client?: Socket // Make socket optional since it might be called directly
+    @ConnectedSocket() client?: Socket, // Make socket optional since it might be called directly
   ) {
     try {
       this.loggerTrace.trace(
@@ -127,7 +127,7 @@ export class EventsGateway implements OnGatewayConnection {
           orderId: data.orderId,
           restaurantId: data.restaurantId,
         },
-        'Order joined to Station'
+        'Order joined to Station',
       );
       // Add client to room for this specific order
       // client.join(data.orderId)
@@ -156,7 +156,7 @@ export class EventsGateway implements OnGatewayConnection {
               orderId: data.orderId,
               stationId: station.id,
             },
-            'Order mapped to station'
+            'Order mapped to station',
           );
         }
       });
@@ -168,7 +168,7 @@ export class EventsGateway implements OnGatewayConnection {
             correlationId: data.correlationId,
             orderId: data.orderId,
           },
-          `Failed to map station`
+          `Failed to map station`,
         );
       }
 
@@ -183,7 +183,7 @@ export class EventsGateway implements OnGatewayConnection {
           orderId: data.orderId,
           error: error.message,
         },
-        'Exception - Station mapping'
+        'Exception - Station mapping',
       );
       this.loggerTrace.trace(
         {
@@ -194,7 +194,7 @@ export class EventsGateway implements OnGatewayConnection {
           error: error.message,
           stack: error.stack,
         },
-        'Exception - Station mapping '
+        'Exception - Station mapping ',
       );
     }
   }
@@ -213,21 +213,13 @@ export class EventsGateway implements OnGatewayConnection {
       stationId: string;
       stationTags: string[];
     },
-    @ConnectedSocket() client: Socket
+    @ConnectedSocket() client: Socket,
   ) {
     // Add station to room
     this.logger.debug(`Station joining: ${JSON.stringify(data)}`);
 
     client.join(data.stationId);
     client.join(`${data.restaurantId}_${data.locationId}`);
-
-    // Store station info
-    this.eventsService.addStation({
-      id: data.stationId,
-      restaurantId: data.restaurantId,
-      locationId: data.locationId,
-      stationTags: data.stationTags,
-    });
 
     client.emit('station_connected', {
       success: true,
@@ -293,7 +285,7 @@ export class EventsGateway implements OnGatewayConnection {
   @SubscribeMessage('order_item_completed')
   async orderItemCompleted(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() data: OrderItemCompletedDto
+    @MessageBody() data: OrderItemCompletedDto,
   ): Promise<void> {
     try {
       const stations = await this.eventsService.getStationsByTags(data.restaurantId, data.locationId, data.stationTags);

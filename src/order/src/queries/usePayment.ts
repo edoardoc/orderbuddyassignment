@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
+import { logApiError } from '@/utils/errorLogger';
 
 interface OrderItem {
   id: string;
@@ -45,16 +46,26 @@ export function useToken(restaurantId: string, requestUuid: string) {
   return useQuery<TokenResponse>({
     queryKey: ['token', restaurantId, requestUuid],
     queryFn: async () => {
-      const response = await axiosInstance.post<TokenResponse>(
-        `payments/start-transaction/${restaurantId}`,
-        {},
-        {
-          headers: {
-            'X-Request-Id': requestUuid,
-          },
-        }
-      );
-      return response.data;
+      try {
+        const response = await axiosInstance.post<TokenResponse>(
+          `payments/start-transaction/${restaurantId}`,
+          {},
+          {
+            headers: {
+              'X-Request-Id': requestUuid,
+            },
+          }
+        );
+        return response.data;
+      } catch (error) {
+        // Add Application Insights logging
+        logApiError(error, `payments/start-transaction/${restaurantId}`, {
+          operation: 'getTransactionToken',
+          restaurantId,
+          requestId: requestUuid
+        });
+        throw error;
+      }
     },
     staleTime: Infinity,
   });
@@ -63,12 +74,28 @@ export function useToken(restaurantId: string, requestUuid: string) {
 export function useCompletePayment() {
   return useMutation<TransactionResponse, Error, { order: CreateOrderRequest; requestUuid: string }>({
     mutationFn: async ({ order, requestUuid }) => {
-      const response = await axiosInstance.post<TransactionResponse>('payments/complete-transaction', order, {
-        headers: {
-          'X-Request-Id': requestUuid,
-        },
-      });
-      return response.data;
+      try {
+        const response = await axiosInstance.post<TransactionResponse>('payments/complete-transaction', order, {
+          headers: {
+            'X-Request-Id': requestUuid,
+          },
+        });
+        return response.data;
+      } catch (error) {
+        // Add Application Insights logging
+        logApiError(error, 'payments/complete-transaction', {
+          operation: 'completePayment',
+          restaurantId: order.restaurantId,
+          requestId: requestUuid
+        });
+        throw error;
+      }
     },
+    onError: (error) => {
+      // Keep existing console.error implicitly called by React Query
+      logApiError(error, 'payments/complete-transaction', {
+        operation: 'completePaymentMutation'
+      });
+    }
   });
 }

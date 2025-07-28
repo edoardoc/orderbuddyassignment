@@ -7,6 +7,7 @@ import { v4 as uuid } from 'uuid';
 import { client } from '@/client';
 import { useParams } from 'react-router-dom';
 import '../../../style.css';
+import { logApiError, logExceptionError } from '@/utils/errorLogger';
 declare global {
   interface Window {
     emergepayFormFields: any;
@@ -25,9 +26,16 @@ interface PaymentFormProps {
   };
   onPaymentSuccess: () => void;
   onPaymentError: (error: any) => void;
+  onFieldsLoaded?: (isLoaded: boolean) => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSuccess, onPaymentError, customerData }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({
+  amount,
+  onPaymentSuccess,
+  onPaymentError,
+  customerData,
+  onFieldsLoaded,
+}) => {
   const [requestUuid] = useState<string>(uuid());
   const hostedRef = useRef<any>(null);
   const initialized = useRef(false);
@@ -173,6 +181,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
         onFieldsLoaded: () => {
           setIsFieldsLoading(false);
           setIsDisabledPayment(false);
+          if (onFieldsLoaded) {
+            onFieldsLoaded(true);
+          }
           console.log('All fields loaded');
         },
         onFieldErrorCleared: function (data: any) {
@@ -216,19 +227,32 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
           }
         },
         onFieldError: (error: any) => {
-          console.error('Field error:', error);
+          console.error('Field error:', error);          
+          logExceptionError(error, 'PaymentFormFieldError', {
+            formType: 'gravity',
+            transactionToken: token
+          });
           onPaymentError(error);
           setIsDisabledPayment(false);
         },
         onTransactionSuccess: (response: any) => {
-          console.log('Transaction successful: paymenet form', response);
+          console.log('Transaction successful: payment form', response);
         },
         onTransactionFailure: (error: any) => {
-          console.error('Transaction failed:', error);
+          console.error('Transaction failed:', error);          
+          logApiError(error, 'paymentTransaction', {
+            operation: 'processPayment',
+            formType: 'gravity',
+            transactionToken: token
+          });
           onPaymentError(error);
         },
         onabort: (error: any) => {
-          console.error('Transaction aborted:', error);
+          console.error('Transaction aborted:', error);          
+          logApiError(error, 'paymentTransaction', {
+            operation: 'abortedPayment',
+            formType: 'gravity'
+          });
           onPaymentError(error);
         },
       });
@@ -253,7 +277,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ amount, onPaymentSucce
     } catch (error) {
       setIsDisabledPayment(false);
       console.log('Error processing payment:', error);
-      console.error('Error processing payment:', error);
+      console.error('Error processing payment:', error);      
+      logExceptionError(error, 'PaymentProcessing', {
+        operation: 'processPaymentClick',
+        formType: 'gravity'
+      });
       onPaymentError(error);
     }
   };

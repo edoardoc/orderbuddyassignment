@@ -20,7 +20,7 @@ import '../../../style.css';
 const LocationsPage: React.FC = () => {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const { data: locations } = useLocations(restaurantId);
-  const { setLocationName } = appStore();
+  const { setLocationName, setLocationSlug } = appStore();
   const router = useIonRouter();
 
   const getLocationIcon = (isMobile: boolean) => {
@@ -36,7 +36,7 @@ const LocationsPage: React.FC = () => {
     setLocationName('');
     if (locations?.length === 1) {
       setLocationName(locations[0].name);
-
+      setLocationSlug(locations[0].locationSlug);
       router.push(`/${restaurantId}/${locations[0]._id}/launch-pad`);
     }
   }, [locations, restaurantId]);

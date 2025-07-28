@@ -1,0 +1,15 @@
+{
+  "routes": [
+    {
+      "route": "/.well-known/apple-developer-merchantid-domain-association.txt",
+      "allowedRoles": ["anonymous"],
+      "serve": "/.well-known/apple-developer-merchantid-domain-association.txt",      
+      "statusCode": 200,
+       "mimeType": "text/plain"
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/.well-known/*"]
+  }
+}

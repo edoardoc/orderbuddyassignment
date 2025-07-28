@@ -7,7 +7,6 @@
 
 /* StoreClosedBanner.tsx */
 
-
 /* category.tsx */
 .sticky-categories {
   position: sticky;
@@ -254,4 +253,14 @@ ion-input.custom {
 
 .font-size-17 {
   font-size: 17px;
+}
+
+.ion-text {
+  color: white;
+  --ion-text-color: white;
+}
+
+.payment-icon {
+  color: white !important;
+  fill: white !important;
 }

@@ -1,5 +1,6 @@
 import { IsString, IsBoolean, IsArray, ValidateNested, IsOptional, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ObjectId } from 'mongodb';
 
 export class WorkingHourDto {
   @IsString()
@@ -27,6 +28,15 @@ export class OrderTimingDto {
   stopOrdersBeforeMinutes: number;
 }
 
+export class AlertNumberDto {
+  @IsString()
+  @IsOptional()
+  _id?: string | ObjectId;
+
+  @IsString()
+  phoneNumber: string;
+}
+
 export class CreateLocationSettingDto {
   @IsString()
   restaurantId: string;
@@ -47,4 +57,10 @@ export class CreateLocationSettingDto {
   @ValidateNested()
   @Type(() => OrderTimingDto)
   orderTiming?: OrderTimingDto;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AlertNumberDto)
+  alertNumbers?: AlertNumberDto[];
 }

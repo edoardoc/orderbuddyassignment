@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
 import { ApiResponse } from './api-response';
 import { handleApiResponse } from './apiHandle';
-import { S } from 'vite/dist/node/types.d-aGj9QkWt';
+import { logApiError } from '../utils/errorLogger';
+
 export type Restaurant = {
   _id: string;
   name: string;
@@ -64,8 +65,17 @@ export function useRestaurant(restaurantId: string) {
     queryKey: ['restaurant', restaurantId],
     queryFn: async () => {
       if (!restaurantId) throw new Error('Missing restaurant ID');
-      const response = await axiosInstance.get<ApiResponse<Restaurant>>(`menu-app/${restaurantId}`);
-      return handleApiResponse(response.data);
+      try {
+        const response = await axiosInstance.get<ApiResponse<Restaurant>>(`menu-app/${restaurantId}`);
+        return handleApiResponse(response.data);
+      } catch (error) {
+        console.error('Failed to fetch restaurant:', error);      
+        logApiError(error, `menu-app/${restaurantId}`, {
+          operation: 'fetchRestaurant',
+          restaurantId
+        });
+        throw error;
+      }
     },
     enabled: !!restaurantId,
   });

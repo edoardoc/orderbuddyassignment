@@ -19,7 +19,11 @@ import { useState } from 'react';
 import { mailOutline, phonePortraitOutline } from 'ionicons/icons';
 import { createCode, consumeCode, clearLoginAttemptInfo } from 'supertokens-web-js/recipe/passwordless';
 import { createUserApi } from '../../queries/useUser';
+import { logExceptionError } from '../../utils/errorLogger';
 import '../../../style.css';
+import AppInsightsTester from '../../components/AppInsightsTester';
+
+
 type AuthMethod = 'phone' | 'email';
 
 const LoginPage: React.FC = () => {
@@ -58,6 +62,11 @@ const LoginPage: React.FC = () => {
         setShowOtpInput(true);
       }
     } catch (err: any) {
+      logExceptionError(
+        err instanceof Error ? err : new Error(String(err)),
+        'login.handleLogin',
+        { authMethod, phoneNumber: authMethod === 'phone' ? phoneNumber : undefined, email: authMethod === 'email' ? email : undefined }
+      );
       present({
         message: err.isSuperTokensGeneralError ? err.message : 'Something went wrong',
         duration: 3000,
@@ -99,6 +108,11 @@ const LoginPage: React.FC = () => {
               color: 'success',
             });
           } catch (error) {
+            logExceptionError(
+              error instanceof Error ? error : new Error(String(error)),
+              'login.createUserApi',
+              { userId: response.user.id, authMethod }
+            );
             console.error('Failed to create user:', error);
             present({
               message: 'Account created but profile setup failed',
@@ -141,6 +155,11 @@ const LoginPage: React.FC = () => {
         setShowOtpInput(false);
       }
     } catch (err: any) {
+      logExceptionError(
+        err instanceof Error ? err : new Error(String(err)),
+        'login.handleOTPVerification',
+        { authMethod, otpLength: otp.length }
+      );
       present({
         message: err.isSuperTokensGeneralError ? err.message : 'Something went wrong',
         duration: 3000,
@@ -161,6 +180,9 @@ const LoginPage: React.FC = () => {
   return (
     <IonPage>
       <IonContent className='ion-padding'>
+        {/* <div>
+          <AppInsightsTester />
+        </div> */}
         <div className='login-container'>
           <IonCard className='auth-card'>
             <h3>

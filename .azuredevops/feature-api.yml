@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - feature/wk29
+      - features/week-30
   paths:
     include:
       - src/api/**
@@ -46,7 +46,8 @@ steps:
   # Deploy to Azure App Service
   - task: AzureWebApp@1
     inputs:
-      azureSubscription: 'stage-service-connection'
+      azureSubscription: 'dev-service-connection'
       appType: 'webApp'
-      appName: 'ob-api-staging'
+      appName: 'ob-api-dev'
       package: '$(System.DefaultWorkingDirectory)/src/api/dist/release.zip'
+      deploymentClean: true
