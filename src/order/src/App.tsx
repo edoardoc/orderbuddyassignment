@@ -42,17 +42,13 @@ const queryClient = new QueryClient({
         // Add custom retry logic if needed
         return failureCount < 2;
       },
-      onError: (error) => {
-        // Global error handler for React Query errors
-        console.error('React Query error:', error);
-      }
     },
     mutations: {
       onError: (error) => {
         console.error('Mutation error:', error);
-      }
-    }
-  }
+      },
+    },
+  },
 });
 
 const App = () => (
@@ -64,12 +60,20 @@ const App = () => (
             <Switch>
               <Route exact path='/entry/:restaurantId/:locationSlug/:locationId' component={EntryPage} />
               <Route exact path='/menus/:restaurantId/:locationSlug/:locationId' component={MenusPage} />
-              <Route exact path='/menu/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId' component={MenuPage} />
-              <Route exact path='/cart/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId' component={CartPage} />
+              <Route
+                exact
+                path='/menu/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId'
+                component={MenuPage}
+              />
+              <Route
+                exact
+                path='/cart/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId'
+                component={CartPage}
+              />
               <Route exact path='/status/:restaurantId/:orderId' component={StatusPage} />
               <Route exact path='/terms' component={TermsPage} />
               <Route exact path='/privacy' component={PrivacyPage} />
-              <Route exact path='/error' component={ErrorPage} />              
+              <Route exact path='/error' component={ErrorPage} />
               {/* Only include test routes in development mode */}
               {/* {import.meta.env.DEV && (
                 <Route exact path='/test-logging' component={LogTestPage} />
