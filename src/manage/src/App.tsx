@@ -18,6 +18,9 @@ import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 
+/* Azure Application Insights for error logging */
+import { initAppInsights } from './services/appInsightsService';
+
 /**
  * Ionic Dark Mode
  * -----------------------------------------------------
@@ -41,6 +44,8 @@ import RootPage from './root';
 import SuperTokens from 'supertokens-web-js';
 import Session from 'supertokens-web-js/recipe/session';
 import Passwordless from 'supertokens-web-js/recipe/passwordless';
+
+import ErrorBoundary from './services/ErrorBoundary';
 import LoginPage from './pages/login/login';
 import { checkSessionStatus } from './pages/checksession';
 import StationsPage from './pages/stations/stations';
@@ -59,9 +64,12 @@ import OrdersPage from './pages/orders-page/OrdersPage';
 import HistoryPage from './pages/order-history/OrderHistoryPage';
 import LocationSettingsPage from './pages/location-settings/LocationSettingsPage';
 import SalesSummaryReport from './pages/sales-report/SalesSummaryPage';
+import SalesItemPage from './pages/sales-item/SalesItemPage';
+import PosPage from './pages/pos/PosPage';
 
 setupIonicReact();
 const apiEndPoint = import.meta.env.VITE_API_ENDPOINT as string;
+initAppInsights();
 
 SuperTokens.init({
   appInfo: {
@@ -82,6 +90,16 @@ const App: React.FC = () => {
         setIsAuthenticated(hasSession);
       } catch (error) {
         console.error('Session verification failed:', error);
+        // Log authentication errors to Application Insights
+        if (error instanceof Error) {
+          import('./services/appInsightsService').then(({ logException }) => {
+            logException(error, { 
+              context: 'Authentication', 
+              status: 'Failed',
+              path: window.location.pathname
+            });
+          });
+        }
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -89,6 +107,22 @@ const App: React.FC = () => {
     };
 
     verifySession();
+    
+    // Track route changes
+    const handleRouteChange = () => {
+      import('./services/appInsightsService').then(({ logPageView }) => {
+        logPageView(
+          document.title || window.location.pathname,
+          window.location.pathname,
+          { referrer: document.referrer }
+        );
+      });
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    handleRouteChange();    
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange);
+    };
   }, []);
   if (isLoading) {
     return (
@@ -101,11 +135,12 @@ const App: React.FC = () => {
   }
 
   return (
-    <IonApp style={{ userSelect: 'none' }}>
-      <Suspense fallback={<IonSpinner />}>
-        <IonReactRouter>
-          <IonRouterOutlet>
-            <Switch>
+    <ErrorBoundary>
+      <IonApp style={{ userSelect: 'none' }}>
+        <Suspense fallback={<IonSpinner />}>
+          <IonReactRouter>
+            <IonRouterOutlet>
+              <Switch>
               {/* Login route - only accessible when logged out */}
               {/* //todo refactor */}
               <Route
@@ -190,6 +225,14 @@ const App: React.FC = () => {
                 path='/:restaurantId/:locationId/apps/sales_reports'
                 render={(props) => (isAuthenticated ? <SalesSummaryReport /> : <Redirect to='/login' />)}
               />
+                 <Route
+                path='/:restaurantId/:locationId/apps/sales_item'
+                render={(props) => (isAuthenticated ? <SalesItemPage /> : <Redirect to='/login' />)}
+              />
+                 <Route
+                path='/:restaurantId/:locationId/apps/pos'
+                render={(props) => (isAuthenticated ? <PosPage /> : <Redirect to='/login' />)}
+              />
               <Route render={() => <Redirect to={isAuthenticated ? '/root-page' : '/login'} />} />
             </Switch>
           </IonRouterOutlet>
@@ -198,6 +241,7 @@ const App: React.FC = () => {
       <PWAInstallPrompt />
       <PWAPrompt />
     </IonApp>
+    </ErrorBoundary>
   );
 };
 export default App;

@@ -4,6 +4,7 @@ import { axiosInstance } from '../axiosInstance';
 import { ApiResponse } from '../api-response';
 import { Options } from 'qr-code-styling';
 import { DotType, CornerSquareType, CornerDotType } from 'qr-code-styling';
+import { logExceptionError } from '../../utils/errorLogger';
 
 // Zod schemas
 const originSchema = z.object({
@@ -80,6 +81,17 @@ export function useOrigins(restaurantId: string, locationId: string) {
         return validatedData;
       } catch (error) {
         console.error('Origins data validation failed:', error);
+        // Log validation error
+        logExceptionError(
+          new Error('Invalid origins data format'),
+          'useOrigins.validation',
+          {
+            endpoint: `/origins/${restaurantId}/${locationId}`,
+            restaurantId,
+            locationId,
+            zodError: error instanceof z.ZodError ? JSON.stringify(error.errors) : 'Unknown error'
+          }
+        );
         throw new Error('Invalid origins data format');
       }
     },

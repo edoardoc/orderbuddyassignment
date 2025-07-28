@@ -5,8 +5,10 @@ import {
   useUpdateLocationSettings,
   WorkingHour,
   OrderTiming,
+  AlertNumber,
 } from '../../queries/location-settings/useLocationSettingsApi';
 import { useIonToast } from '@ionic/react';
+import { logExceptionError } from '../../utils/errorLogger';
 
 const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -33,6 +35,11 @@ export function useLocationSettings() {
   // State for range slider UI values
   const [startAcceptMinutes, setStartAcceptMinutes] = useState<number>(30);
   const [stopAcceptMinutes, setStopAcceptMinutes] = useState<number>(30);
+  // State for alert numbers
+  const [alertNumbers, setAlertNumbers] = useState<AlertNumber[]>([]);
+  // State for new phone number input
+  const [phoneNumber, setPhoneNumber] = useState<string>('');
+  const [phoneNumberError, setPhoneNumberError] = useState<string>('');
 
   const [orderTiming, setOrderTiming] = useState<OrderTimingSettings>({
     acceptOrdersAfterMinutes: 30,
@@ -69,6 +76,7 @@ export function useLocationSettings() {
     workingHours: WorkingHour[];
     timezone: string;
     orderTiming?: OrderTiming;
+    alertNumbers?: AlertNumber[];
   } | null>(null);
 
   // Initialize state from fetched data
@@ -114,6 +122,13 @@ export function useLocationSettings() {
               ? locationSettingsData.orderTiming.stopOrdersBeforeMinutes
               : 30,
         });
+      }
+
+      // Set alert numbers if available
+      if (locationSettingsData.alertNumbers && Array.isArray(locationSettingsData.alertNumbers)) {
+        setAlertNumbers(locationSettingsData.alertNumbers);
+      } else {
+        setAlertNumbers([]);
       }
 
       // Store initial data for comparison
@@ -190,6 +205,69 @@ export function useLocationSettings() {
     }));
   };
 
+  // Handle adding an alert number
+  const addAlertNumber = (phoneNumber: string) => {
+    // Validate phone number format
+    if (!validatePhoneNumber(phoneNumber)) {
+      setPhoneNumberError('Please enter a valid phone number');
+      return;
+    }
+
+    // Check if the phone number already exists
+    const isDuplicate = alertNumbers.some((alert) => alert.phoneNumber === phoneNumber);
+    if (isDuplicate) {
+      setPhoneNumberError('This phone number is already in the list');
+      // Show toast notification for duplicate
+      presentToast({
+        message: 'Phone number already exists in alert list',
+        duration: 2000,
+        color: 'warning',
+        position: 'bottom',
+      });
+      return;
+    }
+
+    dataChangedByUserRef.current = true;
+    setAlertNumbers((prev) => [...prev, { phoneNumber }]);
+    setPhoneNumber('');
+    setPhoneNumberError('');
+
+    // Show success toast
+    presentToast({
+      message: 'Phone number added to alert list',
+      duration: 1500,
+      color: 'success',
+      position: 'bottom',
+    });
+  };
+
+  // Update phone number input with formatting
+  const updatePhoneNumber = (value: string) => {
+    const digitsOnly = value.replace(/\D/g, '');
+    const trimmed = digitsOnly.substring(0, 10);
+    setPhoneNumber(trimmed);
+    if (phoneNumberError) {
+      setPhoneNumberError('');
+    }
+  };
+
+  // Handle removing an alert number
+  const removeAlertNumber = (id: string) => {
+    dataChangedByUserRef.current = true;
+    // Find the phone number being removed for the toast message
+    const removedNumber = alertNumbers.find((alert) => alert._id === id)?.phoneNumber || '';
+
+    setAlertNumbers((prev) => prev.filter((alertNumber) => alertNumber._id !== id));
+
+    // Show toast confirmation
+    presentToast({
+      message: `Alert number ${formatPhoneNumber(removedNumber)} removed`,
+      duration: 1500,
+      color: 'warning',
+      position: 'bottom',
+    });
+  };
+
   // Handle start time range change
   const updateStartAcceptOrders = (e: CustomEvent) => {
     const newValue = parseInt(e.detail.value, 10);
@@ -224,6 +302,7 @@ export function useLocationSettings() {
         workingHours,
         timezone,
         orderTiming,
+        alertNumbers,
       },
       {
         onSuccess: () => {
@@ -237,6 +316,11 @@ export function useLocationSettings() {
           refetch();
         },
         onError: (error) => {
+          logExceptionError(
+            error instanceof Error ? error : new Error(String(error)),
+            'useLocationSettings.saveSettings',
+            { restaurantId, locationId, timezone }
+          );
           presentToast({
             message: `Failed to update location settings: ${error.message}`,
             duration: 3000,
@@ -250,7 +334,7 @@ export function useLocationSettings() {
   // Debounce timer ref for auto-saving
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-save when workingHours, timezone, or orderTiming changes
+  // Auto-save when workingHours, timezone, orderTiming, or alertNumbers changes
   useEffect(() => {
     if (isLoading || isLoadingData) {
       return;
@@ -275,7 +359,19 @@ export function useLocationSettings() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [workingHours, timezone, orderTiming]);
+  }, [workingHours, timezone, orderTiming, alertNumbers, isLoading, isLoadingData, restaurantId, locationId]);
+
+  // Phone number formatting utility functions
+  const formatPhoneNumber = (phoneNumber: string): string => {
+    if (phoneNumber.length === 10) {
+      return `(${phoneNumber.substring(0, 3)}) ${phoneNumber.substring(3, 6)}-${phoneNumber.substring(6)}`;
+    }
+    return phoneNumber;
+  };
+
+  const validatePhoneNumber = (phoneNumber: string): boolean => {
+    return Boolean(phoneNumber && phoneNumber.trim().length >= 10);
+  };
 
   return {
     workingHours,
@@ -294,6 +390,16 @@ export function useLocationSettings() {
     stopAcceptMinutes,
     updateStartAcceptOrders,
     updateStopAcceptOrders,
+    // Alert numbers
+    alertNumbers,
+    addAlertNumber,
+    removeAlertNumber,
+    phoneNumber,
+    updatePhoneNumber,
+    phoneNumberError,
+    // Phone utility functions
+    formatPhoneNumber,
+    validatePhoneNumber,
     // Timezone data
     timezones,
   };

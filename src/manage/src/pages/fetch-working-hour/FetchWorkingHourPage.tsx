@@ -23,6 +23,7 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { close } from 'ionicons/icons';
 import { axiosInstance } from '../../queries/axiosInstance';
+import { logExceptionError } from '../../utils/errorLogger';
 import '../../../style.css';
 interface WorkingHoursPayload {
   restaurantName: string;
@@ -60,6 +61,11 @@ const FetchWorkingHourPage: React.FC = () => {
       setShowModal(true);
     },
     onError: (error) => {
+      logExceptionError(
+        error instanceof Error ? error : new Error(String(error)),
+        'fetchWorkingHours.mutation',
+        { restaurantName, restaurantLocation }
+      );
       console.error('Error fetching working hours:', error);
     },
   });

@@ -1,6 +1,11 @@
 import { ObjectId } from 'mongodb';
 import { QrCodeStyle } from 'src/origins/dto/update-origin.dtos';
 
+export interface AlertNumber {
+  _id?: string | ObjectId;
+  phoneNumber: string;
+}
+
 export interface Location {
   _id: ObjectId;
   restaurantId: string;
@@ -17,11 +22,12 @@ export interface Location {
   payment: {
     acceptPayment: boolean;
   };
-  workingHours: DayWorkingHours[]; 
+  workingHours: DayWorkingHours[];
   orderTiming: {
-  acceptOrdersAfterMinutes: number;
-  stopOrdersBeforeMinutes: number;
+    acceptOrdersAfterMinutes: number;
+    stopOrdersBeforeMinutes: number;
   };
+  alertNumbers?: AlertNumber[];
   isMobile: boolean;
   printers: PrinterData[];
 }
@@ -35,7 +41,7 @@ export interface PrinterData {
 
 export interface DayWorkingHours {
   day: string;
-  startTime: string | null ;
-  endTime: string | null ;
+  startTime: string | null;
+  endTime: string | null;
   isOpen: boolean;
 }

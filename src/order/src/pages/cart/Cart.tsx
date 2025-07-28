@@ -27,6 +27,8 @@ import { useQueryParams } from '@/hooks/useQueryParams';
 import { addOutline } from 'ionicons/icons';
 import '../../../style.css';
 import { useCreateOrder } from '@/queries/useCreateOrder';
+import { logApiError, logExceptionError } from '@/utils/errorLogger';
+
 const CartPage: React.FC = () => {
   // const { isValid, error, isLoading } = useOrderGuard();
   // useCartGuard();
@@ -62,13 +64,21 @@ const CartPage: React.FC = () => {
   const createOrderMutation = useCreateOrder();
 
   function initiateOrder(orderNumber: string) {
-    const payload = {
-      orderId: orderNumber,
-      restaurantId: restaurantId,
-      locationId: location._id,
-      stationTags: [...new Set(cartItems.flatMap((item) => item.stationTags))],
-    };
-    client.emit('order_joined', payload);
+    try {
+      const payload = {
+        orderId: orderNumber,
+        restaurantId: restaurantId,
+        locationId: location._id,
+        stationTags: [...new Set(cartItems.flatMap((item) => item.stationTags))],
+      };
+      client.emit('order_joined', payload);
+    } catch (error) {
+      logExceptionError(error, 'InitiateOrder', {
+        operation: 'emitOrderJoined',
+        orderNumber,
+        restaurantId
+      });
+    }
   }
 
   useEffect(() => {
@@ -131,6 +141,11 @@ const CartPage: React.FC = () => {
       router.push(`/status/${restaurant._id}/${orderId}`, 'forward');
     } catch (error) {
       console.error('Failed to create order:', error);
+      logApiError(error, 'menu-app/restaurant/order', {
+        operation: 'placeOrderCart',
+        restaurantId: restaurant._id,
+        locationId: location._id
+      });
     }
   };
   return (

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { ApiResponse } from '../api-response';
 import { handleApiResponse } from '../apiHandle';
 import { axiosInstance } from '../axiosInstance';
+import { logExceptionError } from '../../utils/errorLogger';
 
 const menuNameSchema = z.object({
   en: z.string(),
@@ -42,8 +43,24 @@ export function useMenus(restaurantId: string, locationId: string) {
       } catch (error) {
         if (error instanceof z.ZodError) {
           console.error('Menu data validation failed:', error.errors);
+          // Log validation error
+          logExceptionError(
+            new Error('Invalid menu data format'),
+            'useMenus.validation',
+            {
+              zodError: JSON.stringify(error.errors),
+              restaurantId,
+              locationId
+            }
+          );
           throw new Error('Invalid menu data format');
         }
+        // Log general error
+        logExceptionError(error, 'useMenus', {
+          restaurantId,
+          locationId,
+          endpoint: `menu/menus/${restaurantId}/${locationId}`
+        });
         throw error;
       }
     },

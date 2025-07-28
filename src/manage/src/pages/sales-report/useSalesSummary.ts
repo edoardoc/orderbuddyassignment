@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useSalesReportSummary, SalesDay } from '../../queries/reports/useSalesReportSummary';
 import { sumBy } from 'lodash';
+import { logExceptionError } from '../../utils/errorLogger';
 
 export function useSalesSummary() {
   const { restaurantId = '', locationId = '' } = useParams<{ restaurantId: string; locationId: string }>();
@@ -13,17 +14,29 @@ export function useSalesSummary() {
     totalGrossSales: number;
     totalTax: number;
   } => {
-    if (!data || data.length === 0) {
+    try {
+      if (!data || data.length === 0) {
+        return {
+          totalGrossSales: 0,
+          totalTax: 0,
+        };
+      }
+
+      return {
+        totalGrossSales: sumBy(data, 'grossSales'),
+        totalTax: sumBy(data, 'tax'),
+      };
+    } catch (error) {
+      logExceptionError(
+        error instanceof Error ? error : new Error(String(error)),
+        'useSalesSummary.calculateTotals',
+        { restaurantId, locationId }
+      );
       return {
         totalGrossSales: 0,
         totalTax: 0,
       };
     }
-
-    return {
-      totalGrossSales: sumBy(data, 'grossSales'),
-      totalTax: sumBy(data, 'tax'),
-    };
   };
 
   const totals = calculateTotals(salesData);

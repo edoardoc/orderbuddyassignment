@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { axiosInstance } from './axiosInstance';
 import { ApiResponse } from './api-response';
+import { logExceptionError } from '../utils/errorLogger';
 
 const stationSchema = z.object({
   _id: z.string(),
@@ -31,6 +32,17 @@ export function useStations(restaurantId: string, locationId: string) {
         return validatedData.data;
       } catch (error) {
         console.error('Stations data validation failed:', error);
+        // Log to Application Insights
+        logExceptionError(
+          new Error('Invalid stations data format'),
+          'useStations.validation',
+          {
+            restaurantId,
+            locationId,
+            zodError: error instanceof z.ZodError ? JSON.stringify(error.errors) : 'Unknown validation error',
+            endpoint: `stations/${restaurantId}/${locationId}`
+          }
+        );
         throw new Error('Invalid stations data format');
       }
     },

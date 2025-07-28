@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { axiosInstance } from './axiosInstance';
 import { ApiResponse } from './api-response';
+import { logExceptionError } from '../utils/errorLogger';
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
@@ -37,6 +38,16 @@ export function useLocations(restaurantId: string) {
         return validatedData.data;
       } catch (error) {
         console.error('Location data validation failed:', error);
+        // Log to Application Insights
+        logExceptionError(
+          new Error('Invalid location data format'),
+          'useLocations.validation',
+          {
+            restaurantId,
+            zodError: error instanceof z.ZodError ? JSON.stringify(error.errors) : 'Unknown validation error',
+            endpoint: `/restaurant/restaurants/${restaurantId}/locations`
+          }
+        );
         throw new Error('Invalid location data format');
       }
     },

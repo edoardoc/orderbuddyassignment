@@ -21,6 +21,7 @@ import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCreateOrigin } from '../../../queries/origin/useOrigin';
 import { useParams } from 'react-router-dom';
+import { logExceptionError } from '../../../utils/errorLogger';
 
 const schema = z.object({
   name: z.string().min(1, 'Origin name is required'),
@@ -68,6 +69,11 @@ const AddOriginModal: React.FC<AddOriginModalProps> = ({ isOpen, onClose }) => {
       reset();
       onClose();
     } catch (error) {
+      logExceptionError(
+        error instanceof Error ? error : new Error(String(error)),
+        'addOriginPage.onSubmit',
+        { restaurantId, locationId, originType: data.type }
+      );
       console.error('Error creating origin:', error);
     }
   };

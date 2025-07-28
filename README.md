@@ -29,6 +29,7 @@ public/          # Static assets
 - **State**: Zustand + TanStack React Query
 - **Backend**: NestJS (planned)
 - **AI Agents**: Nova (for codegen, PRs, and automation)
+- **Observability**: Azure Application Insights for error tracking and telemetry
 
 ## 🧪 Getting Started
 
@@ -57,6 +58,16 @@ AI agent Nova will read and complete tasks from this list.
 - `develop`: Active development
 - `feature/*`: New features
 - `release/*`: Release prep and hotfixes
+
+## 📊 Monitoring & Observability
+
+The project uses Azure Application Insights for error tracking and telemetry:
+
+- **Error Logging**: Automatic tracking of exceptions across the application
+- **Performance Monitoring**: API calls, page loads, and custom metrics
+- **User Telemetry**: Track feature usage and user journeys
+
+See [Manage App Application Insights Documentation](src/manage/README-APPLICATION-INSIGHTS.md) for setup and usage.
 
 ---
 

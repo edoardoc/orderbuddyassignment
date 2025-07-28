@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
 import { ApiResponse } from './api-response';
 import { handleApiResponse } from './apiHandle';
+import { logExceptionError } from   '../utils/errorLogger';
 export const STATIONS_ORDERS_QUERY_KEY = (restaurantId: string, stationId: string, locationId: string) => [
   'stationsOrders',
   restaurantId,
@@ -85,6 +86,11 @@ export function useStationsOrders(restaurantId: string, stationId: string, locat
         return processedData;
       } catch (error) {
         console.error('Error fetching station orders:', error);
+        // Log to Application Insights
+        logExceptionError(error, 'useStationOrders', {
+          endpoint: `stations/orders/${stationId}`,
+          stationId
+        });
         throw error;
       }
     },

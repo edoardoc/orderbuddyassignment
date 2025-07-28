@@ -52,6 +52,8 @@ import { useLogoUpload } from '../../queries/origin/useLogo';
 import { azureConfig } from '../../queries/manage-menu/useStorage';
 import { appStore } from '../../store';
 import { display } from 'html2canvas/dist/types/css/property-descriptors/display';
+import { logExceptionError } from '../../utils/errorLogger';
+
 interface station {
   _id: string;
   stations: stationItem[];
@@ -149,6 +151,11 @@ const OriginsPage: React.FC = () => {
       }));
       setRestaurantLogo(logoUrl as string);
     } catch (error) {
+      logExceptionError(
+        error instanceof Error ? error : new Error(String(error)),
+        'originPage.handleLogoUpload',
+        { restaurantId, locationId, fileType: file.type, fileSize: file.size }
+      );
       console.error('Logo upload failed:', error);
     } finally {
       setUploading(false);
@@ -222,6 +229,11 @@ const OriginsPage: React.FC = () => {
       });
       styleModal.current?.dismiss();
     } catch (error) {
+      logExceptionError(
+        error instanceof Error ? error : new Error(String(error)),
+        'originPage.handleStyleUpdate',
+        { restaurantId, locationId }
+      );
       console.error('Failed to update QR style:', error);
     }
   };

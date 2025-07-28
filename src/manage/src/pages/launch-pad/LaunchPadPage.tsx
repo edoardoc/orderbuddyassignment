@@ -20,7 +20,7 @@ const LaunchPadPage: React.FC = (props) => {
   const { restaurantId, locationId } = useParams<{ restaurantId: string; locationId: string }>();
   const { mutate: initializeNotifications } = useInitializeNotifications();
   const { data: locations } = useLocations(restaurantId);
-  const { setLocationName } = appStore();
+  const { setLocationName, setLocationSlug } = appStore();
   const setPrinters = appStore((state) => state.setPrinters);
 
   const [userId, setUserId] = useState<string | undefined>();
@@ -54,13 +54,15 @@ const LaunchPadPage: React.FC = (props) => {
   useEffect(() => {
     if (locations && locations.length === 1) {
       setLocationName(locations[0].name);
+      setLocationSlug(locations[0].locationSlug);
     } else {
       const currentLocation = locations?.find((location) => location._id === locationId);
       if (currentLocation) {
         setLocationName(currentLocation.name);
+        setLocationSlug(currentLocation.locationSlug);
       }
     }
-  }, [locations, locationId, setLocationName]);
+  }, [locations, locationId, setLocationName, setLocationSlug]);
   useEffect(() => {
     if (restaurantId) {
       initializeNotifications(restaurantId);

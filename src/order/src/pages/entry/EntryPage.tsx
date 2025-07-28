@@ -11,6 +11,7 @@ import { useMenu } from '@/queries/useMenu';
 import { delay } from '@/utils/delay';
 import { menu } from 'ionicons/icons';
 import { Paths } from '@/routes/paths';
+import { logApiError } from '@/utils/errorLogger';
 
 type EntryParams = {
   restaurantId: string;
@@ -113,6 +114,12 @@ export function EntryPage() {
 
   if (isError) {
     console.error('Error loading restaurant data:', isError);
+    logApiError(error, `entry/${restaurantId}/${locationId}/${originId}`, {
+      operation: 'loadEntryPageData',
+      restaurantId,
+      locationId,
+      originId
+    });
     router.push('/error?code=restaurant-load-failed', 'forward');
     return null;
   }

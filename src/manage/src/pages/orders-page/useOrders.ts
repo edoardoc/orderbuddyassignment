@@ -9,6 +9,7 @@ import { useOrderStatus } from '../../queries/useOrderstatus';
 import { useStatusMutation } from '../../queries/dashboard/useDashboardStatusMutation';
 import { OrderStatus } from '../../constants';
 import { usePrinterService } from '../../hooks/usePrinterService';
+import { logExceptionError } from '../../utils/errorLogger';
 
 interface OrderData {
   orderId: string;
@@ -87,6 +88,16 @@ export const useOrders = (restaurantId: string, locationId: string) => {
           }
         }
       } catch (error) {
+        logExceptionError(
+          error instanceof Error ? error : new Error(String(error)),
+          'useOrders.handleOrderReceived',
+          { 
+            restaurantId: orderData.restaurantId, 
+            locationId: orderData.locationId, 
+            orderId: orderData.orderId,
+            correlationId: orderData.correlationId
+          }
+        );
         console.error('Error fetching order:', error);
       }
     };

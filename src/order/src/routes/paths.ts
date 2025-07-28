@@ -1,6 +1,17 @@
+import { logExceptionError } from '../utils/errorLogger';
+
 const assertParam = (name: string, value: string | undefined | null) => {
   if (!value || value.trim() === '') {
-    throw new Error(`Missing or invalid route param: ${name}`);
+    const error = new Error(`Missing or invalid route param: ${name}`);
+
+    // Log to Application Insights with application context
+    logExceptionError(error, 'RouteParamValidation', {
+      paramName: name,
+      paramValue: value,
+      stack: new Error().stack,
+    });
+
+    throw error;
   }
 };
 

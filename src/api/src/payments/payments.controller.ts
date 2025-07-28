@@ -91,9 +91,10 @@ export class PaymentsController {
   }
 
   @Post('complete-upi-transaction')
-  async completeUpiTransaction(@Body() body: CreateOrderDto, @Res() res: Response) {
+  async completeUpiTransaction(@Body() body: CreateOrderDto, @Res() res: Response, @Req() req: Request) {
     try {
-      const data = await this.paymentsService.completeTranscationUpi(body);
+    const requestId = req['requestId'];
+      const data = await this.paymentsService.completeTranscationUpi(body, requestId);
       return res.status(HttpStatus.OK).json(data);
     } catch (error: any) {
       console.error('EmergePay transaction upi failed:', error);

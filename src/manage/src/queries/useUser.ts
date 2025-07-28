@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import { ApiResponse } from './api-response';
 import { handleApiResponse } from './apiHandle';
+import { logExceptionError } from '../utils/errorLogger';
 
 interface CreateUserDto {
   userId: string;
@@ -26,6 +27,12 @@ export const createUserApi = async (userData: CreateUserDto) => {
     return response.data;
   } catch (error) {
     console.error('API Error:', error);
+    // Log to Application Insights
+    logExceptionError(error, 'createUserApi', {
+      endpoint: 'users/create-user',
+      userId: userData.userId,
+      email: userData.email ? true : false // Just log if email was provided, not the actual email
+    });
     throw error;
   }
 };
@@ -58,12 +65,28 @@ export const fetchUserSession = async (): Promise<User> => {
       if (error instanceof z.ZodError) {
         console.error('Validation errors:', error.errors);
         console.error('Received data:', userData);
+        // Log validation error
+        logExceptionError(
+          new Error('Invalid user session data format'),
+          'fetchUserSession.validation',
+          {
+            zodErrors: JSON.stringify(error.errors),
+            // Don't log full user data as it may contain PII
+            receivedDataKeys: Object.keys(userData || {})
+          }
+        );
         throw new Error('Invalid user session data format');
       }
+      // Log general error
+      logExceptionError(error, 'fetchUserSession.validation', {});
       throw error;
     }
   } catch (error) {
     console.error('Session fetch error:', error);
+    // Log API error
+    logExceptionError(error, 'fetchUserSession.api', {
+      endpoint: 'restaurant/user/session'
+    });
     throw error;
   }
 };

@@ -4,6 +4,7 @@ import { InjectClient } from 'nest-mongodb-driver';
 import { COLLECTIONS } from 'src/db/collections';
 import { Location } from 'src/db/models/location.model';
 import { DateTime } from 'luxon';
+import { SalesByItemResponse } from './dto/reports.dto';
 
 @Injectable()
 export class ReportService {
@@ -160,5 +161,82 @@ export class ReportService {
     const fullSalesData = Array.from(allDatesMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
     return fullSalesData;
+  }
+
+  async getSalesByItem(restaurantId: string, locationId: string, date: string): Promise<SalesByItemResponse[]> {
+    // Find the location to get timezone info
+    const location = await this.locationCollection.findOne(
+      {
+        _id: new ObjectId(locationId),
+        restaurantId: restaurantId,
+      },
+      {
+        projection: {
+          timezone: 1,
+          name: 1,
+          _id: 1,
+        },
+      },
+    );
+
+    if (!location) {
+      throw new NotFoundException(`Location ${locationId} not found for restaurant ${restaurantId}`);
+    }
+
+    if (!location.timezone) {
+      throw new Error('Store timezone not configured');
+    }
+
+    const timezone = location.timezone;
+    const localDay = DateTime.fromISO(date).setZone(timezone).startOf('day');
+
+    if (!localDay.isValid) {
+      throw new Error(`Invalid date: ${localDay.invalidReason}`);
+    }
+
+    const startOfDay = localDay.toUTC().toJSDate();
+    const endOfDay = localDay.endOf('day').toUTC().toJSDate();
+
+    const salesByItem = await this.ordersCollection
+      .aggregate([
+        {
+          $match: {
+            restaurantId,
+            locationId: new ObjectId(locationId),
+            status: 'COMPLETED',
+            endedAt: {
+              $gte: startOfDay,
+              $lte: endOfDay,
+            },
+          },
+        },
+        { $unwind: '$items' },
+        {
+          $group: {
+            _id: '$items.menuItemId',
+            itemName: { $first: '$items.name' },
+            soldCount: { $sum: 1 },
+            grossSalesCents: { $sum: '$items.priceCents' },
+          },
+        },
+        {
+          $addFields: {
+            grossSales: { $divide: ['$grossSalesCents', 100] },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            menuItemId: '$_id',
+            itemName: 1,
+            soldCount: 1,
+            grossSales: 1,
+          },
+        },
+        { $sort: { grossSales: -1 } },
+      ])
+      .toArray();
+    console.log('Sales by item:', salesByItem);
+    return salesByItem;
   }
 }

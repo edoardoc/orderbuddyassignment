@@ -25,6 +25,7 @@ import { useStatusMutation } from '../../../queries/usestatus';
 import LaunchPadNavBar from '../../../components/LanunchpadNavBar';
 import '../../../../style.css';
 import { OrderItemStatus, OrderStatus } from '../../../constants';
+import { logExceptionError } from '../../../utils/errorLogger';
 interface OrderData {
   orderId: string;
   stationTags: string[];
@@ -137,6 +138,17 @@ const IndividualKdsPage: React.FC = () => {
             },
           );
         } catch (error) {
+          logExceptionError(
+            error instanceof Error ? error : new Error(String(error)),
+            'individualKds.handleNewOrder',
+            { 
+              restaurantId, 
+              locationId, 
+              orderId: orderData.orderId, 
+              stationId,
+              correlationId: orderData.correlationId 
+            }
+          );
           console.error('Error fetching order details:', error);
         }
       }

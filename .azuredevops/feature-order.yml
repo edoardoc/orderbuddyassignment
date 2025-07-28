@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - feature/wk29
+      - features/week-30
   paths:
     include:
       - src/order/**
@@ -29,8 +29,15 @@ steps:
   # Step 3: Build the Ionic app
   - script: |
       cd src/order
-      ionic build --prod  # Build the app for production
+      npm run build
     displayName: 'Build Ionic Project'
+
+  # Step 3.5: List contents of the build output
+  - script: |
+      cd src/order/dist
+      echo "📂 Listing contents of dist/:"
+      find . -type f | sort
+    displayName: 'List dist/ contents'
 
   # Step 4: Deploy to Azure Static Web App
   - task: AzureStaticWebApp@0

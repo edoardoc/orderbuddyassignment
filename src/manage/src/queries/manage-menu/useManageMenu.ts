@@ -119,6 +119,9 @@ export const useManageMenu = ({ restaurantId, locationId, menuId }: UseManageMen
       queryClient.invalidateQueries({
         queryKey: ['menu', restaurantId, locationId, menuId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ['posmenus', restaurantId, locationId, menuId],
+      });
     },
   });
 

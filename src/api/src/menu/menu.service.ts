@@ -249,10 +249,12 @@ export class MenuService {
       this.logger.debug('SMS not requested');
     }
     const alertNumbersData = await this.getAlertNumbers(body.restaurantId, body.locationId);
-    if (alertNumbersData && alertNumbersData.alertNumbers.length > 0) {
+    if (alertNumbersData && alertNumbersData.alertNumbers && alertNumbersData.alertNumbers.length > 0) {
       const orderReadySms = `OrderBuddy- you have received an order #${orderCode}`;
       for (const alertNumber of alertNumbersData.alertNumbers) {
-        await this.messageService.sendMessage(alertNumber, orderReadySms);
+        if (alertNumber && alertNumber.phoneNumber) {
+          await this.messageService.sendMessage(alertNumber.phoneNumber, orderReadySms);
+        }
       }
     }
     const locationId = body.locationId;

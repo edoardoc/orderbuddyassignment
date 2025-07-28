@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
+import { logExceptionError } from '../utils/errorLogger';
 import { client } from '../Client';
 import { fetchDashboardOrder } from './dashboard/useSingleDasboardOrder';
 import { OrderStatus } from '../constants';
@@ -122,6 +123,11 @@ export function useOrderStatus({
             }
           } catch (error) {
             console.error('Error fetching completed order:', error);
+            // Log to Application Insights
+            logExceptionError(error, 'useOrderStatus.fetchCompletedOrder', {
+              orderId,
+              targetStatus: 'Completed'
+            });
           }
         }
       }
