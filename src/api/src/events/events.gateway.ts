@@ -17,6 +17,8 @@ import {
   UpdateOrderWaitTimeDto,
   OrderItemCompletedDto,
   OrderSubmittedDto,
+  JoinOrderDto,
+  OrderAcceptedDto,
 } from './dtos/events.gateway.dto';
 import * as dotenv from 'dotenv'; // Change import statement
 import { logger as pinoLoggerTrace } from 'src/logger/pino.logger';
@@ -102,11 +104,10 @@ export class EventsGateway implements OnGatewayConnection {
     this.logger.debug(`Store joined restaurant ${data.restaurantId} and location ${data.locationId}`);
   }
 
-  // @SubscribeMessage('order_joined')
-  // onOrderJoined(@ConnectedSocket() socket: Socket, @MessageBody() data: JoinOrderDto): void {
-  //   this.eventsService.join(socket, data.orderId)
-  // }
   @SubscribeMessage('order_joined')
+  onOrderJoined(@ConnectedSocket() socket: Socket, @MessageBody() data: JoinOrderDto): void {
+    this.eventsService.join(socket, data.orderId);
+  }
   async handleOrderJoined(
     @MessageBody()
     data: {
@@ -129,11 +130,6 @@ export class EventsGateway implements OnGatewayConnection {
         },
         'Order joined to Station',
       );
-      // Add client to room for this specific order
-      // client.join(data.orderId)
-      if (client) {
-        client.join(data.orderId);
-      }
 
       // Get all connected stations that match the tags
       const stations = await this.eventsService.getStationsByTags(data.restaurantId, data.locationId, data.stationTags);
@@ -263,9 +259,14 @@ export class EventsGateway implements OnGatewayConnection {
       this.logger.error('Error broadcasting order_item_started:', error);
     }
   }
+  @SubscribeMessage('order_accepted')
+  onOrderAccepted(@ConnectedSocket() socket: Socket, @MessageBody() data: OrderAcceptedDto): void {   
+    this.eventsService.broadcast(socket, 'order_accepted', data.restaurantId, data);
+    this.eventsService.broadcast(socket, 'order_accepted', data.orderId, data);
+  }
+
   @SubscribeMessage('order_ready_for_pickup')
   onOrderReadyForPickup(@ConnectedSocket() socket: Socket, @MessageBody() data: OrderPickupDto): void {
-    console.log('order_ready_for_pickup', data);
     this.eventsService.broadcast(socket, 'order_ready_for_pickup', data.restaurantId, data);
     this.eventsService.broadcast(socket, 'order_ready_for_pickup', data.orderId, data);
   }

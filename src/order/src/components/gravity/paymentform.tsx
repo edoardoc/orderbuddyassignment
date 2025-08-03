@@ -45,12 +45,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const { locationSlug } = useParams<{ locationSlug: string }>();
   const initiateOrder = (orderNumber: string) => {
     const payload = {
-      orderId: orderNumber,
-      restaurantId: restaurant._id,
-      locationId: location._id,
-      stationTags: [...new Set(cartItems.flatMap((item) => item.stationTags))],
-    };
-    client.emit('order_joined', payload);
+       orderId: orderNumber,
+     };
+     client.emit('order_joined', payload);
   };
 
   const origin = useOrderStore((s) => s.origin);

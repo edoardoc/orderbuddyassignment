@@ -11,6 +11,7 @@ import {
 import { COLLECTIONS } from '../db/collections';
 import { Stations } from 'src/db/models/station.model';
 import { DateTime } from 'luxon';
+import { OrderStatus } from 'src/constants';
 
 export interface OrderItem {
   id: string;
@@ -131,7 +132,7 @@ export class StationsService {
       .find<Order>({
         restaurantId,
         locationId: new ObjectId(locationId),
-        status: { $ne: 'COMPLETED' },
+        status: OrderStatus.OrderAccepted,
         startedAt: {
           $gte: startUTC,
           $lt: endUTC,
@@ -205,6 +206,7 @@ export class StationsService {
       _id: new ObjectId(orderId),
       restaurantId,
       locationId: new ObjectId(locationId),
+      status: OrderStatus.OrderAccepted,
       items: {
         $elemMatch: {
           stationTags: {

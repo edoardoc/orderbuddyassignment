@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useTodayOrders } from '../../queries/useOrder';
+import { useState, useEffect, useRef } from 'react';
 import { client } from '../../Client';
 import { debounce } from 'lodash';
 import { Order } from './types';
@@ -10,6 +9,8 @@ import { useStatusMutation } from '../../queries/dashboard/useDashboardStatusMut
 import { OrderStatus } from '../../constants';
 import { usePrinterService } from '../../hooks/usePrinterService';
 import { logExceptionError } from '../../utils/errorLogger';
+import { Printer, usePrinters } from '../../queries/printers/usePrinter';
+import { useTodayOrders } from './useOrdersQuery';
 
 interface OrderData {
   orderId: string;
@@ -26,6 +27,8 @@ interface RestaurantInfo {
 }
 
 export const useOrders = (restaurantId: string, locationId: string) => {
+  const { data: printersData } = usePrinters(restaurantId, locationId);
+
   const { printOrder: printOrderService } = usePrinterService();
 
   const [audio] = useState(new Audio('/sounds/new-order.mp3'));
@@ -34,6 +37,44 @@ export const useOrders = (restaurantId: string, locationId: string) => {
   const [activeOrders, setActiveOrders] = useState<Map<string, Order>>(new Map());
   const [completedOrders, setCompletedOrders] = useState<Map<string, Order>>(new Map());
   const [futureOrders, setFutureOrders] = useState<Map<string, Order>>(new Map());
+  const [isMobile, setIsMobile] = useState(false);
+
+  const [printers, setPrinters] = useState<Printer[]>([]);
+  const [selectedPrinter, setSelectedPrinter] = useState<Printer>();
+  const { isLoading, data: orders } = useTodayOrders(restaurantId, locationId);
+  const hasInitialized = useRef(false);
+  const activeOrdersRef = useRef(activeOrders);
+  useEffect(() => {
+    activeOrdersRef.current = activeOrders;
+  }, [activeOrders]);
+  useEffect(() => {
+    if (printersData && printersData) {
+      setPrinters(printersData);
+    }
+  }, [printersData]);
+
+  useEffect(() => {
+    if (printers) {
+      const ordersPrinter = printers.find((printer) => printer.name.toLowerCase() === 'orders');
+      if (ordersPrinter) {
+        setSelectedPrinter(ordersPrinter);
+      }
+    }
+  }, [printers]);
+
+  const sortOrder = (order: Order) => {
+    switch (order.status) {
+      case OrderStatus.OrderCompleted:
+        setCompletedOrders((prev) => new Map(prev).set(order._id, order));
+        break;
+      case OrderStatus.OrderAccepted:
+        setActiveOrders((prev) => new Map(prev).set(order._id, order));
+        break;
+      default:
+        setActiveOrders((prev) => new Map(prev).set(order._id, order));
+    }
+  };
+
   const restaurantInfo = {
     restaurantId: restaurantId,
     restaurantName: appState.selection.restaurant.name!,
@@ -41,21 +82,184 @@ export const useOrders = (restaurantId: string, locationId: string) => {
     locationName: appState.selection.location.name!,
   };
   const printOrder = debounce((order: Order) => {
-    printOrderService(order, restaurantInfo, appState.printers);
+    if (selectedPrinter) {
+      printOrderService(order, restaurantInfo, selectedPrinter);
+    }
   }, 1000);
 
-  const addItemToMap = (key: string, value: Order) => {
-    setActiveOrders((prevOrder) => {
-      const newOrders = new Map(prevOrder.set(key, value));
-      return newOrders;
-    });
-  };
+  useEffect(() => {
+    if (!orders || !printersData || hasInitialized.current) return;
 
-  const addCompletedOrderToMap = (key: string, value: Order) => {
-    setCompletedOrders((prevOrder) => new Map(prevOrder.set(key, value)));
-  };
+    hasInitialized.current = true;
 
-  const { isLoading } = useTodayOrders(restaurantId, locationId, addItemToMap, addCompletedOrderToMap);
+    for (const order of orders) {
+      sortOrder(order);
+    }
+
+    // Setup socket listeners here (move your socket setup code into a function and call it here)
+    // setupSocketListeners();
+
+    // Optionally, return a cleanup function to remove listeners
+    return () => {
+      // Remove socket listeners here
+    };
+  }, [orders, printersData]);
+
+  useEffect(() => {
+    setupSocketListeners();
+  }, [restaurantId, locationId, selectedPrinter]);
+
+  const setupSocketListeners = () => {
+    // Order received
+    const handleOrderReceived = async (orderData: OrderData) => {
+      try {
+        const newOrder = await fetchDashboardOrder(
+          orderData.restaurantId,
+          orderData.locationId,
+          orderData.orderId,
+          orderData.correlationId,
+        );
+        if (newOrder && selectedPrinter) {
+          printOrderService(newOrder, restaurantInfo, selectedPrinter);
+          sortOrder(newOrder);
+          audio.play();
+        }
+      } catch (error) {
+        logExceptionError(error instanceof Error ? error : new Error(String(error)), 'useOrders.handleOrderReceived', {
+          restaurantId: orderData.restaurantId,
+          locationId: orderData.locationId,
+          orderId: orderData.orderId,
+          correlationId: orderData.correlationId,
+        });
+        console.error('Error fetching order:', error);
+      }
+    };
+
+    // Order ready for pickup
+
+    const handleOrderAccepted = ({ orderId, restaurantId }: { orderId: string; restaurantId: string }) => {
+      const currentOrders = activeOrdersRef.current;
+
+      if (!currentOrders.has(orderId)) return;
+      setActiveOrders((prevOrders) => {
+        const newOrders = new Map(prevOrders);
+        const order = newOrders.get(orderId)!;
+        order.status = OrderStatus.OrderAccepted;
+        return newOrders;
+      });
+    };
+
+    const handleOrderReadyForPickup = ({ orderId, restaurantId }: { orderId: string; restaurantId: string }) => {
+      const currentOrders = activeOrdersRef.current;
+
+      if (!currentOrders.has(orderId)) return;
+      setActiveOrders((prevOrders) => {
+        const newOrders = new Map(prevOrders);
+        const order = newOrders.get(orderId)!;
+        const currentTime = new Date();
+        order.items.forEach((item) => {
+          if (!item.startedAt) {
+            item.startedAt = order.startedAt;
+          }
+          if (!item.completedAt) {
+            item.completedAt = currentTime;
+          }
+        });
+        order.status = OrderStatus.ReadyForPickup;
+        return newOrders;
+      });
+    };
+
+    // Order completed
+    const handleOrderCompleted = ({ orderId, restaurantId }: { orderId: string; restaurantId: string }) => {
+      const currentOrders = activeOrdersRef.current;
+      const order = currentOrders.get(orderId);
+      const orderCorrelationId = order?.meta.correlationId || '';
+      if (!currentOrders.has(orderId)) return;
+      setActiveOrders((prevOrders) => {
+        const newOrders = new Map(prevOrders);
+        const order = newOrders.get(orderId)!;
+        if (!order) {
+          console.warn(`Order not found in state for ID: ${orderId}`);
+          return prevOrders;
+        }
+
+        order.status = OrderStatus.OrderCompleted;
+        newOrders.delete(orderId);
+        return newOrders;
+      });
+
+      fetchDashboardOrder(restaurantId, locationId, orderId, orderCorrelationId)
+        .then((completedOrder) => {
+          sortOrder(completedOrder);
+        })
+        .catch((error) => {
+          console.error('Error fetching completed order:', error);
+        });
+    };
+
+    // Dashboard order item started
+    const handleOrderItemStarted = ({
+      orderId,
+      itemId,
+    }: {
+      orderId: string;
+      itemId: string;
+      restaurantId: string;
+      locationId: string;
+    }) => {
+      setActiveOrders((prevOrders) => {
+        const newOrders = new Map(prevOrders);
+        const order = newOrders.get(orderId)!;
+        const itemToUpdate = order.items.find((item) => item.id === itemId)!;
+        itemToUpdate.startedAt = new Date();
+        itemToUpdate.completedAt = null;
+        return newOrders;
+      });
+    };
+
+    // Dashboard order item completed
+    const handleOrderItemCompleted = ({
+      orderId,
+      itemId,
+    }: {
+      orderId: string;
+      itemId: string;
+      restaurantId: string;
+      locationId: string;
+    }) => {
+      setActiveOrders((prevOrders) => {
+        const newOrders = new Map(prevOrders);
+        const order = newOrders.get(orderId)!;
+        const itemToUpdate = order.items.find((item) => item.id === itemId)!;
+        itemToUpdate.completedAt = new Date();
+        itemToUpdate.startedAt = itemToUpdate.startedAt || new Date();
+        return newOrders;
+      });
+    };
+    client.off('order_received', handleOrderReceived).on('order_received', handleOrderReceived);
+    client.off('order_accepted', handleOrderAccepted).on('order_accepted', handleOrderAccepted);
+    client
+      .off('order_ready_for_pickup', handleOrderReadyForPickup)
+      .on('order_ready_for_pickup', handleOrderReadyForPickup);
+    client.off('order_completed', handleOrderCompleted).on('order_completed', handleOrderCompleted);
+    client
+      .off('dashboard_order_item_started', handleOrderItemStarted)
+      .on('dashboard_order_item_started', handleOrderItemStarted);
+    client
+      .off('dashboard_order_item_completed', handleOrderItemCompleted)
+      .on('dashboard_order_item_completed', handleOrderItemCompleted);
+
+    // Cleanup function (return this from your effect)
+    return () => {
+      client.off('order_received', handleOrderReceived);
+      client.off('order_accepted', handleOrderAccepted);
+      client.off('order_ready_for_pickup', handleOrderReadyForPickup);
+      client.off('order_completed', handleOrderCompleted);
+      client.off('dashboard_order_item_started', handleOrderItemStarted);
+      client.off('dashboard_order_item_completed', handleOrderItemCompleted);
+    };
+  };
 
   const initiateStore = () => {
     client.emit('store_joined', {
@@ -67,99 +271,16 @@ export const useOrders = (restaurantId: string, locationId: string) => {
   useEffect(() => {
     initiateStore();
   }, []);
-
   useEffect(() => {
-    const handleOrderReceived = async (orderData: OrderData) => {
-      try {
-        const newOrder = await fetchDashboardOrder(
-          orderData.restaurantId,
-          orderData.locationId,
-          orderData.orderId,
-          orderData.correlationId,
-        );
-        if (newOrder) {
-          printOrderService(newOrder, restaurantInfo, appState.printers);
+    setIsMobile(window.matchMedia('(max-width: 600px)').matches);
+  }, []);
 
-          if (newOrder.status === OrderStatus.Completed) {
-            addCompletedOrderToMap(orderData.orderId, newOrder);
-          } else {
-            addItemToMap(orderData.orderId, newOrder);
-            await audio.play();
-          }
-        }
-      } catch (error) {
-        logExceptionError(
-          error instanceof Error ? error : new Error(String(error)),
-          'useOrders.handleOrderReceived',
-          { 
-            restaurantId: orderData.restaurantId, 
-            locationId: orderData.locationId, 
-            orderId: orderData.orderId,
-            correlationId: orderData.correlationId
-          }
-        );
-        console.error('Error fetching order:', error);
-      }
-    };
-
-    client.off('order_received').on('order_received', handleOrderReceived);
-
-    return () => {
-      client.off('order_received', handleOrderReceived);
-    };
-  }, [appState, audio]);
-
-  useEffect(() => {
-    const handleOrderItemEvents = () => {
-      client.on('order_ready_for_pickup', ({ orderId, restaurantId }) => {
-        if (!activeOrders.has(orderId)) return;
-        setActiveOrders((prevOrders) => {
-          const newOrders = new Map(prevOrders);
-          const order = newOrders.get(orderId)!;
-          const currentTime = new Date();
-          order.items.forEach((item) => {
-            if (!item.startedAt) {
-              item.startedAt = order.startedAt;
-            }
-            if (!item.completedAt) {
-              item.completedAt = currentTime;
-            }
-          });
-          order.status = OrderStatus.ReadyForPickup;
-          return newOrders;
-        });
-      });
-
-      client.on('order_completed', ({ orderId, restaurantId }) => {
-        if (!activeOrders.has(orderId)) return;
-        const order = activeOrders.get(orderId)!;
-        const orderCorrelationId = order.meta.correlationId; //needed for fetchDashboardOrder
-        setActiveOrders((prevOrders) => {
-          const newOrders = new Map(prevOrders);
-          order.status = OrderStatus.Completed;
-          newOrders.delete(orderId);
-          return newOrders;
-        });
-
-        fetchDashboardOrder(restaurantId, locationId, orderId, orderCorrelationId)
-          .then((completedOrder) => {
-            if (completedOrder && completedOrder.status === OrderStatus.Completed) {
-              addCompletedOrderToMap(orderId, completedOrder);
-            }
-          })
-          .catch((error) => {
-            console.error('Error fetching completed order:', error);
-          });
-      });
-    };
-
-    handleOrderItemEvents();
-
-    return () => {
-      client.off('order_ready_for_pickup');
-      client.off('order_completed');
-    };
-  }, [activeOrders]);
+  const notifyAcceptOrder = async (orderId: string) => {
+    if (client.connected) {
+      const correlationId = activeOrdersRef.current.get(orderId)?.meta.correlationId;
+      client.emit('order_accepted', { restaurantId, orderId, correlationId });
+    }
+  };
 
   const notifyPickupOrder = async (orderId: string) => {
     if (client.connected) {
@@ -176,7 +297,7 @@ export const useOrders = (restaurantId: string, locationId: string) => {
     setActiveOrders((prev) => {
       const newOrders = new Map(prev);
       const order = activeOrders.get(orderId)!;
-      order.status = OrderStatus.Completed;
+      order.status = OrderStatus.OrderCompleted;
       newOrders.delete(orderId);
       return newOrders;
     });
@@ -199,65 +320,27 @@ export const useOrders = (restaurantId: string, locationId: string) => {
     });
   };
 
+  const updateOrderToAcceptOrder = (orderId: string) => {
+    setActiveOrders((prevOrders) => {
+      const newOrders = new Map(prevOrders);
+      const order = newOrders.get(orderId)!;
+      order.status = OrderStatus.OrderAccepted;
+      return newOrders;
+    });
+  };
+
   const orderStatusMutation = useOrderStatus({
     activeOrders,
     restaurantId,
     locationId,
-    addCompletedOrderToMap,
+    sortOrder,
+    notifyAcceptOrder,
     notifyPickupOrder,
     notifyCompleteOrder,
     removeOrderFromActive,
     updateOrderToReadyForPickup,
+    updateOrderToAcceptOrder,
   });
-  // Handle item status updates
-  useEffect(() => {
-    const handleOrderItemStarted = ({
-      orderId,
-      itemId,
-    }: {
-      orderId: string;
-      itemId: string;
-      restaurantId: string;
-      locationId: string;
-    }) => {
-      setActiveOrders((prevOrders) => {
-        const newOrders = new Map(prevOrders);
-        const order = newOrders.get(orderId)!;
-        const itemToUpdate = order.items.find((item) => item.id === itemId)!;
-        itemToUpdate.startedAt = new Date();
-        itemToUpdate.completedAt = null;
-        return newOrders;
-      });
-    };
-
-    const handleOrderItemCompleted = ({
-      orderId,
-      itemId,
-    }: {
-      orderId: string;
-      itemId: string;
-      restaurantId: string;
-      locationId: string;
-    }) => {
-      setActiveOrders((prevOrders) => {
-        const newOrders = new Map(prevOrders);
-        const order = newOrders.get(orderId)!;
-        const itemToUpdate = order.items.find((item) => item.id === itemId)!;
-        itemToUpdate.completedAt = new Date();
-        itemToUpdate.startedAt = itemToUpdate.startedAt || new Date();
-        return newOrders;
-      });
-    };
-
-    client.on('dashboard_order_item_started', handleOrderItemStarted);
-    client.on('dashboard_order_item_completed', handleOrderItemCompleted);
-
-    return () => {
-      client.off('dashboard_order_item_started', handleOrderItemStarted);
-      client.off('dashboard_order_item_completed', handleOrderItemCompleted);
-    };
-  }, []);
-
   const updateOrderStatus = (orderId: string, orderStatus: string, correlationId: string) => {
     orderStatusMutation.mutate({
       orderId,
@@ -292,17 +375,32 @@ export const useOrders = (restaurantId: string, locationId: string) => {
       correlationId,
     });
   };
+  const getOrderItemStats = () => {
+    let inProgress = 0;
+    let inQueue = 0;
+
+    for (const order of activeOrders.values()) {
+      for (const item of order.items) {
+        if (item.startedAt) inProgress++;
+        if (!item.startedAt) inQueue++;
+      }
+    }
+
+    return { inProgress, inQueue };
+  };
 
   return {
     activeOrders,
     printOrder,
     completedOrders,
     futureOrders,
+    notifyAcceptOrder,
     notifyPickupOrder,
     notifyCompleteOrder,
     isLoading,
-    addCompletedOrderToMap,
     updateOrderItemStatus,
     updateOrderStatus,
+    isMobile,
+    getOrderItemStats,
   };
 };

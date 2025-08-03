@@ -4,7 +4,7 @@ import { InjectClient } from 'nest-mongodb-driver';
 import { CreateOriginDto } from './dto/create-origin.dto';
 import { COLLECTIONS } from '../db/collections';
 import { Origin, Restaurant, Location } from 'src/db/models';
-import { OriginDto } from './dto/get-origin.dtos';
+import { OriginDto, OriginsResponseDto } from './dto/get-origin.dtos';
 import { UpdateQrStyleDto } from './dto/update-origin.dtos';
 import { AzureStorageService } from 'src/storage/storage.service';
 
@@ -16,7 +16,7 @@ export class OriginsService {
 
   constructor(
     @InjectClient() private readonly db: Db,
-    private readonly storageService: AzureStorageService
+    private readonly storageService: AzureStorageService,
   ) {
     this.originsCollection = this.db.collection<Origin>(COLLECTIONS.ORIGINS);
     this.restaurantsCollection = this.db.collection(COLLECTIONS.RESTAURANTS);
@@ -43,7 +43,7 @@ export class OriginsService {
           locationSlug: 1,
           name: 1,
         },
-      }
+      },
     );
 
     if (!location) {
@@ -52,10 +52,10 @@ export class OriginsService {
 
     return location;
   }
-  async findAllOrigins(restaurantId: string, locationId: string): Promise<OriginDto[]> {
+  async findAllOrigins(restaurantId: string, locationId: string): Promise<OriginsResponseDto> {
     const location = await this.locationCollection.findOne(
       { restaurantId, _id: new ObjectId(locationId) },
-      { projection: { qrCodeStyle: 1, qrCodeImage: 1 } }
+      { projection: { qrCodeStyle: 1, qrCodeImage: 1 } },
     );
 
     const query = {
@@ -78,11 +78,11 @@ export class OriginsService {
       throw new NotFoundException(`No origins found for restaurant ${restaurantId} and location ${locationId}`);
     }
 
-    return origins.map((origin) => ({
-      ...origin,
+    return {
       qrCodeStyle: location?.qrCodeStyle,
       qrCodeImage: location?.qrCodeImage,
-    }));
+      originData: origins,
+    };
   }
 
   async createOrigin(restaurantId: string, locationId: string, createOriginDto: CreateOriginDto): Promise<OriginDto> {
@@ -111,7 +111,7 @@ export class OriginsService {
     const result = await this.originsCollection.findOneAndUpdate(
       { _id: originId },
       { $set: updateData },
-      { returnDocument: 'after' }
+      { returnDocument: 'after' },
     );
 
     if (!result) {
@@ -132,7 +132,7 @@ export class OriginsService {
           qrCodeStyle: updateQrStyleDto.qrCodeStyle,
           qrCodeImage: updateQrStyleDto.qrCodeImage,
         },
-      }
+      },
     );
 
     if (!result.matchedCount) {

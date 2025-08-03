@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { IoDownloadOutline } from 'react-icons/io5';
 import { BsQrCodeScan } from 'react-icons/bs';
+import { debounce } from 'lodash';
 
 import {
   IonCard,
@@ -86,6 +87,26 @@ const OriginsPage: React.FC = () => {
     appStore((state) => state.selection.restaurant.logo) || 'https://order.orderbuddyapp.com/logo.png';
   const { setRestaurantLogo } = appStore();
 
+  useEffect(() => {
+    // Update options with QR code style from origins data if available
+    if (origins && origins.qrCodeStyle) {
+      const qrStyle = origins.qrCodeStyle;
+
+      setOptions((prev) => ({
+        ...prev,
+        cornersSquareOptions: {
+          color: qrStyle.cornersSquareOptions?.color || '#222222',
+          type: (qrStyle.cornersSquareOptions?.type || 'extra-rounded') as CornerSquareType,
+        },
+        cornersDotOptions: {
+          color: qrStyle.cornersDotOptions?.color || '#222222',
+          type: (qrStyle.cornersDotOptions?.type || 'dot') as CornerDotType,
+        },
+        // Also update other style options if needed
+      }));
+    }
+  }, [origins]);
+
   const [options, setOptions] = useState<Options>({
     width: 200,
     height: 200,
@@ -113,11 +134,11 @@ const OriginsPage: React.FC = () => {
       color: colors,
     },
     cornersSquareOptions: {
-      color: '#222222',
+      color: (origins && origins.qrCodeStyle?.cornersSquareOptions?.color) || '#222222',
       type: 'extra-rounded' as CornerSquareType,
     },
     cornersDotOptions: {
-      color: '#222222',
+      color: (origins && origins.qrCodeStyle?.cornersDotOptions?.color) || '#222222',
       type: 'dot' as CornerDotType,
     },
     shape: 'square',
@@ -151,11 +172,12 @@ const OriginsPage: React.FC = () => {
       }));
       setRestaurantLogo(logoUrl as string);
     } catch (error) {
-      logExceptionError(
-        error instanceof Error ? error : new Error(String(error)),
-        'originPage.handleLogoUpload',
-        { restaurantId, locationId, fileType: file.type, fileSize: file.size }
-      );
+      logExceptionError(error instanceof Error ? error : new Error(String(error)), 'originPage.handleLogoUpload', {
+        restaurantId,
+        locationId,
+        fileType: file.type,
+        fileSize: file.size,
+      });
       console.error('Logo upload failed:', error);
     } finally {
       setUploading(false);
@@ -184,27 +206,56 @@ const OriginsPage: React.FC = () => {
     resolver: zodResolver(schema),
   });
 
-  const onDataOuterEdgeColorChange = (color: any) => {
-    setOptions((options) => ({
-      ...options,
+  const debouncedApiUpdate = useCallback(
+    debounce(async () => {
+      if (!ref.current) return;
+      console.log('debouncedApiUpdate called');
+      console.error("options.cornersDotOptions",options.cornersDotOptions);
+      console.error("options.cornersSquareOptions",options.cornersSquareOptions);
+      try {
+        await updateQrStyle.mutateAsync({
+          options,
+          ref: { current: ref.current },
+        });
+        styleModal.current?.dismiss();
+      } catch (error) {
+        logExceptionError(error instanceof Error ? error : new Error(String(error)), 'debouncedApiUpdate', {
+          restaurantId,
+          locationId,
+        });
+        console.error('Failed to update QR style:', error);
+      }
+    }, 300),
+    [options, updateQrStyle, ref, restaurantId, locationId],
+  );
+
+  // Handler for outer edge color changes
+  const onDataOuterEdgeColorChange = (color: string) => {
+    setOptions((prevOptions) => ({
+      ...prevOptions,
       cornersSquareOptions: {
         color: color,
         type: 'extra-rounded' as CornerSquareType,
       },
     }));
+
+    debouncedApiUpdate();
   };
-  const onDataInnerEdgeColorChange = (color: any) => {
-    setOptions((options) => ({
-      ...options,
+
+  const onDataInnerEdgeColorChange = (color: string) => {
+    setOptions((prevOptions) => ({
+      ...prevOptions,
       cornersDotOptions: {
         color: color,
         type: 'dot' as CornerDotType,
       },
     }));
+
+    debouncedApiUpdate();
   };
 
   const generateQrCode = async (origin: Origin) => {
-    const config = { ...origin.qrCodeStyle, data: `${smartScanUrl}/${origin.qrCodeId}` };
+    const config = { ...(origins?.qrCodeStyle || {}), data: `${smartScanUrl}/${origin.qrCodeId}` };
     const qrCode = new QRCodeStyling({
       ...config,
       type: 'canvas',
@@ -218,24 +269,6 @@ const OriginsPage: React.FC = () => {
       qrCode.download({ extension: 'png', name: origin.label });
       container.remove();
     }, 500);
-  };
-
-  const handleStyleUpdate = async () => {
-    if (!ref.current) return;
-    try {
-      await updateQrStyle.mutateAsync({
-        options,
-        ref: { current: ref.current },
-      });
-      styleModal.current?.dismiss();
-    } catch (error) {
-      logExceptionError(
-        error instanceof Error ? error : new Error(String(error)),
-        'originPage.handleStyleUpdate',
-        { restaurantId, locationId }
-      );
-      console.error('Failed to update QR style:', error);
-    }
   };
 
   return (
@@ -259,7 +292,7 @@ const OriginsPage: React.FC = () => {
             )}
 
             {!isLoading &&
-              origins?.map((origin, index) => (
+              origins?.originData?.map((origin, index) => (
                 <IonCol size-sm='6' size-md='3' key={index}>
                   <IonCard
                     key={origin._id}
@@ -276,7 +309,7 @@ const OriginsPage: React.FC = () => {
                     </IonCardHeader>
 
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <img src={origin.qrCodeImage} alt={origin.label}></img>
+                      <img src={origins.qrCodeImage} alt={origin.label}></img>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -358,12 +391,14 @@ const OriginsPage: React.FC = () => {
                         ></IonInput>
                         <IonPopover trigger='outer-ring' triggerAction='click'>
                           <IonContent style={{ height: '300px' }}>
-                            <ColorPicker color={colors} onChange={(color) => onDataOuterEdgeColorChange(color.hex)} />
+                            <ColorPicker
+                              color={options.cornersSquareOptions?.color || '#222222'}
+                              onChange={(color) => onDataOuterEdgeColorChange(color.hex)}
+                            />
                           </IonContent>
                         </IonPopover>
                       </IonCol>
                       <IonCol size='6'>
-                        {' '}
                         <IonButton
                           id='inner-ring'
                           style={{ backgroundColor: options.cornersDotOptions?.color }}
@@ -377,7 +412,10 @@ const OriginsPage: React.FC = () => {
                         ></IonInput>
                         <IonPopover trigger='inner-ring' triggerAction='click'>
                           <IonContent style={{ height: '300px' }}>
-                            <ColorPicker color={colors} onChange={(color) => onDataInnerEdgeColorChange(color.hex)} />
+                            <ColorPicker
+                              color={options.cornersDotOptions?.color || '#222222'}
+                              onChange={(color) => onDataInnerEdgeColorChange(color.hex)}
+                            />
                           </IonContent>
                         </IonPopover>
                       </IonCol>
@@ -425,14 +463,6 @@ const OriginsPage: React.FC = () => {
                     <IonCard className='rounded'>
                       <div ref={ref} />
                     </IonCard>
-                    <IonButton
-                      onClick={handleStyleUpdate}
-                      fill='solid'
-                      className='solid-button'
-                      style={{ display: 'block', marginTop: '20px' }}
-                    >
-                      Save
-                    </IonButton>
                   </div>
                 </IonCol>{' '}
               </IonRow>

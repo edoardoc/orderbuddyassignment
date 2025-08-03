@@ -8,6 +8,8 @@ import {
   IonGrid,
   IonCol,
   IonRow,
+  IonTextarea,
+  IonInput,
 } from '@ionic/react';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 import WorkingHours from './components/WorkingHours';
@@ -15,6 +17,7 @@ import Timezone from './components/Timezone';
 import OrderAcceptance from './components/OrderAcceptance';
 import AlertNumbers from './components/AlertNumbers';
 import { useLocationSettings } from './useLocationSettings';
+import Address from './components/Address';
 
 const LocationSettingsPage: React.FC = () => {
   const {
@@ -37,6 +40,8 @@ const LocationSettingsPage: React.FC = () => {
     phoneNumber,
     updatePhoneNumber,
     phoneNumberError,
+    address,
+    updateAddress,
   } = useLocationSettings();
 
   return (
@@ -81,23 +86,35 @@ const LocationSettingsPage: React.FC = () => {
                     />
                   </div>
                 </IonAccordion>
-                <IonAccordion value='AlertNumbers'>
-                  <IonItem slot='header' color='light'>
-                    <IonLabel>Alert Numbers</IonLabel>
-                  </IonItem>
-                  <div className='ion-padding' slot='content'>
-                    <AlertNumbers
-                      alertNumbers={alertNumbers}
-                      isLoading={isUpdating}
-                      addAlertNumber={addAlertNumber}
-                      removeAlertNumber={removeAlertNumber}
-                      formatPhoneNumber={formatPhoneNumber}
-                      phoneNumber={phoneNumber}
-                      updatePhoneNumber={updatePhoneNumber}
-                      phoneNumberError={phoneNumberError}
-                    />
-                  </div>
-                </IonAccordion>
+      <IonAccordion value='AlertNumbers'>
+        <IonItem slot='header' color='light'>
+          <IonLabel>Alert Numbers</IonLabel>
+        </IonItem>
+        <div className='ion-padding' slot='content'>
+          <AlertNumbers
+            alertNumbers={alertNumbers}
+            isLoading={isUpdating}
+            addAlertNumber={addAlertNumber}
+            removeAlertNumber={removeAlertNumber}
+            formatPhoneNumber={formatPhoneNumber}
+            phoneNumber={phoneNumber}
+            updatePhoneNumber={updatePhoneNumber}
+            phoneNumberError={phoneNumberError}
+          />
+        </div>
+      </IonAccordion>
+      <IonAccordion value='Address'>
+        <IonItem slot='header' color='light'>
+          <IonLabel>Address</IonLabel>
+        </IonItem>
+        <div className='ion-padding' slot='content'>
+          <Address
+            address={address}
+            onAddressChange={updateAddress}
+          />
+          
+        </div>
+      </IonAccordion>
               </IonAccordionGroup>
             </IonCol>
           </IonRow>

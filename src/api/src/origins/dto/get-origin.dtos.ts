@@ -37,3 +37,9 @@ export class OriginDto {
   @IsString()
   qrCode: string;
 }
+
+export class OriginsResponseDto {
+  qrCodeStyle: any;
+  qrCodeImage: any;
+  originData: OriginDto[];
+}

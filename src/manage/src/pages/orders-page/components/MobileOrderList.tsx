@@ -51,7 +51,7 @@ const MobileOrderList: React.FC<MobileOrderListProps> = (props) => {
     if (!selectedOrder) {
       setShowModal(false);
     }
-    if (selectedOrder && selectedOrder.status === OrderStatus.Completed && tabValue !== 'completed') {
+    if (selectedOrder && selectedOrder.status === OrderStatus.OrderCompleted && tabValue !== 'completed') {
       setShowModal(false);
     }
   }, [selectedOrder, orders]);

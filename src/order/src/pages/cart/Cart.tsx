@@ -67,16 +67,13 @@ const CartPage: React.FC = () => {
     try {
       const payload = {
         orderId: orderNumber,
-        restaurantId: restaurantId,
-        locationId: location._id,
-        stationTags: [...new Set(cartItems.flatMap((item) => item.stationTags))],
       };
       client.emit('order_joined', payload);
     } catch (error) {
       logExceptionError(error, 'InitiateOrder', {
         operation: 'emitOrderJoined',
         orderNumber,
-        restaurantId
+        restaurantId,
       });
     }
   }
@@ -144,7 +141,7 @@ const CartPage: React.FC = () => {
       logApiError(error, 'menu-app/restaurant/order', {
         operation: 'placeOrderCart',
         restaurantId: restaurant._id,
-        locationId: location._id
+        locationId: location._id,
       });
     }
   };

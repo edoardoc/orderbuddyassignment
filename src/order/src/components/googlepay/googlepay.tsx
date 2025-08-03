@@ -68,11 +68,8 @@ const GooglePay: React.FC<WalletsProps> = ({
   const [requestUuid] = useState<string>(uuid());
   const router = useIonRouter();
   const initiateOrder = (orderNumber: string) => {
-    const payload = {
+   const payload = {
       orderId: orderNumber,
-      restaurantId: restaurant._id,
-      locationId: location._id,
-      stationTags: [...new Set(cartItems.flatMap((item) => item.stationTags))],
     };
     client.emit('order_joined', payload);
   };

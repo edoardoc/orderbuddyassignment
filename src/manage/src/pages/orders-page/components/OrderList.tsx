@@ -62,7 +62,7 @@ const OrderList: React.FC<DashboardProps> = (props) => {
                         {orders.get(key)?.customer.name}
                       </span>
 
-                      {orders.get(key)!.status !== OrderStatus.Completed && (
+                      {orders.get(key)!.status !== OrderStatus.OrderCompleted && (
                         <IonText slot='end' style={{ fontSize: '14px' }}>
                           {moment().diff(moment(orders.get(key)?.startedAt), 'minutes')} mins{' '}
                         </IonText>

@@ -15,9 +15,9 @@ import {
 } from '@ionic/react';
 import { MdPrint, MdDone } from 'react-icons/md';
 import moment from 'moment';
-import { Order } from '../../../queries/useOrder';
 import { UseMutationResult } from '@tanstack/react-query';
 import { OrderItemStatus, OrderStatus } from '../../../constants';
+import { Order } from '../useOrdersQuery';
 
 interface SelectedOrderProps {
   selectedOrder: Order;
@@ -158,10 +158,10 @@ const MobileOrderDetail: React.FC<SelectedOrderProps> = ({
             </IonCardContent>
           </IonCard>
 
-          {selectedOrder.status !== OrderStatus.Completed && updateOrderStatus && (
+          {selectedOrder.status !== OrderStatus.OrderCompleted && updateOrderStatus && (
             <OrderActions selectedOrder={selectedOrder} updateOrderStatus={updateOrderStatus} />
           )}
-          {selectedOrder.status !== OrderStatus.Completed && <OrderPaymentDetails selectedOrder={selectedOrder} />}
+          {selectedOrder.status !== OrderStatus.OrderCompleted && <OrderPaymentDetails selectedOrder={selectedOrder} />}
 
           <OrderTimeline selectedOrder={selectedOrder} />
         </div>
@@ -236,7 +236,7 @@ const OrderActions: React.FC<{
   return (
     <IonCard className='ion-padding'>
       <IonCardContent className='ion-text-center'>
-        {selectedOrder.status === OrderStatus.OrderPlaced && (
+        {selectedOrder.status === OrderStatus.OrderCreated && (
           <IonButton
             fill='outline'
             style={{ textTransform: 'capitalize' }}
@@ -249,7 +249,7 @@ const OrderActions: React.FC<{
           <IonButton
             fill='outline'
             style={{ textTransform: 'capitalize' }}
-            onClick={() => handleUpdateOrderStatus(OrderStatus.Completed)}
+            onClick={() => handleUpdateOrderStatus(OrderStatus.OrderCompleted)}
           >
             Complete Order
           </IonButton>
@@ -305,7 +305,7 @@ const OrderTimeline: React.FC<{ selectedOrder: Order }> = ({ selectedOrder }) =>
             ).format('LT')}
           />
         )}
-        {selectedOrder.status === OrderStatus.Completed && (
+        {selectedOrder.status === OrderStatus.OrderCompleted && (
           <TimelineItem color='#1e88e5' title='Order Completed' time={moment(selectedOrder.endedAt).format('LT')} />
         )}
       </div>

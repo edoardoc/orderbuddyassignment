@@ -177,21 +177,27 @@ export class RestaurantController {
   ) {
     const correlationId = req['requestId'];
     try {
-      this.logger.trace(
-        {
-          module: 'restaurant',
-          event: 'update_order_status',
-          correlationId,
-          orderId: updateOrderStatusDto.orderId,
-          status: updateOrderStatusDto.orderStatus,
-        },
-        `Order - ${updateOrderStatusDto.orderStatus}`,
-      );
+      if (updateOrderStatusDto.orderStatus !== OrderStatus.OrderAccepted) {
+        this.logger.trace(
+          {
+            module: 'restaurant',
+            event: 'update_order_status',
+            correlationId,
+            orderId: updateOrderStatusDto.orderId,
+            status: updateOrderStatusDto.orderStatus,
+          },
+          `Order - ${updateOrderStatusDto.orderStatus}`,
+        );
+      }
 
       const order = await this.restaurantService.getOrder(updateOrderStatusDto.orderId);
       if (!order) throw new NotFoundException();
 
-      const restaurantAck = await this.restaurantService.updateOrderStatus(updateOrderStatusDto);
+      const restaurantAck = await this.restaurantService.updateOrderStatus(
+        updateOrderStatusDto.orderId,
+        updateOrderStatusDto.orderStatus,
+        correlationId,
+      );
       const restaurant = await this.restaurantService.getRestaurantById(order.restaurantId);
       if (!restaurant) throw new NotFoundException();
 

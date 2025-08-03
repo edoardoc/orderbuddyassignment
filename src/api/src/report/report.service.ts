@@ -5,6 +5,7 @@ import { COLLECTIONS } from 'src/db/collections';
 import { Location } from 'src/db/models/location.model';
 import { DateTime } from 'luxon';
 import { SalesByItemResponse } from './dto/reports.dto';
+import { OrderStatus } from 'src/constants';
 
 @Injectable()
 export class ReportService {
@@ -102,7 +103,7 @@ export class ReportService {
           $match: {
             restaurantId,
             locationId: new ObjectId(locationId),
-            status: 'COMPLETED',
+            status: OrderStatus.OrderCompleted,
             endedAt: { $gte: daysAgo },
           },
         },
@@ -203,7 +204,7 @@ export class ReportService {
           $match: {
             restaurantId,
             locationId: new ObjectId(locationId),
-            status: 'COMPLETED',
+            status: OrderStatus.OrderCompleted,
             endedAt: {
               $gte: startOfDay,
               $lte: endOfDay,
@@ -236,7 +237,6 @@ export class ReportService {
         { $sort: { grossSales: -1 } },
       ])
       .toArray();
-    console.log('Sales by item:', salesByItem);
     return salesByItem;
   }
 }

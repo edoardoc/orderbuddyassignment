@@ -3,9 +3,12 @@
     {
       "route": "/.well-known/apple-developer-merchantid-domain-association",
       "allowedRoles": ["anonymous"],
-      "serve": "/.well-known/apple-developer-merchantid-domain-association",      
+      "serve": "/.well-known/apple-developer-merchantid-domain-association",
       "statusCode": 200,
-       "mimeType": "text/plain"
+      "mimeType": "text/plain",
+      "headers": {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"
+      }
     }
   ],
   "navigationFallback": {

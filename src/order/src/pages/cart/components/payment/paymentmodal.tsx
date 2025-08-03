@@ -50,9 +50,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     const menuEndpoint = import.meta.env.VITE_MENU_ENDPOINT || '';
     const currentHostname = window.location.hostname;
 
-    const isDevelopment = menuEndpoint.includes('localhost');
-    const isDev = currentHostname.includes('dev.orderbuddyapp.com') || menuEndpoint.includes('dev.orderbuddyapp.com');
-    setShowDigitalPayments(isDevelopment || isDev);
+    // const isDevelopment = menuEndpoint.includes('localhost');
+    // const isDev = currentHostname.includes('dev.orderbuddyapp.com') || menuEndpoint.includes('dev.orderbuddyapp.com');
+    // setShowDigitalPayments(isDevelopment || isDev);
+    setShowDigitalPayments(true);
   }, []);
 
   useEffect(() => {
@@ -90,7 +91,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           onFieldsLoaded={setFieldsLoaded}
         />
 
-        {fieldsLoaded && showDigitalPayments && (
+        {/* {fieldsLoaded && showDigitalPayments && ( */}
+        {true && (
           <>
             <div style={{ padding: '20px 0', margin: '10px 0' }}>
               <hr style={{ borderTop: '1px solid #ddd', margin: '0 16px' }} />
@@ -101,19 +103,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <IonGrid className='ion-padding'>
               <IonRow>
                 <IonCol size='6' className='ion-text-center'>
-                  <GooglePay
+                  {/* <GooglePay
                     amount={amount}
                     publicId={import.meta.env.VITE_PUBLIC_ID}
                     customerData={customerData}
                     onPaymentComplete={onPaymentComplete || onPaymentSuccess}
                     onError={onPaymentError}
                     onCancel={handleCancel}
-                  />
+                  /> */}
                 </IonCol>
                 <IonCol size='6' className='ion-text-center'>
                   <ApplePay
                     amount={amount}
                     publicId={import.meta.env.VITE_PUBLIC_ID}
+                    emergepayWalletsUrl={`${import.meta.env.VITE_ASSETS_EMERGEPAY_URL}/cip-hosted-wallets.js`}
                     customerData={customerData}
                     onPaymentComplete={onPaymentComplete || onPaymentSuccess}
                     onError={onPaymentError}

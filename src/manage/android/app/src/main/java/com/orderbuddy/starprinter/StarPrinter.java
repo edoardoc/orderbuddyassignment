@@ -1,4 +1,4 @@
-package com.orderbuddy.printer;
+package com.orderbuddy.starprinter;
 
 import com.starmicronics.stario.StarIOPort;
 import com.starmicronics.stario.StarIOPortException;

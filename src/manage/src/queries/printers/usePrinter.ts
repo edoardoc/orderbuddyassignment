@@ -24,6 +24,7 @@ export const usePrinters = (restaurantId?: string, locationId?: string) => {
       const response = await axiosInstance.get<ApiResponse<Printer[]>>(`/printers/${restaurantId}/${locationId}`);
       return z.array(printerSchema).parse(response.data.data ?? []);
     },
+    staleTime: 30 * 60 * 1000, // 30 minutes
     enabled: !!restaurantId && !!locationId,
   });
 };

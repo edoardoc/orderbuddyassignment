@@ -138,17 +138,13 @@ const IndividualKdsPage: React.FC = () => {
             },
           );
         } catch (error) {
-          logExceptionError(
-            error instanceof Error ? error : new Error(String(error)),
-            'individualKds.handleNewOrder',
-            { 
-              restaurantId, 
-              locationId, 
-              orderId: orderData.orderId, 
-              stationId,
-              correlationId: orderData.correlationId 
-            }
-          );
+          logExceptionError(error instanceof Error ? error : new Error(String(error)), 'individualKds.handleNewOrder', {
+            restaurantId,
+            locationId,
+            orderId: orderData.orderId,
+            stationId,
+            correlationId: orderData.correlationId,
+          });
           console.error('Error fetching order details:', error);
         }
       }
@@ -253,6 +249,64 @@ const IndividualKdsPage: React.FC = () => {
         },
       );
     };
+    const handleOrderAccepted = async ({
+      orderId,
+      restaurantId: orderRestaurantId,
+      correlationId,
+    }: {
+      orderId: string;
+      restaurantId: string;
+      correlationId?: string;
+    }) => {
+
+      if (orderRestaurantId === restaurantId) {
+        try {
+          const orderDetails = await fetchStationOrder(restaurantId, locationId, orderId, data.stationTags, correlationId);
+
+
+          // Update the cache with the updated order
+          queryClient.setQueryData(
+            STATIONS_ORDERS_QUERY_KEY(restaurantId, stationId, locationId),
+            (oldData: StationOrdersResponse | undefined) => {
+              // If no existing data, create initial structure
+              if (!oldData) {
+                return {
+                  locationName: data?.locationName || '',
+                  stationName: data?.stationName || '',
+                  stationTags: data?.stationTags || [],
+                  matchedOrders: [orderDetails],
+                };
+              }
+
+              // Check for duplicate orders
+              const isDuplicate = oldData.matchedOrders.some((order) => order._id === orderDetails._id);
+
+              if (isDuplicate) {
+                return oldData;
+              }
+
+              return {
+                ...oldData,
+                matchedOrders: [...oldData.matchedOrders, orderDetails],
+              };
+            },
+          );
+        } catch (error) {
+          logExceptionError(
+            error instanceof Error ? error : new Error(String(error)),
+            'individualKds.handleOrderAccepted',
+            {
+              restaurantId,
+              locationId,
+              orderId,
+              stationId,
+            },
+          );
+          console.error('Error updating accepted order:', error);
+        }
+      }
+    };
+
     const handleOrderCompleted = ({
       orderId,
       restaurantId: orderRestaurantId,
@@ -274,7 +328,7 @@ const IndividualKdsPage: React.FC = () => {
                 if (order._id === orderId) {
                   return {
                     ...order,
-                    status: OrderStatus.Completed,
+                    status: OrderStatus.OrderCompleted,
                     items: order.items.map((item) => ({
                       ...item,
                       startedAt: order.startedAt || new Date(),
@@ -294,6 +348,7 @@ const IndividualKdsPage: React.FC = () => {
     client.on('new_order', handleNewOrder);
     client.on('order_item_started', handleOrderItemStarted);
     client.on('order_item_completed', handleOrderItemCompleted);
+    client.on('order_accepted', handleOrderAccepted);
     client.on('order_ready_for_pickup', handleOrderCompleted);
 
     // Listen for connection confirmation
@@ -310,6 +365,7 @@ const IndividualKdsPage: React.FC = () => {
       client.off('new_order', handleNewOrder);
       client.off('order_item_started', handleOrderItemStarted);
       client.off('order_item_completed', handleOrderItemCompleted);
+      client.off('order_accepted', handleOrderAccepted);
       client.off('order_ready_for_pickup', handleOrderCompleted);
       client.off('station_connected');
     };

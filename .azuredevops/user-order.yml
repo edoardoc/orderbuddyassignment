@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - users/prakash/289
+      - users/rony/302-applepay-0730
   paths:
     include:
       - src/order/**
@@ -13,26 +13,39 @@ pool:
     - group: dev
 
 steps:
-  # Step 1: Set up Node.js
+  # Set up Node.js
   - task: NodeTool@0
     inputs:
       versionSpec: '16.x'
       checkLatest: true
 
-  # Step 2: Install dependencies
+  # Install dependencies
   - script: |
       cd src/order
       npm install -g @ionic/cli  # Install Ionic CLI
       npm ci
     displayName: 'Install dependencies'
 
-  # Step 3: Build the Ionic app
+  # Build the Ionic app
   - script: |
       cd src/order
       ionic build --prod  # Build the app for production
     displayName: 'Build Ionic Project'
 
-  # Step 4: Deploy to Azure Static Web App
+  # Copy Apple Pay domain verification file
+  - script: |
+      cd src/order      
+      mkdir -p dist/.well-known
+      cp -f apple-verification-files/apple-developer-merchantid-domain-association.gravity dist/.well-known/apple-developer-merchantid-domain-association
+    displayName: 'Postbuild: Copy Apple Pay Verification File'
+
+  - script: |
+      cd src/order/dist
+      echo "📂 Final dist/ contents:"
+      find . -type f -exec stat --format='%y %s bytes %n' {} \; | sort
+    displayName: 'Verify dist/ contents'
+
+  # Deploy to Azure Static Web App
   - task: AzureStaticWebApp@0
     inputs:
       azure_static_web_apps_api_token: $(azure_static_web_apps_api_token_order)
