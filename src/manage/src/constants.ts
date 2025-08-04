@@ -1,7 +1,8 @@
 export enum OrderStatus {
-  OrderPlaced = 'ORDER_PLACED',
+  OrderCreated = 'CREATED',
+  OrderAccepted = 'ACCEPTED',
   ReadyForPickup = 'READY_FOR_PICKUP',
-  Completed = 'COMPLETED',
+  OrderCompleted = 'PICKED_UP',
 }
 
 export enum OrderItemStatus {

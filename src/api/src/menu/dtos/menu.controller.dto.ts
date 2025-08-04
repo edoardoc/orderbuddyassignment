@@ -104,7 +104,7 @@ export class OrderStatusResponseDto {
   items: GetOrderItemDto[];
 
   @IsString()
-  status: 'ORDER_PLACED' | 'READY_FOR_PICKUP' | 'COMPLETED';
+  status: 'CREATED' | 'READY_FOR_PICKUP' | 'PICKED_UP';
 
   @IsDate()
   startedAt: Date;

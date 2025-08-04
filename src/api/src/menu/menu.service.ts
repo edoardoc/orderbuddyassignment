@@ -144,7 +144,7 @@ export class MenuService {
         );
       }),
 
-      status: OrderStatus.OrderPlaced,
+      status: OrderStatus.OrderCreated,
       startedAt: new Date(),
       totalPriceCents: totalPriceWithTax,
       getSms: body.getSms,
@@ -265,24 +265,60 @@ export class MenuService {
       locationId,
       correlationId,
     });
-    const stationTags = [...new Set(body.items.flatMap((item) => item.stationTags))].filter(
-      (tag): tag is string => tag !== undefined,
-    );
-    const orderData = {
-      orderId: orderId.toString(),
-      restaurantId: body.restaurantId,
-      locationId: body.locationId,
-      stationTags,
-      correlationId, // Add requestId here
 
-      orderDetails: {
-        status: OrderStatus.OrderPlaced,
-        items: body.items.map((item) => ({
-          name: item.name,
-        })),
-      },
-    };
-    await this.eventsGateway.handleOrderJoined(orderData); //event to all stations
+    // Check AutoAcceptOrder from location collection
+    const location = await this.locationsCollection.findOne(
+      { _id: new ObjectId(body.locationId) },
+      { projection: { AutoAcceptOrder: 1 } },
+    );
+    const autoAcceptOrder = location?.AutoAcceptOrder === true;
+    if (autoAcceptOrder) {
+      await this.ordersCollection.updateOne(
+        { _id: orderId },
+        {
+          $set: {
+            status: OrderStatus.OrderAccepted,
+            'meta.acceptedBy': 'system',
+            'meta.acceptedAt': new Date().toISOString(),
+            'meta.autoAccept': true,
+          },
+        },
+      );
+      const stationTags = [...new Set(body.items.flatMap((item) => item.stationTags))].filter(
+        (tag): tag is string => tag !== undefined,
+      );
+      const orderData = {
+        orderId: orderId.toString(),
+        restaurantId: body.restaurantId,
+        locationId: body.locationId,
+        stationTags,
+        correlationId,
+
+        orderDetails: {
+          status: OrderStatus.OrderCreated,
+          items: body.items.map((item) => ({
+            name: item.name,
+          })),
+        },
+      };
+      await this.eventsGateway.handleOrderJoined(orderData); // event to all stations
+      this.logger.trace(
+        {
+          module: 'order',
+          event: 'auto_accept',
+          correlationId,
+          orderId: orderId.toString(),
+          restaurantId: body.restaurantId,
+          meta: {
+            acceptedBy: 'system',
+            acceptedAt: new Date().toISOString(),
+            autoAccept: true,
+          },
+        },
+        'Order-ACCEPTED',
+      );
+    }
+
     try {
       const notificationPayload = {
         title: 'New Order',

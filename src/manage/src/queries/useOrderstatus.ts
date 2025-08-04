@@ -68,11 +68,13 @@ interface UseOrderStatusProps {
   activeOrders: Map<string, Order>;
   notifyPickupOrder: (orderId: string) => void;
   notifyCompleteOrder: (orderId: string) => void;
+  notifyAcceptOrder: (orderId: string) => void;
   locationId: string;
-  addCompletedOrderToMap: (key: string, value: Order) => void;
-  removeOrderFromActive: (orderId: string) => void; // Add this
+  sortOrder: (order: Order) => void;
+  removeOrderFromActive: (orderId: string) => void;
   restaurantId: string;
-  updateOrderToReadyForPickup: (orderId: string) => void; 
+  updateOrderToReadyForPickup: (orderId: string) => void;
+  updateOrderToAcceptOrder: (orderId: string) => void;
   onSuccess?: () => void;
 }
 
@@ -80,12 +82,14 @@ export function useOrderStatus({
   activeOrders,
   restaurantId,
   locationId,
-  addCompletedOrderToMap,
+  sortOrder,
   removeOrderFromActive,
   notifyPickupOrder,
   notifyCompleteOrder,
+  notifyAcceptOrder,
   updateOrderToReadyForPickup,
   onSuccess,
+  updateOrderToAcceptOrder,
 }: UseOrderStatusProps) {
   return useMutation({
     mutationFn: async ({ orderId, orderStatus, correlationId }: OrderStatusInfo) => {
@@ -106,11 +110,14 @@ export function useOrderStatus({
       if (activeOrders.has(orderId)) {
         const order = activeOrders.get(orderId)!;
 
-        if (order.status === OrderStatus.OrderPlaced) {
+        if (orderStatus === OrderStatus.OrderAccepted) {
+          updateOrderToAcceptOrder(orderId);
+        }
+        if (orderStatus === OrderStatus.ReadyForPickup) {
           updateOrderToReadyForPickup(orderId);
         }
 
-        if (orderStatus === OrderStatus.Completed) {
+        if (orderStatus === OrderStatus.OrderCompleted) {
           const orderCorrelationId = order.meta.correlationId;
           removeOrderFromActive(orderId);
 
@@ -118,15 +125,13 @@ export function useOrderStatus({
 
           try {
             const newOrder = await fetchDashboardOrder(restaurantId, locationId, orderId, orderCorrelationId);
-            if (newOrder && newOrder.status === OrderStatus.Completed) {
-              addCompletedOrderToMap(orderId, newOrder);
-            }
+            sortOrder(newOrder);
           } catch (error) {
             console.error('Error fetching completed order:', error);
             // Log to Application Insights
             logExceptionError(error, 'useOrderStatus.fetchCompletedOrder', {
               orderId,
-              targetStatus: 'Completed'
+              targetStatus: 'Completed',
             });
           }
         }
@@ -135,10 +140,11 @@ export function useOrderStatus({
     },
     onSettled: (_, __, variables) => {
       const { orderId, orderStatus } = variables;
-
-      if (orderStatus === OrderStatus.ReadyForPickup) {
+      if (orderStatus === OrderStatus.OrderAccepted) {
+        notifyAcceptOrder(orderId);
+      } else if (orderStatus === OrderStatus.ReadyForPickup) {
         notifyPickupOrder(orderId);
-      } else if (orderStatus === OrderStatus.Completed) {
+      } else if (orderStatus === OrderStatus.OrderCompleted) {
         notifyCompleteOrder(orderId);
       }
     },

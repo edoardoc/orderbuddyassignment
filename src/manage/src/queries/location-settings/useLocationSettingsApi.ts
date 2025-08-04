@@ -97,6 +97,7 @@ export function useUpdateLocationSettings() {
       timezone,
       orderTiming,
       alertNumbers,
+      address
     }: {
       restaurantId: string;
       locationId: string;
@@ -104,11 +105,12 @@ export function useUpdateLocationSettings() {
       timezone?: string;
       orderTiming?: OrderTiming;
       alertNumbers?: AlertNumber[];
+      address?: string;
     }) => {
       try {
         const response = await axiosInstance.patch<ApiResponse<LocationSettings>>(
           `location-settings/restaurant/${restaurantId}/location/${locationId}`,
-          { workingHours, timezone, orderTiming, alertNumbers },
+          { workingHours, timezone, orderTiming, alertNumbers, address },
         );
         return handleApiResponse(response);
       } catch (error) {

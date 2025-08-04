@@ -8,6 +8,7 @@ import { COLLECTIONS } from 'src/db/collections';
 import { Menu, Restaurant } from 'src/db/models';
 import { Location } from 'src/db/models/location.model';
 import { DateTime } from 'luxon';
+import { logger } from 'src/logger/pino.logger';
 interface Station {
   id: string;
   name: string;
@@ -19,11 +20,13 @@ export class RestaurantService {
   private readonly restaurantsCollection: any;
   private readonly ordersCollection: any;
   private readonly locationCollection: Collection<Location>;
+  private readonly logger: typeof logger;
 
   constructor(@InjectClient() private readonly db: Db) {
     this.restaurantsCollection = db.collection(COLLECTIONS.RESTAURANTS);
     this.ordersCollection = db.collection(COLLECTIONS.ORDERS);
     this.locationCollection = this.db.collection<Location>(COLLECTIONS.LOCATIONS);
+    this.logger = logger.child({ context: 'RestaurantService' });
   }
 
   async getOrder(orderId: string) {
@@ -175,17 +178,41 @@ export class RestaurantService {
 
     return order;
   }
-  async updateOrderStatus({ orderId, orderStatus }: { orderId: string; orderStatus: string }) {
+  async updateOrderStatus(orderId: string, orderStatus: string, correlationId?: string) {
     let result;
-    const currentTime = new Date();
+    const order = await this.ordersCollection.findOne({ _id: new ObjectId(orderId) });
 
-    if (orderStatus === OrderStatus.ReadyForPickup.toString()) {
-      const order = await this.ordersCollection.findOne({ _id: new ObjectId(orderId) });
-
-      if (!order) {
-        throw new NotFoundException(`Order ${orderId} not found`);
-      }
-
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+    if (orderStatus === OrderStatus.OrderAccepted.toString()) {
+      result = await this.ordersCollection.updateOne(
+        { _id: new ObjectId(orderId) },
+        {
+          $set: {
+            status: orderStatus.toString(),
+            'meta.acceptedBy': 'user',
+            'meta.acceptedAt': new Date().toISOString(),
+            'meta.autoAccept': true,
+          },
+        },
+      );
+      this.logger.trace(
+        {
+          module: 'order',
+          event: 'manual_accept',
+          correlationId,
+          orderId: orderId.toString(),
+          meta: {
+            acceptedBy: 'user',
+            acceptedAt: new Date().toISOString(),
+            autoAccept: false,
+          },
+        },
+        `Order-${orderStatus.toString()}`,
+      );
+    } else if (orderStatus === OrderStatus.ReadyForPickup.toString()) {
+      const currentTime = new Date();
       const updatedItems = order.items.map((item) => ({
         ...item,
         startedAt: order.startedAt,

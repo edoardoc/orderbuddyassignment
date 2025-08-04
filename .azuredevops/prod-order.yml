@@ -32,6 +32,13 @@ steps:
       ionic build --prod  # Build the app for production
     displayName: 'Build Ionic Project'
 
+  # Copy Apple Pay domain verification file
+  - script: |
+      cd src/order
+      mkdir -p dist/.well-known
+      cp apple-verification-files/apple-developer-merchantid-domain-association.apple dist/.well-known/apple-developer-merchantid-domain-association
+    displayName: 'Postbuild: Copy Apple Pay Verification File'
+
   # Step 4: Deploy to Azure Static Web App
   - task: AzureStaticWebApp@0
     inputs:

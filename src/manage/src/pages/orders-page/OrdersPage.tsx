@@ -8,19 +8,20 @@ import {
   IonSegmentButton,
   IonSegmentContent,
   IonSegmentView,
-  IonGrid,
-  IonRow,
-  IonCol,
+  IonFooter,
+  IonText,
+  IonToolbar,
+  IonTitle,
+  IonIcon,
 } from '@ionic/react';
-import { appStore } from '../../store';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
-import { usePrinterService } from '../../hooks';
 import { Order } from './types';
 import { useOrders } from './useOrders';
-import OrderList from './components/OrderList';
-import OrderDetail from './components/OrderDetail';
-import MobileOrderList from './components/MobileOrderList';
+
 import EmptyState from './components/EmptyState';
+import ActiveOrdersTab from './components/ActiveOrdersTab';
+import CompletedOrdersTab from './components/CompletedOrdersTab';
+import { alarmOutline, hourglassOutline } from 'ionicons/icons';
 
 const OrdersPage: React.FC = () => {
   const { restaurantId, locationId } = useParams<{
@@ -30,13 +31,17 @@ const OrdersPage: React.FC = () => {
 
   const [selectedActiveOrder, setSelectedActiveOrder] = useState<Order | null>(null);
   const [selectedCompletedOrder, setSelectedCompletedOrder] = useState<Order | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
 
-  const { activeOrders, completedOrders, updateOrderItemStatus, updateOrderStatus, printOrder } = useOrders(
-    restaurantId,
-    locationId,
-  );
-
+  const {
+    activeOrders,
+    completedOrders,
+    updateOrderItemStatus,
+    updateOrderStatus,
+    printOrder,
+    isMobile,
+    getOrderItemStats,
+  } = useOrders(restaurantId, locationId);
+  const { inProgress, inQueue } = getOrderItemStats();
   useEffect(() => {
     // if (selectedActiveOrder && activeOrders.has(selectedActiveOrder._id)) return;
     if (selectedActiveOrder && activeOrders.has(selectedActiveOrder._id)) {
@@ -63,9 +68,6 @@ const OrdersPage: React.FC = () => {
     setSelectedCompletedOrder(null);
   }, [completedOrders]);
 
-  useEffect(() => {
-    setIsMobile(window.matchMedia('(max-width: 600px)').matches);
-  }, []);
   return (
     <IonPage>
       <LaunchPadNavBar title='Orders' />
@@ -88,80 +90,25 @@ const OrdersPage: React.FC = () => {
 
         <IonSegmentView>
           <IonSegmentContent id='active'>
-            {!activeOrders.size && (
-              <EmptyState
-                title='🧾 No orders in the queue.'
-                subTitle='You’re in control. Orders will appear here the moment they’re placed.'
-              />
-            )}
-            
-            {isMobile && !!activeOrders.size && (
-              <MobileOrderList
-                orders={activeOrders}
-                updateOrderStatus={updateOrderStatus}
-                updateOrderItemStatus={updateOrderItemStatus}
-                selectedOrder={selectedActiveOrder}
-                setSelectedOrder={setSelectedActiveOrder}
-                printOrder={printOrder}
-              />
-            )}
-
-            {!isMobile && !!activeOrders.size && (
-              <IonGrid>
-                <IonRow>
-                  <IonCol size='4'>
-                    <OrderList
-                      orders={activeOrders}
-                      selectedOrder={selectedActiveOrder}
-                      setSelectedOrder={setSelectedActiveOrder}
-                    />
-                  </IonCol>
-                  <IonCol size='8'>
-                    <OrderDetail
-                      selectedOrder={selectedActiveOrder}
-                      updateOrderStatus={updateOrderStatus}
-                      printOrder={printOrder}
-                    />
-                  </IonCol>
-                </IonRow>
-              </IonGrid>
-            )}
+            <ActiveOrdersTab
+              orders={activeOrders}
+              updateOrderStatus={updateOrderStatus}
+              updateOrderItemStatus={updateOrderItemStatus}
+              selectedOrder={selectedActiveOrder}
+              setSelectedOrder={setSelectedActiveOrder}
+              printOrder={printOrder}
+              isMobile={isMobile}
+            />
           </IonSegmentContent>
 
           <IonSegmentContent id='completed'>
-            {!completedOrders.size && (
-              <EmptyState
-                title='✅ No completed orders yet.'
-                subTitle='Once an order is finished, it’ll show up here for your records.'
-              />
-            )}
-
-            {isMobile && (
-              <MobileOrderList
-                orders={completedOrders}
-                selectedOrder={selectedCompletedOrder}
-                setSelectedOrder={setSelectedCompletedOrder}
-                printOrder={printOrder}
-                tabValue='completed'
-              />
-            )}
-
-            {!isMobile && !!completedOrders.size && (
-              <IonGrid>
-                <IonRow>
-                  <IonCol size='4'>
-                    <OrderList
-                      orders={completedOrders}
-                      selectedOrder={selectedCompletedOrder}
-                      setSelectedOrder={setSelectedCompletedOrder}
-                    />
-                  </IonCol>
-                  <IonCol size='8'>
-                    <OrderDetail selectedOrder={selectedCompletedOrder} printOrder={printOrder} />
-                  </IonCol>
-                </IonRow>
-              </IonGrid>
-            )}
+            <CompletedOrdersTab
+              orders={completedOrders}
+              selectedOrder={selectedCompletedOrder}
+              setSelectedOrder={setSelectedCompletedOrder}
+              printOrder={printOrder}
+              isMobile={isMobile}
+            />
           </IonSegmentContent>
 
           <IonSegmentContent id='future'>
@@ -172,6 +119,24 @@ const OrdersPage: React.FC = () => {
           </IonSegmentContent>
         </IonSegmentView>
       </IonContent>
+      {activeOrders.size > 0 && (
+        <IonFooter translucent={true}>
+          <IonToolbar>
+            <IonTitle slot='end' style={{ fontSize: '14px' }}>
+              <IonIcon
+                icon={alarmOutline}
+                style={{ verticalAlign: 'middle', marginRight: '4px' }}
+              />{' '}
+              <span style={{ fontWeight: 'bold' }}>{inProgress}</span> In Progress
+              <IonIcon
+                icon={hourglassOutline}
+                style={{ verticalAlign: 'middle', marginRight: '4px', paddingLeft: '14px' }}
+              />
+              <span style={{ fontWeight: 'bold' }}>{inQueue}</span> In Queue
+            </IonTitle>
+          </IonToolbar>
+        </IonFooter>
+      )}
     </IonPage>
   );
 };

@@ -25,9 +25,7 @@ export class JoinStoreDto {
   locationId!: string;
 }
 export class JoinOrderDto {
-  restaurantId!: string;
   orderId!: string;
-  displayIds!: string[];
 }
 
 export class OrderCompletedDto {
@@ -54,6 +52,12 @@ export class OrderItemStartedDto {
 export class OrderPickupDto {
   restaurantId!: string;
   orderId!: string;
+}
+
+export class OrderAcceptedDto {
+  restaurantId!: string;
+  orderId!: string;
+  correlationId?: string;
 }
 
 export class OrderReceivedDto {

@@ -16,7 +16,7 @@ import {
 import { OriginsService } from './origins.service';
 import { CreateOriginsParamsDto, LogoUploadParamsDto, OriginsParamsDto } from './dto/create-origin.dto';
 import { ApiTags } from '@nestjs/swagger';
-import { GetOriginsParamsDto, OriginDto } from './dto/get-origin.dtos';
+import { GetOriginsParamsDto, OriginDto, OriginsResponseDto } from './dto/get-origin.dtos';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { ApiResponse } from 'src/models/api-response';
 import { Response } from 'express';
@@ -34,17 +34,17 @@ export class OriginsController {
   constructor(
     private readonly originsService: OriginsService,
     private readonly httpService: HttpService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
 
   @Get(':restaurantId/:locationId')
   async findAll(
     @Param() params: GetOriginsParamsDto,
-    @Res() res: Response
-  ): Promise<Response<ApiResponse<OriginDto[]>>> {
-    const origins = await this.originsService.findAllOrigins(params.restaurantId, params.locationId);
+    @Res() res: Response,
+  ): Promise<Response<ApiResponse<OriginsResponseDto>>> {
+    const originsResponse = await this.originsService.findAllOrigins(params.restaurantId, params.locationId);
     return res.status(HttpStatus.OK).json({
-      data: origins,
+      data: originsResponse,
     });
   }
 
@@ -52,7 +52,7 @@ export class OriginsController {
   async create(
     @Param() params: CreateOriginsParamsDto,
     @Body() createOriginDto: OriginsParamsDto,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<OriginDto>>> {
     try {
       const menuEndPoint = this.configService.get<string>('MENU_ENDPOINT');
@@ -85,7 +85,7 @@ export class OriginsController {
       const { data, status } = await firstValueFrom(
         this.httpService.post(`${smartScanUrl}/add-qrdata`, {
           redirectUrl: redirectUrl,
-        })
+        }),
       );
 
       if (status !== HttpStatus.CREATED) {
@@ -115,7 +115,7 @@ export class OriginsController {
   async updateQrStyle(
     @Param() params: UpdateQrStyleParamsDto,
     @Body() updateQrStyleDto: UpdateQrStyleDto,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<void>>> {
     try {
       await this.originsService.updateQrStyle(params.restaurantId, params.locationId, updateQrStyleDto);
@@ -137,7 +137,7 @@ export class OriginsController {
   async uploadLogo(
     @Param() params: LogoUploadParamsDto,
     @UploadedFile() file: Express.Multer.File,
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<string>>> {
     if (!file) {
       throw new BadRequestException('No file uploaded');

@@ -1,7 +1,7 @@
 trigger:
   branches:
     include:
-      - users/prakash/289
+      - users/prakash/307
   paths:
     include:
       - src/manage/**

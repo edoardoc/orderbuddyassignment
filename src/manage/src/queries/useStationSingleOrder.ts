@@ -41,7 +41,7 @@ export const fetchStationOrder = async (
   locationId: string,
   orderId: string,
   stationTags: string[],
-  correlationId: string
+  correlationId?: string,
 ): Promise<StationOrder> => {
   const { data } = await axiosInstance.get(`/stations/${restaurantId}/${locationId}/orders/${orderId}`, {
     params: {
@@ -65,7 +65,7 @@ export const useStationSingleOrder = (
   locationId: string,
   orderId: string,
   stationTags: string[],
-  correlationId: string
+  correlationId: string,
 ) => {
   return useQuery({
     queryKey: ['station-order', orderId, stationTags],

@@ -43,14 +43,7 @@ const StatusPage: React.FC = () => {
   useEffect(() => {
     if (client.connected) {
       try {
-        // Join order room to receive updates
-        client.emit('order_joined', {
-          orderId: orderId,
-          restaurantId: '', // These fields are required by the DTO but not needed for status updates
-          locationId: '',
-          stationTags: [],
-        });
-
+        client.emit('order_joined', orderId);
         // Listen for status updates
         client.on('order_completed', ({ orderId, restaurantId }) => {
           console.log('status order completed message received');
@@ -202,7 +195,7 @@ const StatusPage: React.FC = () => {
                                     </IonRow>
                                     <IonRow>
                                       {item.notes && (
-                                        <span style={{ fontSize: '12px' ,maxWidth: '200px'}}>
+                                        <span style={{ fontSize: '12px', maxWidth: '200px' }}>
                                           <IonText> {item.notes}</IonText>
                                         </span>
                                       )}

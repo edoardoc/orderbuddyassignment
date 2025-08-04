@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { axiosInstance } from './axiosInstance';
-import { OrderStatus } from '../constants';
+import { axiosInstance } from '../../queries/axiosInstance';
+
 
 export interface Customer {
   name: string;
@@ -32,7 +32,7 @@ export interface OrderItem {
   menuItemId: string;
   name: string;
   priceCents: number;
-  notes?: string; 
+  notes?: string;
   modifiers: Modifier[];
   variants: Variant[];
   stationTags: string[];
@@ -58,13 +58,7 @@ export interface Order {
   endedAt?: Date;
 }
 
-export function useTodayOrders(
-  restaurantId: string,
-  locationId: string,
-  addItemToMap: (key: string, value: Order) => void,
-  addCompletedOrderToMap: (key: string, value: Order) => void,
-  correlationId?: string
-) {
+export function useTodayOrders(restaurantId: string, locationId: string, correlationId?: string) {
   if (!restaurantId || !locationId) {
     throw new Error('restaurantId and locationId required');
   }
@@ -80,24 +74,7 @@ export function useTodayOrders(
       if (!res.data) {
         throw new Error('No today orders found');
       }
-      // Sort and process orders
       const orders = res.data.sort().reverse();
-
-      let firstActiveOrder: Order | null = null;
-
-      if (orders.length > 0) {
-        orders.forEach((order) => {
-          if (order.status === OrderStatus.Completed) {
-            addCompletedOrderToMap(order._id, order);
-          } else {
-            addItemToMap(order._id, order);
-            if (!firstActiveOrder) {
-              firstActiveOrder = order;
-            }
-          }
-        });
-      }
-
       return orders;
     },
     enabled: Boolean(restaurantId && locationId),

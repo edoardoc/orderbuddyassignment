@@ -63,4 +63,8 @@ export class CreateLocationSettingDto {
   @ValidateNested({ each: true })
   @Type(() => AlertNumberDto)
   alertNumbers?: AlertNumberDto[];
+
+  @IsString()
+  @IsOptional()
+  address?: string;
 }

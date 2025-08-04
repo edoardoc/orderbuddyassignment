@@ -35,7 +35,7 @@ const originSchema = z.object({
           color: z.string(),
           type: z.enum(['rounded', 'dots', 'classy', 'classy-rounded', 'square', 'extra-rounded'] as [
             DotType,
-            ...DotType[]
+            ...DotType[],
           ]),
         })
         .optional(),
@@ -67,33 +67,19 @@ const originResponseSchema = z.array(originSchema);
 
 // Types
 export type Origin = z.infer<typeof originSchema>;
-export type OriginsResponse = Origin[];
+export type OriginsResponse = {
+  qrCodeStyle: any;
+  qrCodeImage: any;
+  originData: Origin[];
+};
 
 // Queries and Mutations
 export function useOrigins(restaurantId: string, locationId: string) {
   return useQuery<OriginsResponse>({
     queryKey: ['origins', restaurantId, locationId],
     queryFn: async () => {
-      const response = await axiosInstance.get<ApiResponse<Origin[]>>(`/origins/${restaurantId}/${locationId}`);
-      try {
-        // Validate the array directly
-        const validatedData = originResponseSchema.parse(response.data.data);
-        return validatedData;
-      } catch (error) {
-        console.error('Origins data validation failed:', error);
-        // Log validation error
-        logExceptionError(
-          new Error('Invalid origins data format'),
-          'useOrigins.validation',
-          {
-            endpoint: `/origins/${restaurantId}/${locationId}`,
-            restaurantId,
-            locationId,
-            zodError: error instanceof z.ZodError ? JSON.stringify(error.errors) : 'Unknown error'
-          }
-        );
-        throw new Error('Invalid origins data format');
-      }
+      const response = await axiosInstance.get<ApiResponse<OriginsResponse>>(`/origins/${restaurantId}/${locationId}`);
+      return response.data.data || { qrCodeStyle: null, qrCodeImage: null, originData: [] };
     },
     enabled: !!restaurantId && !!locationId,
   });

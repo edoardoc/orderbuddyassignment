@@ -40,6 +40,7 @@ export function useLocationSettings() {
   // State for new phone number input
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [phoneNumberError, setPhoneNumberError] = useState<string>('');
+  const [address, setAddress] = useState<string>('');
 
   const [orderTiming, setOrderTiming] = useState<OrderTimingSettings>({
     acceptOrdersAfterMinutes: 30,
@@ -82,6 +83,8 @@ export function useLocationSettings() {
   // Initialize state from fetched data
   useEffect(() => {
     if (locationSettingsData) {
+
+
       // Create default working hours with all days of the week
       const defaultWorkingHours: WorkingHour[] = daysOfWeek.map((day) => ({
         day,
@@ -106,7 +109,6 @@ export function useLocationSettings() {
         // No working hours data, use defaults
         setWorkingHours(defaultWorkingHours);
       }
-
       const tzValue = locationSettingsData.timezone || 'America/New_York';
       setTimezone(tzValue);
 
@@ -122,6 +124,12 @@ export function useLocationSettings() {
               ? locationSettingsData.orderTiming.stopOrdersBeforeMinutes
               : 30,
         });
+      }
+      if (locationSettingsData.address) {
+        setAddress(locationSettingsData.address);
+      }
+      else {
+        setAddress('');
       }
 
       // Set alert numbers if available
@@ -181,6 +189,11 @@ export function useLocationSettings() {
   const updateTimezone = (newTimezone: string) => {
     dataChangedByUserRef.current = true;
     setTimezone(newTimezone);
+  };
+  // Handle address update
+  const updateAddress = (value: string) => {
+    dataChangedByUserRef.current = true;
+    setAddress(value);
   };
 
   // Update UI values when orderTiming changes
@@ -303,6 +316,7 @@ export function useLocationSettings() {
         timezone,
         orderTiming,
         alertNumbers,
+        address
       },
       {
         onSuccess: () => {
@@ -319,7 +333,7 @@ export function useLocationSettings() {
           logExceptionError(
             error instanceof Error ? error : new Error(String(error)),
             'useLocationSettings.saveSettings',
-            { restaurantId, locationId, timezone }
+            { restaurantId, locationId, timezone },
           );
           presentToast({
             message: `Failed to update location settings: ${error.message}`,
@@ -359,7 +373,7 @@ export function useLocationSettings() {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [workingHours, timezone, orderTiming, alertNumbers, isLoading, isLoadingData, restaurantId, locationId]);
+  }, [workingHours, timezone, orderTiming, alertNumbers, isLoading, isLoadingData, restaurantId, locationId, address]);
 
   // Phone number formatting utility functions
   const formatPhoneNumber = (phoneNumber: string): string => {
@@ -402,5 +416,7 @@ export function useLocationSettings() {
     validatePhoneNumber,
     // Timezone data
     timezones,
+    address,
+    updateAddress,
   };
 }
