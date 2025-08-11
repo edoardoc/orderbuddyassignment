@@ -8,7 +8,8 @@ const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 const printerSchema = z.object({
   id: z.string().regex(objectIdRegex, 'Invalid ObjectId format'),
   type: z.string(),
-  ip: z.string().ip('Invalid IP address'),
+  //ip: z.string().ip('Invalid IP address'),
+  ip: z.string().min(1, 'Invalid IP address'),
   name: z.string().min(1, 'Printer name is required'),
 });
 
@@ -24,7 +25,7 @@ export const usePrinters = (restaurantId?: string, locationId?: string) => {
       const response = await axiosInstance.get<ApiResponse<Printer[]>>(`/printers/${restaurantId}/${locationId}`);
       return z.array(printerSchema).parse(response.data.data ?? []);
     },
-    staleTime: 30 * 60 * 1000, // 30 minutes
+    //staleTime: 30 * 60 * 1000, // 30 minutes
     enabled: !!restaurantId && !!locationId,
   });
 };

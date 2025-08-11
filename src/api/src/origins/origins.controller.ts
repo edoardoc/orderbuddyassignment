@@ -14,7 +14,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { OriginsService } from './origins.service';
-import { CreateOriginsParamsDto, LogoUploadParamsDto, OriginsParamsDto } from './dto/create-origin.dto';
+import {
+  CreateOriginsParamsDto,
+  LogoUploadParamsDto,
+  OriginsParamsDto,
+  SendQrCodeLinkParamsDto,
+} from './dto/create-origin.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { GetOriginsParamsDto, OriginDto, OriginsResponseDto } from './dto/get-origin.dtos';
 import { AuthGuard } from 'src/auth/auth.guard';
@@ -152,6 +157,28 @@ export class OriginsController {
       });
     } catch (error) {
       throw new BadRequestException('Failed to upload logo: ' + error.message);
+    }
+  }
+
+  @Post(':restaurantId/:locationId/send-link/:originId')
+  async sendQrCodeLink(
+    @Param() params: SendQrCodeLinkParamsDto,
+    @Res() res: Response,
+  ): Promise<Response<ApiResponse<void>>> {
+    try {
+
+      console.log('Sending QR code link for:', params);
+      await this.originsService.sendQrCodeLink(params.restaurantId, params.locationId, params.originId);
+
+      return res.status(HttpStatus.OK).json({
+        data: null,
+        message: 'QR code link sent successfully via email',
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+      throw new BadRequestException('Failed to send QR code link: ' + error.message);
     }
   }
 }

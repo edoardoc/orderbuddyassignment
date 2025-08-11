@@ -1,5 +1,8 @@
 package com.orderbuddy.starprinter;
+
+import android.content.Context;
 import android.util.Log;
+
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.annotation.CapacitorPlugin;
@@ -10,39 +13,35 @@ import com.squareup.moshi.Moshi;
 @CapacitorPlugin(name = "StarPrinter")
 public class StarPrinterPlugin extends Plugin {
 
-
     @PluginMethod
     public void printOverNetwork(PluginCall call) {
-        Log.d("StarPrinter", "printOverNetwork called");
-    String data = call.getString("data");
-    if (data == null) {
-        call.reject("Missing data");
-        return;
-    }
-        Log.d("StarPrinter", "data: " + data);
 
-    try {
-        Moshi moshi = new Moshi.Builder().build();
-        JsonAdapter<PrintPayload> adapter = moshi.adapter(PrintPayload.class);
-        PrintPayload payload = adapter.fromJson(data);
-
-        if (payload == null) {
-            call.reject("Payload is null after parsing");
+        String data = call.getString("data");
+        if (data == null) {
+            call.reject("Missing data");
             return;
         }
-        Log.d("StarPrinter", "Parsed payload: " + payload.toString());
-        Log.d("StarPrinter", "Parsed payload all: " + moshi.adapter(PrintPayload.class).toJson(payload));
 
-        String ip = payload.printerInfo != null ? payload.printerInfo.ip : "unknown";
-        Object orderId = payload.order != null ? payload.order._id : null;
+        try {
+            Moshi moshi = new Moshi.Builder().build();
+            JsonAdapter<PrintPayload> adapter = moshi.adapter(PrintPayload.class);
+            PrintPayload payload = adapter.fromJson(data);
 
-        Log.d("StarPrinter", "IP: " + ip);
-        Log.d("StarPrinter", "Order ID: " + orderId);
-//         new com.orderbuddy.starprinter.StarPrinter(ip).print(payload);
+            if (payload == null) {
+                call.reject("Payload is null after parsing");
+                return;
+            }
 
-        call.resolve();
-    } catch (Exception e) {
-        call.reject("Failed to parse JSON using Moshi", e);
+            String ip = payload.printerInfo != null ? payload.printerInfo.ip : "unknown";
+            Log.d("printer", ip);
+
+            Context context = getContext();
+            StarPrinterManager starPrinterManager = new com.orderbuddy.starprinter.StarPrinterManager(ip, context);
+            starPrinterManager.print(payload.order, payload.restaurantInfo, payload.printerInfo);
+
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to parse JSON using Moshi", e);
+        }
     }
-}
 }

@@ -19,6 +19,9 @@ export interface Location {
   qrCodeId: string;
   createdAt: Date;
   updatedAt: Date;
+  contact: {
+    email: string;
+  };
   payment: {
     acceptPayment: boolean;
   };

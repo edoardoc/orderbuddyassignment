@@ -25,7 +25,7 @@ export class PaymentsController {
             restaurantId: params.restaurantId,
             correlationId: requestId,
           },
-          'Payment initiated'
+          'Payment initiated',
         );
       return res.status(HttpStatus.OK).json(transactionToken);
     } catch (error: any) {
@@ -38,7 +38,7 @@ export class PaymentsController {
           error: error.message,
           stack: error.stack,
         },
-        'Exception - Payment failed to initiate'
+        'Exception - Payment failed to initiate',
       );
       this.logger.trace(
         {
@@ -49,7 +49,7 @@ export class PaymentsController {
           error: error.message,
           stack: error.stack,
         },
-        'Exception - Payment failed to initiate'
+        'Exception - Payment failed to initiate',
       );
 
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -72,7 +72,7 @@ export class PaymentsController {
           error: error.message,
           stack: error.stack,
         },
-        'Exception - Payment failed to complete'
+        'Exception - Payment failed to complete',
       );
       this.logger.trace(
         {
@@ -82,7 +82,7 @@ export class PaymentsController {
           error: error.message,
           stack: error.stack,
         },
-        'Exception - Payment failed to complete'
+        'Exception - Payment failed to complete',
       );
 
       console.error('EmergePay transaction failed:', error);
@@ -93,7 +93,7 @@ export class PaymentsController {
   @Post('complete-upi-transaction')
   async completeUpiTransaction(@Body() body: CreateOrderDto, @Res() res: Response, @Req() req: Request) {
     try {
-    const requestId = req['requestId'];
+      const requestId = req['requestId'];
       const data = await this.paymentsService.completeTranscationUpi(body, requestId);
       return res.status(HttpStatus.OK).json(data);
     } catch (error: any) {

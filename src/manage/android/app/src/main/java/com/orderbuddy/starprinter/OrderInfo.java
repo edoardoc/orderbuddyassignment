@@ -3,7 +3,7 @@ package com.orderbuddy.starprinter;
 
 import java.util.List;
 
-public class OrderData {
+public class OrderInfo {
     public String _id;
     public String orderCode;
     public String paymentId;
@@ -23,6 +23,7 @@ public class OrderData {
     public static class Meta {
         public String correlationId;
     }
+
     public static class Customer {
         public String name;
         public String phone;
@@ -46,13 +47,13 @@ public class OrderData {
         public String completedAt;
     }
 
-    public  static class Modifier {
+    public static class Modifier {
         public String id;
         public String name;
         public List<Option> options;
     }
 
-    public static  class Option {
+    public static class Option {
         public String name;
         public int priceCents;
     }

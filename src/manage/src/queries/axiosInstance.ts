@@ -6,14 +6,14 @@ import { appStore } from '../store';
 
 const apiBaseUrl = import.meta.env.VITE_API_ENDPOINT;
 const getBaseUrl = async () => {
-  const info = await Device.getInfo();
-  // Android emulator uses 10.0.2.2 to access host's localhost
-  if (
-    info.platform === 'android' &&
-    (info.isVirtual || info.model?.toLowerCase().includes('sdk') || info.manufacturer?.toLowerCase().includes('google'))
-  ) {
-    return import.meta.env.VITE_EMULATOR_HOST_API; // Use your API port
-  }
+  // const info = await Device.getInfo();
+  // // Android emulator uses 10.0.2.2 to access host's localhost
+  // if (
+  //   info.platform === 'android' &&
+  //   (info.isVirtual || info.model?.toLowerCase().includes('sdk') || info.manufacturer?.toLowerCase().includes('google'))
+  // ) {
+  //   return import.meta.env.VITE_EMULATOR_HOST_API; // Use your API port
+  // }
   return import.meta.env.VITE_API_ENDPOINT;
 };
 export const axiosInstance = axios.create({

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { emergepaySdk, TransactionType } from 'emergepay-sdk';
 import { InjectClient } from 'nest-mongodb-driver';
-import { Db } from 'mongodb';
+import { Db, ObjectId } from 'mongodb';
 import { ConfigService } from '@nestjs/config';
 import { v4 } from 'uuid';
 import axios from 'axios';
@@ -10,6 +10,7 @@ import { MenuService } from '../menu/menu.service';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { COLLECTIONS } from 'src/db/collections';
 import { logger } from 'src/logger/pino.logger';
+import { json } from 'stream/consumers';
 
 @Injectable()
 export class PaymentsService {
@@ -126,11 +127,21 @@ export class PaymentsService {
 
   async completeTranscationUpi(body: CreateOrderDto, requestId: string) {
     const projection = { payment: 1 };
-    const PaymentDetails = await this.locationCollection.findOne({ _id: body.restaurantId }, { projection });
+    const PaymentDetails = await this.locationCollection.findOne(
+      { _id: new ObjectId(body.locationId), restaurantId: body.restaurantId },
+      { projection },
+    );
     const oid = PaymentDetails.payment.oid;
     const authToken = PaymentDetails.payment.auth;
     const environmentUrl = this.configService.get<string>('EMERGEPAY_ENVIRONMENT_URL');
     const url = `${environmentUrl}/orgs/${oid}/transactions/wallets`;
+
+    if (!oid || !authToken) {
+      throw new Error('EmergePay credentials not found');
+    }
+    if (!environmentUrl) {
+      throw new Error('EmergePay environment URL not found');
+    }
 
     const orderTotalPrice = body.items.reduce(
       (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
@@ -149,17 +160,23 @@ export class PaymentsService {
       },
     };
 
-    const transactionData = {
-      amount: totalPriceWithTax,
-      transactionType: 'CreditSale',
-      externalTransactionId: v4(),
-      transactionReference: body.transactionDetails.reference,
-    };
+    const transactionData: any = {};
+
+    transactionData.type = body.transactionDetails.type;
+    transactionData.isSandbox = body.transactionDetails.isSandbox;
+    transactionData.billing = body.transactionDetails.billing;
+    transactionData.card = body.transactionDetails.card;
+    transactionData.token = body.transactionDetails.token;
+    transactionData.amount = totalPriceWithTax;
+    transactionData.transactionType = 'CreditSale';
+    transactionData.externalTransactionId = requestId;
+    transactionData.transactionReference = requestId;
+
     try {
       const response = await axios.post(url, { transactionData }, requestConfig);
-
+      
       let orderId = '';
-      if (response.data && response.data.status === 'APPROVED') {
+      if (response.data && response.data.transactionResponse.resultMessage === 'Approved') {
         this.logger.trace(
           {
             module: 'payment',

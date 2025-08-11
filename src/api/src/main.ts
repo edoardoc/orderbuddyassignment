@@ -6,6 +6,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as appInsights from 'applicationinsights';
 import { logger } from './logger/pino.logger';
 
+
 if (!appInsights.defaultClient) {
   appInsights.setup(process.env.APPLICATIONINSIGHTS_CONNECTION_STRING).setAutoCollectConsole(false).start();
 }

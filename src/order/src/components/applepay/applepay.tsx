@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useIonRouter } from '@ionic/react';
 import { useParams } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
-import styled from 'styled-components';
-import { FaApplePay } from 'react-icons/fa';
 import { useOrderStore } from '@/stores/orderStore';
 import { useUpiPayment } from '../../queries/useUpiPayment';
 import { client } from '@/client';
@@ -22,19 +20,6 @@ interface WalletsProps {
   onError?: (error: any) => void;
   onCancel?: () => void;
 }
-
-const WalletContainer = styled.div`
-  .checkout-button {
-    cursor: pointer;
-    color: white;
-    background-color: black;
-    width: 150px;
-    height: 40px;
-    border: none;
-    font-size: 1.1em;
-    margin: 0 10px;
-  }
-`;
 
 declare global {
   interface Window {
@@ -94,7 +79,7 @@ const ApplePay: React.FC<WalletsProps> = ({
       restaurantId: restaurant._id,
       locationId: location._id,
       locationSlug,
-      paymentId: transactionDetails.transactionToken,
+      paymentId: transactionDetails.token.data,
       origin: origin._id ? { id: origin._id, name: origin.name } : { id: '', name: 'Web' },
       customer: {
         name: customerData.name,
@@ -138,6 +123,7 @@ const ApplePay: React.FC<WalletsProps> = ({
 
     script.onload = async () => {
       try {
+        console.log('Initializing EmergePay Wallets SDK with publicId:', publicId);
         const wallets = new window.emergepayWallets(publicId);
         walletsRef.current = wallets;
 
@@ -152,7 +138,7 @@ const ApplePay: React.FC<WalletsProps> = ({
           await wallets.appendButtons({
             appendToId: containerRef.current.id,
             color: 'black',
-            type: 'compact',
+            type: 'normal',
           });
         }
 
@@ -185,13 +171,7 @@ const ApplePay: React.FC<WalletsProps> = ({
     document.body.appendChild(script);
   }, [publicId]);
 
-  return (
-    <WalletContainer>
-      <div id='wallets-container' ref={containerRef}>
-        {/* <button id='checkout-button' className='checkout-button'></button> */}
-      </div>
-    </WalletContainer>
-  );
+  return <div id='wallets-container' className='wallets' ref={containerRef}></div>;
 };
 
 export default ApplePay;

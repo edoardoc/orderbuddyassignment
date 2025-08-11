@@ -66,6 +66,8 @@ import LocationSettingsPage from './pages/location-settings/LocationSettingsPage
 import SalesSummaryReport from './pages/sales-report/SalesSummaryPage';
 import SalesItemPage from './pages/sales-item/SalesItemPage';
 import PosPage from './pages/pos/PosPage';
+import RestaurantSettingsPage from './pages/restaurant-settings/RestaurantSettingsPage';
+
 
 setupIonicReact();
 const apiEndPoint = import.meta.env.VITE_API_ENDPOINT as string;
@@ -232,6 +234,11 @@ const App: React.FC = () => {
                  <Route
                 path='/:restaurantId/:locationId/apps/pos'
                 render={(props) => (isAuthenticated ? <PosPage /> : <Redirect to='/login' />)}
+              />
+
+              <Route
+                path='/:restaurantId/:locationId/apps/restaurant-settings'
+                render={(props) => (isAuthenticated ? <RestaurantSettingsPage /> : <Redirect to='/login' />)}
               />
               <Route render={() => <Redirect to={isAuthenticated ? '/root-page' : '/login'} />} />
             </Switch>

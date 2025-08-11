@@ -91,19 +91,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           onFieldsLoaded={setFieldsLoaded}
         />
 
-        {/* {fieldsLoaded && showDigitalPayments && ( */}
-        {true && (
-          <>
-            <div style={{ padding: '20px 0', margin: '10px 0' }}>
-              <hr style={{ borderTop: '1px solid #ddd', margin: '0 16px' }} />
-              <div className='ion-text-center' style={{ margin: '10px 0', color: '#666', fontSize: '14px' }}>
-                Or pay with
-              </div>
-            </div>
-            <IonGrid className='ion-padding'>
-              <IonRow>
-                <IonCol size='6' className='ion-text-center'>
-                  {/* <GooglePay
+        <div style={{ padding: '20px 0', margin: '10px 0' }}>
+          <hr style={{ borderTop: '1px solid #ddd', margin: '0 16px' }} />
+        </div>
+
+        <IonGrid className='ion-padding'>
+          <IonRow>
+            <IonCol size='12' className='ion-text-center'>
+              {/* <GooglePay
                     amount={amount}
                     publicId={import.meta.env.VITE_PUBLIC_ID}
                     customerData={customerData}
@@ -111,22 +106,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     onError={onPaymentError}
                     onCancel={handleCancel}
                   /> */}
-                </IonCol>
-                <IonCol size='6' className='ion-text-center'>
-                  <ApplePay
-                    amount={amount}
-                    publicId={import.meta.env.VITE_PUBLIC_ID}
-                    emergepayWalletsUrl={`${import.meta.env.VITE_ASSETS_EMERGEPAY_URL}/cip-hosted-wallets.js`}
-                    customerData={customerData}
-                    onPaymentComplete={onPaymentComplete || onPaymentSuccess}
-                    onError={onPaymentError}
-                    onCancel={handleCancel}
-                  />
-                </IonCol>
-              </IonRow>
-            </IonGrid>
-          </>
-        )}
+            </IonCol>
+            <IonCol size='12' className='ion-text-center'>
+              <ApplePay
+                amount={amount}
+                publicId={import.meta.env.VITE_PUBLIC_ID}
+                emergepayWalletsUrl={`${import.meta.env.VITE_ASSETS_EMERGEPAY_URL}/cip-hosted-wallets.js`}
+                customerData={customerData}
+                onPaymentComplete={onPaymentComplete || onPaymentSuccess}
+                onError={onPaymentError}
+                onCancel={handleCancel}
+              />
+            </IonCol>
+          </IonRow>
+        </IonGrid>
       </IonContent>
     </IonModal>
   );

@@ -22,15 +22,15 @@ steps:
   # Step 2: Install dependencies
   - script: |
       cd src/order
-      npm install -g @ionic/cli  # Install Ionic CLI
       npm ci
     displayName: 'Install dependencies'
 
-  # Step 3: Build the Ionic app
+ # Build the app using Vite (via npm script)
   - script: |
       cd src/order
-      ionic build --prod  # Build the app for production
-    displayName: 'Build Ionic Project'
+      npm run build 
+    displayName: 'Build Vite Project'
+    continueOnError: false
 
   # Copy Apple Pay domain verification file
   - script: |
@@ -41,6 +41,7 @@ steps:
 
   # Step 4: Deploy to Azure Static Web App
   - task: AzureStaticWebApp@0
+    continueOnError: false
     inputs:
       azure_static_web_apps_api_token: $(azure_static_web_apps_api_token_order)
       app_location: 'src/order'

@@ -38,7 +38,8 @@ interface PrinterPageParams {
 }
 const createPrinterSchema = z.object({
   name: z.string().min(1, 'Printer name is required'),
-  ip: z.string().ip('Invalid IP address'),
+  //ip: z.string().ip('Invalid IP address'), // enable this later
+  ip: z.string().min(1,'Invalid IP address'),
 });
 
 type CreatePrinterForm = z.infer<typeof createPrinterSchema>;

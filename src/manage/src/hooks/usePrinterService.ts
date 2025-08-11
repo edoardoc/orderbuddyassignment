@@ -1,4 +1,4 @@
-import { StarPrinter } from '../services/print-service';
+import { StarPrinter } from '../services/printer/print-service';
 import ReceiptPrinterEncoder from '@point-of-sale/receipt-printer-encoder';
 import _ from 'lodash';
 import { Order } from '../pages/orders-page/types';

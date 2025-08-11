@@ -30,6 +30,20 @@ export class LogoUploadParamsDto {
   @IsString()
   locationId: string;
 }
+
+export class SendQrCodeLinkParamsDto {
+  @IsNotEmpty()
+  @IsString()
+  restaurantId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  locationId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  originId: string;
+}
 export class CreateOriginDto {
   @IsNotEmpty()
   @IsString()

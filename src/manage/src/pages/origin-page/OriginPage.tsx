@@ -1,10 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { IoDownloadOutline } from 'react-icons/io5';
 import { BsQrCodeScan } from 'react-icons/bs';
-import { debounce } from 'lodash';
 
 import {
   IonCard,
@@ -28,13 +27,10 @@ import {
   IonPopover,
   IonText,
   IonFabButton,
-  IonList,
-  IonItem,
-  IonProgressBar,
-  IonCardContent,
+  useIonToast,
 } from '@ionic/react';
 import { Link, useParams } from 'react-router-dom';
-import { add, qrCodeOutline } from 'ionicons/icons';
+import { add, mailOutline, qrCodeOutline } from 'ionicons/icons';
 import ColorPicker from 'react-pick-color';
 import QRCodeStyling, {
   Options,
@@ -49,11 +45,9 @@ import { Origin, useOrigins } from '../../queries/origin/useOrigin';
 import { useUpdateQrStyle } from '../../queries/origin/useQrcode';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 import AddOriginModal from './components/AddOriginPage';
-import { useLogoUpload } from '../../queries/origin/useLogo';
-import { azureConfig } from '../../queries/manage-menu/useStorage';
 import { appStore } from '../../store';
-import { display } from 'html2canvas/dist/types/css/property-descriptors/display';
 import { logExceptionError } from '../../utils/errorLogger';
+import { useSendQrCodeLink } from './OriginPageQuery';
 
 interface station {
   _id: string;
@@ -79,13 +73,14 @@ const OriginsPage: React.FC = () => {
   const { restaurantId, locationId } = useParams<{ restaurantId: string; locationId: string }>();
   const { data: origins, isLoading } = useOrigins(restaurantId, locationId);
   const updateQrStyle = useUpdateQrStyle(restaurantId, locationId);
+  const sendQrCodeLink = useSendQrCodeLink(restaurantId, locationId);
+  const [presentToast] = useIonToast();
   const smartScanUrl = import.meta.env.VITE_SMART_SCAN_URL;
   // const appState = appStore()
   const [colors, setColor] = useState('#fff');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const restaurantLogo =
     appStore((state) => state.selection.restaurant.logo) || 'https://order.orderbuddyapp.com/logo.png';
-  const { setRestaurantLogo } = appStore();
 
   useEffect(() => {
     // Update options with QR code style from origins data if available
@@ -144,47 +139,6 @@ const OriginsPage: React.FC = () => {
     shape: 'square',
   });
   const [qrCode] = useState<QRCodeStyling>(new QRCodeStyling(options));
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const logoUpload = useLogoUpload(restaurantId, locationId);
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files?.length) return;
-
-    const file = files[0];
-
-    if (file.size > azureConfig.maxFileSize) {
-      return;
-    }
-
-    if (!azureConfig.allowedFileTypes.includes(file.type)) {
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
-
-    try {
-      const logoUrl = await logoUpload.mutateAsync(file);
-      setOptions((prev) => ({
-        ...prev,
-        image: logoUrl as string,
-      }));
-      setRestaurantLogo(logoUrl as string);
-    } catch (error) {
-      logExceptionError(error instanceof Error ? error : new Error(String(error)), 'originPage.handleLogoUpload', {
-        restaurantId,
-        locationId,
-        fileType: file.type,
-        fileSize: file.size,
-      });
-      console.error('Logo upload failed:', error);
-    } finally {
-      setUploading(false);
-      setUploadProgress(0);
-    }
-  };
-
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -206,29 +160,6 @@ const OriginsPage: React.FC = () => {
     resolver: zodResolver(schema),
   });
 
-  const debouncedApiUpdate = useCallback(
-    debounce(async () => {
-      if (!ref.current) return;
-      console.log('debouncedApiUpdate called');
-      console.error("options.cornersDotOptions",options.cornersDotOptions);
-      console.error("options.cornersSquareOptions",options.cornersSquareOptions);
-      try {
-        await updateQrStyle.mutateAsync({
-          options,
-          ref: { current: ref.current },
-        });
-        styleModal.current?.dismiss();
-      } catch (error) {
-        logExceptionError(error instanceof Error ? error : new Error(String(error)), 'debouncedApiUpdate', {
-          restaurantId,
-          locationId,
-        });
-        console.error('Failed to update QR style:', error);
-      }
-    }, 300),
-    [options, updateQrStyle, ref, restaurantId, locationId],
-  );
-
   // Handler for outer edge color changes
   const onDataOuterEdgeColorChange = (color: string) => {
     setOptions((prevOptions) => ({
@@ -238,8 +169,6 @@ const OriginsPage: React.FC = () => {
         type: 'extra-rounded' as CornerSquareType,
       },
     }));
-
-    debouncedApiUpdate();
   };
 
   const onDataInnerEdgeColorChange = (color: string) => {
@@ -250,8 +179,6 @@ const OriginsPage: React.FC = () => {
         type: 'dot' as CornerDotType,
       },
     }));
-
-    debouncedApiUpdate();
   };
 
   const generateQrCode = async (origin: Origin) => {
@@ -271,6 +198,44 @@ const OriginsPage: React.FC = () => {
     }, 500);
   };
 
+  // Handler for sending QR code link via email
+  const handleSendLink = async (originId: string) => {
+    try {
+      await sendQrCodeLink.mutateAsync(originId);
+      presentToast({
+        message: 'QR Code link sent successfully via email',
+        duration: 3000,
+        position: 'bottom',
+        color: 'success',
+      });
+    } catch (error) {
+      presentToast({
+        message: 'Failed to send QR Code link via email',
+        duration: 3000,
+        position: 'bottom',
+        color: 'danger',
+      });
+      console.error('Failed to send link:', error);
+    }
+  };
+
+  async function handleStyleUpdate(event: React.MouseEvent<HTMLIonButtonElement, MouseEvent>): Promise<void> {
+    event.preventDefault();
+    if (!ref.current) return;
+    try {
+      await updateQrStyle.mutateAsync({
+        options,
+        ref: { current: ref.current },
+      });
+      styleModal.current?.dismiss();
+    } catch (error) {
+      logExceptionError(error instanceof Error ? error : new Error(String(error)), 'handleStyleUpdate', {
+        restaurantId,
+        locationId,
+      });
+      console.error('Failed to update QR style:', error);
+    }
+  }
   return (
     <IonPage className='body'>
       <LaunchPadNavBar title='Origins' />
@@ -294,11 +259,7 @@ const OriginsPage: React.FC = () => {
             {!isLoading &&
               origins?.originData?.map((origin, index) => (
                 <IonCol size-sm='6' size-md='3' key={index}>
-                  <IonCard
-                    key={origin._id}
-                    className='ion-padding-bottom '
-                    style={{ backgroundColor: 'white', width: '220px' }}
-                  >
+                  <IonCard key={origin._id} style={{ backgroundColor: 'white', width: '220px' }}>
                     <IonCardHeader className='ion-no-padding ion-padding-start ion-padding-top'>
                       <IonCardTitle className='ion-text-start'>
                         <IonText style={{ fontSize: '14px' }}>{origin.label}</IonText>
@@ -311,36 +272,23 @@ const OriginsPage: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <img src={origins.qrCodeImage} alt={origin.label}></img>
                     </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <div className='tooltip'>
-                        <Link
-                          to='#'
-                          onClick={(e) => {
-                            e.preventDefault();
-                            window.open(`${smartScanUrl}/${origin.qrCodeId}`, '_blank', 'noopener,noreferrer');
-                          }}
-                        >
-                          <IonButton aria-label='Scan QR' size='small' fill='outline'>
-                            <BsQrCodeScan size={15} style={{ color: 'white' }} />
-                            <IonText style={{ textTransform: 'Capitalize', paddingLeft: '5px' }}>Scan</IonText>
+                    <IonGrid>
+                      <IonRow className='ion-justify-content-center'>
+                        <IonCol size='12' className='ion-text-center'>
+                          <IonButton
+                            expand='block'
+                            fill='outline'
+                            size='small'
+                            type='button'
+                            onClick={() => handleSendLink(origin._id)}
+                          >
+                            <IonIcon icon={mailOutline}></IonIcon>
+                            <IonText style={{ textTransform: 'Capitalize', paddingLeft: '5px' }}>Link</IonText>
                           </IonButton>
-                        </Link>
-                      </div>
+                        </IonCol>
+                      </IonRow>
+                    </IonGrid>
 
-                      <div className='tooltipdown'>
-                        <IonButton
-                          fill='outline'
-                          size='small'
-                          aria-label='Download QR'
-                          type='button'
-                          onClick={() => generateQrCode(origin)}
-                        >
-                          <IoDownloadOutline style={{ color: 'white' }} />
-                          <IonText style={{ textTransform: 'Capitalize', paddingLeft: '5px' }}>download</IonText>
-                        </IonButton>
-                      </div>
-                    </div>
                   </IonCard>
                 </IonCol>
               ))}
@@ -420,31 +368,6 @@ const OriginsPage: React.FC = () => {
                         </IonPopover>
                       </IonCol>
                     </IonRow>
-                    <IonRow>
-                      <IonCol size='12'>
-                        <IonList>
-                          <IonItem lines='none'>
-                            <input
-                              type='file'
-                              accept={azureConfig.allowedFileTypes.join(',')}
-                              onChange={handleLogoUpload}
-                              style={{ display: 'none' }}
-                              id='logo-upload'
-                            />
-                            <IonButton
-                              expand='block'
-                              fill='outline'
-                              slot='end'
-                              onClick={() => document.getElementById('logo-upload')?.click()}
-                              disabled={uploading}
-                            >
-                              {uploading ? 'Uploading...' : 'Upload Logo'}
-                            </IonButton>
-                          </IonItem>
-                          {uploading && <IonProgressBar value={uploadProgress}></IonProgressBar>}
-                        </IonList>
-                      </IonCol>
-                    </IonRow>
                   </IonGrid>
                 </IonCol>
                 <IonCol
@@ -463,6 +386,14 @@ const OriginsPage: React.FC = () => {
                     <IonCard className='rounded'>
                       <div ref={ref} />
                     </IonCard>
+                    <IonButton
+                      onClick={handleStyleUpdate}
+                      fill='solid'
+                      className='solid-button'
+                      style={{ display: 'block', marginTop: '20px' }}
+                    >
+                      Save
+                    </IonButton>
                   </div>
                 </IonCol>{' '}
               </IonRow>

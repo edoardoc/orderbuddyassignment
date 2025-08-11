@@ -41,6 +41,7 @@ export function useLocationSettings() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [phoneNumberError, setPhoneNumberError] = useState<string>('');
   const [address, setAddress] = useState<string>('');
+  const [autoAccept, setAutoAccept] = useState<boolean>(false); 
 
   const [orderTiming, setOrderTiming] = useState<OrderTimingSettings>({
     acceptOrdersAfterMinutes: 30,
@@ -69,7 +70,7 @@ export function useLocationSettings() {
     refetch,
   } = useLocationSettingsApi(restaurantId, locationId);
 
-  // Update location settings mutation
+  // Mutation for updating location settings
   const { mutate: updateSettings, isPending: isUpdating } = useUpdateLocationSettings();
 
   // To track initial data for comparison
@@ -137,6 +138,11 @@ export function useLocationSettings() {
         setAlertNumbers(locationSettingsData.alertNumbers);
       } else {
         setAlertNumbers([]);
+      }
+      if (locationSettingsData.autoAcceptOrder) {
+        setAutoAccept(locationSettingsData.autoAcceptOrder);
+      } else {
+        setAutoAccept(false);
       }
 
       // Store initial data for comparison
@@ -316,7 +322,8 @@ export function useLocationSettings() {
         timezone,
         orderTiming,
         alertNumbers,
-        address
+        address,
+        autoAccept,
       },
       {
         onSuccess: () => {
@@ -367,13 +374,13 @@ export function useLocationSettings() {
         saveSettings();
       }
     }, 1000);
-
+ 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [workingHours, timezone, orderTiming, alertNumbers, isLoading, isLoadingData, restaurantId, locationId, address]);
+  }, [workingHours, timezone, orderTiming, alertNumbers, isLoading, isLoadingData, restaurantId, locationId, address, autoAccept]);
 
   // Phone number formatting utility functions
   const formatPhoneNumber = (phoneNumber: string): string => {
@@ -385,6 +392,12 @@ export function useLocationSettings() {
 
   const validatePhoneNumber = (phoneNumber: string): boolean => {
     return Boolean(phoneNumber && phoneNumber.trim().length >= 10);
+  };
+
+  // Handle autoAccept update
+  const updateAutoAccept = (value: boolean) => {
+    dataChangedByUserRef.current = true;
+    setAutoAccept(value);
   };
 
   return {
@@ -418,5 +431,7 @@ export function useLocationSettings() {
     timezones,
     address,
     updateAddress,
+    autoAccept,
+    updateAutoAccept,
   };
 }
