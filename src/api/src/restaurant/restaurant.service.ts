@@ -3,6 +3,7 @@ import { InjectClient } from 'nest-mongodb-driver';
 import { Collection, Db, ObjectId } from 'mongodb';
 import { OrderStatus } from '../constants';
 import { CategoryDto, GetMenuItemDto, LocationDto, MenuSummaryDto, RestaurantDto } from './dto/restaurant.dto';
+import { RestaurantUpdateDto } from './dto/restaurant-update.dto';
 import { User } from 'src/models/users';
 import { COLLECTIONS } from 'src/db/collections';
 import { Menu, Restaurant } from 'src/db/models';
@@ -461,6 +462,59 @@ export class RestaurantService {
 
     if (!result.matchedCount) {
       throw new NotFoundException('Menu item not found');
+    }
+
+    return result.acknowledged;
+  }
+
+
+  async getRestaurantDetails(restaurantId: string, locationId: string): Promise<any> {
+    const restaurant = await this.restaurantsCollection.findOne({
+      _id: restaurantId,
+    });
+
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+
+    return restaurant;
+  }
+
+  async updateRestaurantDetails(
+    restaurantId: string,
+    locationId: string,
+    updateDto: RestaurantUpdateDto,
+  ): Promise<boolean> {
+    this.logger.trace(
+      {
+        module: 'restaurant',
+        event: 'update_restaurant_details',
+        restaurantId,
+        locationId,
+        fields: Object.keys(updateDto),
+      },
+      'Updating restaurant details',
+    );
+    const updateFields = { ...updateDto };
+    const fieldsToUpdate = Object.entries(updateFields)
+      .filter(([_, value]) => value !== undefined)
+      .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {});
+    fieldsToUpdate['updatedAt'] = new Date().toISOString();
+
+    this.logger.trace(
+      {
+        module: 'restaurant',
+        event: 'update_restaurant_service',
+        restaurantId,
+        fields: Object.keys(fieldsToUpdate),
+      },
+      'Updating restaurant',
+    );
+
+    const result = await this.restaurantsCollection.updateOne({ _id: restaurantId }, { $set: fieldsToUpdate });
+
+    if (!result.matchedCount) {
+      throw new NotFoundException('Restaurant not found');
     }
 
     return result.acknowledged;

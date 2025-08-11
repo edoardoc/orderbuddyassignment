@@ -266,12 +266,12 @@ export class MenuService {
       correlationId,
     });
 
-    // Check AutoAcceptOrder from location collection
+    // Check autoAcceptOrder from location collection
     const location = await this.locationsCollection.findOne(
       { _id: new ObjectId(body.locationId) },
-      { projection: { AutoAcceptOrder: 1 } },
+      { projection: { autoAcceptOrder: 1 } },
     );
-    const autoAcceptOrder = location?.AutoAcceptOrder === true;
+    const autoAcceptOrder = location?.autoAcceptOrder === true;
     if (autoAcceptOrder) {
       await this.ordersCollection.updateOne(
         { _id: orderId },

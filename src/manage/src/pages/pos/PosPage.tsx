@@ -24,13 +24,15 @@ import '../../../style.css';
 import MenuItemModal from './modal/MenuItemModal';
 import { MenuItemType } from '../../types/menu';
 import Cart from './components/Cart';
+import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 const PosPage: React.FC = () => {
   // State for the selected menu
   const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItemType>();
   const currentLang = getUserLang();
-  const { menusMap, menus, addOrderItem, orderItems, removeOrderItem, onCustomerDataChange, placeOrder, clearOrder } = usePos();
+  const { menusMap, menus, addOrderItem, orderItems, removeOrderItem, onCustomerDataChange, placeOrder, clearOrder } =
+    usePos();
   const selectedMenu = selectedMenuId ? menusMap[selectedMenuId] : null;
   const categories = selectedMenu?.categories || [];
   const [presentActionSheet] = useIonActionSheet();
@@ -60,6 +62,7 @@ const PosPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const closeModal = () => {
+    setSelectedMenuItem(undefined);
     setIsModalOpen(false);
   };
 
@@ -101,13 +104,8 @@ const PosPage: React.FC = () => {
   };
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>POS System</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-
-      <IonContent  scrollY={false}>
+      <LaunchPadNavBar title='POS System' />
+      <IonContent scrollY={false}>
         <IonGrid>
           <IonRow>
             <IonCol size='7'>

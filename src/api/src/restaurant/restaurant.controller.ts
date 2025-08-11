@@ -8,7 +8,6 @@ import {
   Param,
   Patch,
   Post,
-  Query,
   Req,
   Res,
   UseGuards,
@@ -25,7 +24,6 @@ import {
   LocationDto,
   MenuDto,
   MenuSummaryDto,
-  OrderHistoryDto,
   RestaurantDto,
   UpdateCategorySortOrderDto,
 } from './dto/restaurant.dto';
@@ -33,12 +31,11 @@ import { Response } from 'express';
 import { UpdateOrderStatusDto } from './dto/create-restaurant.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { ApiResponse } from 'src/models/api-response';
-import { PinoLogger, InjectPinoLogger } from 'nestjs-pino';
 import { OrderStatus } from 'src/constants';
 import { MessageService } from 'src/message/message.service';
-import { RequireRestaurant } from 'src/auth/session/restaurant.decorator';
 import { logger } from 'src/logger/pino.logger';
 import { UpdateItemAvailabilityParamDto } from './dto/update-restaurant.dto';
+import { RestaurantUpdateDto } from './dto/restaurant-update.dto';
 @UseGuards(AuthGuard)
 @Controller('restaurant')
 export class RestaurantController {
@@ -378,6 +375,100 @@ export class RestaurantController {
         'Error updating menu item availability',
       );
       throw error;
+    }
+  }
+
+  @Get('restaurants/:restaurantId/locationId/:locationId/restaurantDetails')
+  async getRestaurantDetails(
+    @Param() params: GetMenusParamDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<Response<ApiResponse<any>>> {
+    const requestId = req['requestId'];
+
+    try {
+      this.logger.trace(
+        {
+          module: 'restaurant',
+          event: 'get_restaurant_details',
+          correlationId: requestId,
+          restaurantId: params.restaurantId,
+          locationId: params.locationId,
+        },
+        'Getting restaurant details',
+      );
+
+      const restaurant = await this.restaurantService.getRestaurantDetails(params.restaurantId, params.locationId);
+
+      return res.status(HttpStatus.OK).json({
+        data: restaurant,
+      });
+    } catch (error) {
+      this.logger.error(
+        {
+          module: 'restaurant',
+          event: 'get_restaurant_details',
+          correlationId: requestId,
+          error: error.message,
+        },
+        'Error fetching restaurant details',
+      );
+
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Patch('restaurants/:restaurantId/locationId/:locationId/update-restaurantDetails')
+  async updateRestaurantDetails(
+    @Param() params: GetMenusParamDto,
+    @Body() updateDto: RestaurantUpdateDto,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<Response<ApiResponse<any>>> {
+    const requestId = req['requestId'];
+
+    try {
+      this.logger.trace(
+        {
+          module: 'restaurant',
+          event: 'update_restaurant_details',
+          correlationId: requestId,
+          restaurantId: params.restaurantId,
+          locationId: params.locationId,
+          updateData: updateDto,
+        },
+        'Updating restaurant details',
+      );
+
+      const result = await this.restaurantService.updateRestaurantDetails(
+        params.restaurantId,
+        params.locationId,
+        updateDto,
+      );
+
+      return res.status(HttpStatus.OK).json({
+        data: result,
+      });
+    } catch (error) {
+      this.logger.error(
+        {
+          module: 'restaurant',
+          event: 'update_restaurant_details',
+          correlationId: requestId,
+          error: error.message,
+        },
+        'Error updating restaurant details',
+      );
+
+      if (error instanceof NotFoundException) {
+        throw new NotFoundException(error.message);
+      }
+
+      throw new BadRequestException(error.message);
     }
   }
 }

@@ -5,9 +5,10 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { UsersService } from 'src/users/users.service';
 import { StorageModule } from 'src/storage/storage.module';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
-  imports: [HttpModule, ConfigModule, StorageModule],
+  imports: [HttpModule, ConfigModule, StorageModule, EmailModule],
   controllers: [OriginsController],
   providers: [OriginsService, UsersService],
 })

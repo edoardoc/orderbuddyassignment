@@ -68,23 +68,24 @@ export const useUpiPayment = () => {
             'X-Request-Id': requestId,
           },
         });
+
         return response.data;
       } catch (error) {
         logApiError(error, 'payments/complete-upi-transaction', {
           operation: 'completeUpiPayment',
           restaurantId: payload.restaurantId,
-          requestId: requestId
+          requestId: requestId,
         });
         throw error;
       }
     },
     onError: (error) => {
       console.error('UPI Payment failed:', error);
-      
-      logApiError(error, 'payments/complete-upi-transaction', { 
+
+      logApiError(error, 'payments/complete-upi-transaction', {
         operation: 'upiPaymentMutation',
         errorMessage: error.message,
-        errorCode: error.code
+        errorCode: error.code,
       });
     },
   });

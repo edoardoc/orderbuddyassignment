@@ -23,6 +23,7 @@ import { PrintersModule } from './printers/printers.module';
 import { ReportModule } from './report/report.module';
 import { LocationSettingsModule } from './location-settings/location-settings.module';
 import { PosModule } from './pos/pos.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -118,6 +119,7 @@ import { PosModule } from './pos/pos.module';
     ReportModule,
     LocationSettingsModule,
     PosModule,
+    EmailModule,
   ],
   controllers: [],
   providers: [MongoIndexInitializer, Logger],

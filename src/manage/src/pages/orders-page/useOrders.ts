@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { client } from '../../Client';
-import { debounce } from 'lodash';
+import { debounce, set } from 'lodash';
 import { Order } from './types';
 import { fetchDashboardOrder } from '../../queries/dashboard/useSingleDasboardOrder';
 import { appStore } from '../../store';
@@ -11,6 +11,7 @@ import { usePrinterService } from '../../hooks/usePrinterService';
 import { logExceptionError } from '../../utils/errorLogger';
 import { Printer, usePrinters } from '../../queries/printers/usePrinter';
 import { useTodayOrders } from './useOrdersQuery';
+import { useNotificationSound } from '../../hooks/useNotificationSound';
 
 interface OrderData {
   orderId: string;
@@ -30,8 +31,8 @@ export const useOrders = (restaurantId: string, locationId: string) => {
   const { data: printersData } = usePrinters(restaurantId, locationId);
 
   const { printOrder: printOrderService } = usePrinterService();
+  const { playNotificationSound } = useNotificationSound();
 
-  const [audio] = useState(new Audio('/sounds/new-order.mp3'));
   const appState = appStore();
 
   const [activeOrders, setActiveOrders] = useState<Map<string, Order>>(new Map());
@@ -68,6 +69,9 @@ export const useOrders = (restaurantId: string, locationId: string) => {
         setCompletedOrders((prev) => new Map(prev).set(order._id, order));
         break;
       case OrderStatus.OrderAccepted:
+        setActiveOrders((prev) => new Map(prev).set(order._id, order));
+        break;
+      case OrderStatus.OrderCreated:
         setActiveOrders((prev) => new Map(prev).set(order._id, order));
         break;
       default:
@@ -122,7 +126,7 @@ export const useOrders = (restaurantId: string, locationId: string) => {
         if (newOrder && selectedPrinter) {
           printOrderService(newOrder, restaurantInfo, selectedPrinter);
           sortOrder(newOrder);
-          audio.play();
+          playNotificationSound();
         }
       } catch (error) {
         logExceptionError(error instanceof Error ? error : new Error(String(error)), 'useOrders.handleOrderReceived', {
@@ -381,7 +385,7 @@ export const useOrders = (restaurantId: string, locationId: string) => {
 
     for (const order of activeOrders.values()) {
       for (const item of order.items) {
-        if (item.startedAt) inProgress++;
+        if (item.startedAt && !item.completedAt) inProgress++;
         if (!item.startedAt) inQueue++;
       }
     }

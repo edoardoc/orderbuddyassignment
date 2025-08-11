@@ -1,10 +1,11 @@
 trigger:
   branches:
     include:
-      - users/rony/302-applepay-0730
+      # Trigger on any branch starting with users/
+      - users/** 
   paths:
     include:
-      - src/order/**
+      - src/order/**  
 
 pool:
   vmImage: ubuntu-latest
@@ -22,15 +23,15 @@ steps:
   # Install dependencies
   - script: |
       cd src/order
-      npm install -g @ionic/cli  # Install Ionic CLI
       npm ci
     displayName: 'Install dependencies'
 
-  # Build the Ionic app
+  # Build the app using Vite (via npm script)
   - script: |
       cd src/order
-      ionic build --prod  # Build the app for production
-    displayName: 'Build Ionic Project'
+      npm run build 
+    displayName: 'Build Vite Project'
+    continueOnError: false
 
   # Copy Apple Pay domain verification file
   - script: |
@@ -39,14 +40,9 @@ steps:
       cp -f apple-verification-files/apple-developer-merchantid-domain-association.gravity dist/.well-known/apple-developer-merchantid-domain-association
     displayName: 'Postbuild: Copy Apple Pay Verification File'
 
-  - script: |
-      cd src/order/dist
-      echo "📂 Final dist/ contents:"
-      find . -type f -exec stat --format='%y %s bytes %n' {} \; | sort
-    displayName: 'Verify dist/ contents'
-
   # Deploy to Azure Static Web App
   - task: AzureStaticWebApp@0
+    continueOnError: false
     inputs:
       azure_static_web_apps_api_token: $(azure_static_web_apps_api_token_order)
       app_location: 'src/order'

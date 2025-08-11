@@ -67,4 +67,8 @@ export class CreateLocationSettingDto {
   @IsString()
   @IsOptional()
   address?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  autoAcceptOrder?: boolean;
 }

@@ -223,6 +223,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
     addOrderItem(orderItem);
     setSelectedVariant(undefined);
     setSelectedModifiers([]);
+    setNotes('');
     onClose();
   };
 
@@ -246,6 +247,8 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({ selectedItem, onClose, is
       onDidDismiss={() => {
         setOrderItemState(initialOrderState);
         setSelectedModifiers([]);
+        setSelectedVariant(undefined);
+        setNotes('');
         onClose();
       }}
     >

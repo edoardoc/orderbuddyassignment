@@ -1,12 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Db, Collection, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
 import { CreateOriginDto } from './dto/create-origin.dto';
 import { COLLECTIONS } from '../db/collections';
-import { Origin, Restaurant, Location } from 'src/db/models';
+import { Origin } from '../db/models/origin.model';
+import { Restaurant } from '../db/models/restaurant.model';
+import { Location } from '../db/models/location.model';
 import { OriginDto, OriginsResponseDto } from './dto/get-origin.dtos';
 import { UpdateQrStyleDto } from './dto/update-origin.dtos';
 import { AzureStorageService } from 'src/storage/storage.service';
+import { EMAIL_SENDER } from '../email/email.module';
+import { EmailTemplateService } from '../email/email-template.service';
 
 @Injectable()
 export class OriginsService {
@@ -17,6 +21,8 @@ export class OriginsService {
   constructor(
     @InjectClient() private readonly db: Db,
     private readonly storageService: AzureStorageService,
+    @Inject(EMAIL_SENDER) private readonly emailService: any,
+    private readonly emailTemplateService: EmailTemplateService,
   ) {
     this.originsCollection = this.db.collection<Origin>(COLLECTIONS.ORIGINS);
     this.restaurantsCollection = this.db.collection(COLLECTIONS.RESTAURANTS);
@@ -146,10 +152,84 @@ export class OriginsService {
   async uploadLogo(file: Express.Multer.File, restaurantId: string): Promise<string> {
     try {
       const imageUrl = await this.storageService.uploadLogoImage(file.buffer, file.originalname, restaurantId, 'logo');
-      await this.restaurantsCollection.updateOne({ _id: restaurantId }, { $set: { logo: imageUrl } });
+      await this.restaurantsCollection.updateOne(
+        { _id: restaurantId },
+        {
+          $set: {
+            logo: imageUrl,
+            updatedAt: new Date(),
+          },
+        },
+      );
       return imageUrl;
     } catch (error) {
       throw new Error(`Failed to upload logo: ${error.message}`);
+    }
+  }
+
+  async sendQrCodeLink(restaurantId: string, locationId: string, originId: string): Promise<void> {
+    try {
+      // Get the origin details
+      const origin = await this.originsCollection.findOne({
+        _id: new ObjectId(originId),
+        restaurantId,
+        locationId: new ObjectId(locationId),
+      });
+
+      if (!origin) {
+        throw new NotFoundException(`Origin ${originId} not found`);
+      }
+
+      // Get restaurant details
+      const restaurant = await this.restaurantsCollection.findOne({ _id: restaurantId }, { projection: { name: 1 } });
+
+      if (!restaurant) {
+        throw new NotFoundException(`Restaurant ${restaurantId} not found`);
+      }
+
+      // Get location details including contact email
+      const location = await this.locationCollection.findOne(
+        { _id: new ObjectId(locationId), restaurantId },
+        { projection: { name: 1, contact: 1 } },
+      );
+
+      if (!location) {
+        throw new NotFoundException(`Location ${locationId} not found`);
+      }
+
+      if (!location.contact.email) {
+        throw new Error('Location does not have a contact email configured');
+      }
+
+      // Get the smart scan URL
+      const smartScanUrl = process.env.SMART_SCAN_URL || 'https://scan.orderbuddyapp.com';
+      const qrCodeUrl = `${smartScanUrl}/${origin.qrCodeId}`;
+
+      // Create the email HTML using the template service
+      const templateData = {
+        restaurantName: restaurant.name,
+        locationName: location.name,
+        originName: origin.label,
+        qrCodeUrl: qrCodeUrl,
+        originType: origin.type || 'table',
+      };
+
+      // Render the HTML from the template
+      const html = this.emailTemplateService.renderHtml('qrcode-link', templateData);
+      console.log('Email HTML:', html); // Debugging line to check rendered HTML
+      console.log('Email Service:', this.emailService.constructor.name); // Debugging line to check email service
+      // Send email using the email service
+      await this.emailService.send({
+        
+        to: location.contact.email,
+        subject: `QR Code Link for ${origin.label} at ${location.name}`,
+        html: html,
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error(`Failed to send QR code link: ${error.message}`);
     }
   }
 }

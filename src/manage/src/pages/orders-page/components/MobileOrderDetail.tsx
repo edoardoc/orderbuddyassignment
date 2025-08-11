@@ -123,11 +123,10 @@ const MobileOrderDetail: React.FC<SelectedOrderProps> = ({
                             ))}
                             {item.notes && (
                               <div style={{ fontSize: '12px', maxWidth: '200px' }}>
-    <span style={{ fontSize: '12px', }}>
-                                <IonText> {item.notes}</IonText>
-                              </span>
+                                <span style={{ fontSize: '12px' }}>
+                                  <IonText> {item.notes}</IonText>
+                                </span>
                               </div>
-                          
                             )}
                           </IonLabel>
                         </IonCol>
@@ -237,6 +236,15 @@ const OrderActions: React.FC<{
     <IonCard className='ion-padding'>
       <IonCardContent className='ion-text-center'>
         {selectedOrder.status === OrderStatus.OrderCreated && (
+          <IonButton
+            fill='outline'
+            style={{ textTransform: 'capitalize' }}
+            onClick={() => handleUpdateOrderStatus(OrderStatus.OrderAccepted)}
+          >
+            Accept Order
+          </IonButton>
+        )}
+        {selectedOrder.status === OrderStatus.OrderAccepted && (
           <IonButton
             fill='outline'
             style={{ textTransform: 'capitalize' }}

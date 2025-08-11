@@ -9,6 +9,7 @@ import { SlLocationPin } from 'react-icons/sl';
 import { FaChartBar } from "react-icons/fa";
 import { BiMenuAltLeft } from "react-icons/bi";
 import { MdOutlinePointOfSale } from "react-icons/md";
+import { IoRestaurant } from "react-icons/io5";
 
 export const getLaunchPadConfig = (restaurantId: string, locationId: string): LaunchPadSection[] => [
   {
@@ -78,6 +79,14 @@ export const getLaunchPadConfig = (restaurantId: string, locationId: string): La
         name: 'Location',
         icon: SlLocationPin,
         link: `/${restaurantId}/${locationId}/apps/location-settings`,
+        iconProps: {
+          size: 32,
+        },
+      },
+        {
+        name: 'Restaurant',
+        icon: IoRestaurant,
+        link: `/${restaurantId}/${locationId}/apps/restaurant-settings`,
         iconProps: {
           size: 32,
         },

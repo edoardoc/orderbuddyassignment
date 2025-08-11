@@ -1,7 +1,8 @@
 trigger:
   branches:
     include:
-      - features/week-30
+      # Trigger on any branch starting with features/
+      - features/** 
   paths:
     include:
       - src/manage/**
@@ -22,18 +23,19 @@ steps:
   # Step 2: Install dependencies
   - script: |
       cd src/manage
-      npm install -g @ionic/cli  # Install Ionic CLI
       npm ci
     displayName: 'Install dependencies'
 
-  # Step 3: Build the Ionic app
+  # Build the app using Vite (via npm script)
   - script: |
       cd src/manage
-      ionic build --prod  # Build the app for production
-    displayName: 'Build Ionic Project'
+      npm run build  
+    displayName: "Build Vite Project"
+    continueOnError: false
 
   # Step 4: Deploy to Azure Static Web App
   - task: AzureStaticWebApp@0
+    continueOnError: false
     inputs:
       azure_static_web_apps_api_token: $(azure_static_web_apps_api_token_manage)
       app_location: 'src/manage'

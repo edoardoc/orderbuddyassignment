@@ -34,6 +34,7 @@ const locationSettingsSchema = z.object({
   workingHours: z.array(workingHourSchema).nullable().default([]),
   orderTiming: orderTimingSchema.optional(),
   alertNumbers: z.array(alertNumberSchema).optional().default([]),
+  autoAcceptOrder: z.boolean().default(false),
 });
 
 export type WorkingHour = z.infer<typeof workingHourSchema>;
@@ -97,7 +98,8 @@ export function useUpdateLocationSettings() {
       timezone,
       orderTiming,
       alertNumbers,
-      address
+      address,
+      autoAccept
     }: {
       restaurantId: string;
       locationId: string;
@@ -106,11 +108,14 @@ export function useUpdateLocationSettings() {
       orderTiming?: OrderTiming;
       alertNumbers?: AlertNumber[];
       address?: string;
+      autoAccept?: boolean;
     }) => {
+
+      const autoAcceptOrder=autoAccept
       try {
         const response = await axiosInstance.patch<ApiResponse<LocationSettings>>(
           `location-settings/restaurant/${restaurantId}/location/${locationId}`,
-          { workingHours, timezone, orderTiming, alertNumbers, address },
+          { workingHours, timezone, orderTiming, alertNumbers, address, autoAcceptOrder },
         );
         return handleApiResponse(response);
       } catch (error) {
