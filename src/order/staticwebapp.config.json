@@ -4,6 +4,7 @@
       "route": "/.well-known/apple-developer-merchantid-domain-association",
       "allowedRoles": ["anonymous"],
       "serve": "/.well-known/apple-developer-merchantid-domain-association",
+      "serve": "/.well-known/apple-developer-merchantid-domain-association",
       "statusCode": 200,
       "mimeType": "text/plain",
       "headers": {
