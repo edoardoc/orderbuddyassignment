@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Db } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
+import { COLLECTIONS } from './collections';
 
 @Injectable()
 export class MongoIndexInitializer implements OnModuleInit {
@@ -20,6 +21,7 @@ export class MongoIndexInitializer implements OnModuleInit {
       // this.db
       //   .collection('stations')
       //   .createIndex({ restaurantId: 1, locationId: 1, stationId: 1 }, { unique: true, name: 'unique_station_key' }),
+      this.db.collection(COLLECTIONS.CAMPAIGNS).createIndex({ originId: 1 }, { name: 'campaign_origin_lookup', unique: true }),
     ]);
 
     console.log('[MongoIndexInitializer] Compound indexes created');

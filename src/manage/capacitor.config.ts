@@ -15,7 +15,13 @@ const config: CapacitorConfig = {
   //todo change to prod url for android build read from env
   server: {
     androidScheme: 'https',
+    //dev
     url: 'https://manage.dev.orderbuddyapp.com',
+    //staging
+    //url: 'https://manage.staging.orderbuddyapp.com',
+    //prod
+    //url: 'https://manage.orderbuddyapp.com',
+    
     //url: 'https://6f8a-50-35-91-91.ngrok-free.app',
     cleartext: true,
   },

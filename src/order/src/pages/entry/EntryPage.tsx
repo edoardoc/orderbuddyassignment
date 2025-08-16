@@ -1,126 +1,101 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { IonFooter, useIonRouter } from '@ionic/react';
-import { useEntryInfo } from '@/queries/useEntryInfo';
-import { useOrderStore } from '@/stores/orderStore';
+import { useRestaurant, useLocation, useOrigin, useCampaign } from '@/shared/useEntryInfo';
 import { IonPage, IonContent, IonSpinner, IonText } from '@ionic/react';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { useMenus } from '@/queries/useMenus';
-import { ORDER_SESSION_KEY, ORDER_SESSION_TTL } from '@/constants/app-config';
-import { useMenu } from '@/queries/useMenu';
-import { delay } from '@/utils/delay';
-import { menu } from 'ionicons/icons';
 import { Paths } from '@/routes/paths';
 import { logApiError } from '@/utils/errorLogger';
 
-type EntryParams = {
-  restaurantId: string;
-  locationId: string;
-};
-
 export function EntryPage() {
+  const { originId } = useParams<{ originId: string }>();
   const nameParam = useQueryParams().get('name');
   const restaurantName = nameParam ? decodeURIComponent(nameParam) : null;
-
-  const { restaurantId, locationId } = useParams<EntryParams>();
   const router = useIonRouter();
 
-  const setOrderOrigin = useOrderStore((s) => s.setOrderOrigin);
-  const setRestaurantName = useOrderStore((s) => s.setRestaurantName);
-  const setMenuId = useOrderStore((s) => s.setMenuId);
-  const restoreCart = useOrderStore((s) => s.restoreCartFromSession);
-  // const persistSession = useOrderStore((s) => s.persistSession);
+  // Fetch origin data
+  const { data: origin, isError: isOriginError, error: originError } = useOrigin(originId);
 
-  //todo:standup
-  const originId = useQueryParams().get('originId') || 'web';
-  const { data: entryInfo, isError: entryInfoIsError, error } = useEntryInfo(restaurantId, locationId, originId);
-  const { data: menus, isError } = useMenus(restaurantId, locationId);
+  // Get data based on origin
+  const {
+    data: restaurant,
+    isError: isRestaurantError,
+    error: restaurantError,
+  } = useRestaurant(origin?.restaurantId || '');
 
-  const start = Date.now();
+  const {
+    data: location,
+    isError: isLocationError,
+    error: locationError,
+  } = useLocation(origin?.restaurantId || '', origin?.locationId || '');
 
-  const init = async () => {
-    if (!entryInfo) return;
+  const {
+    data: menus,
+    isError: isMenusError,
+    error: menusError,
+  } = useMenus(origin?.restaurantId || '', origin?.locationId || '');
+
+
+  const allDataLoaded = restaurant && location && origin && menus;
+  const hasError = isRestaurantError || isLocationError || isOriginError || isMenusError;
+
+  const init = useCallback(async () => {
+    if (!restaurant || !location || !origin) return;
     if (!menus || menus.length === 0) return;
-    if (entryInfoIsError) {
-      switch (error.message) {
-        case 'INVALID_ORIGIN':
-          router.push('/error?code=invalid-origin', 'forward');
-          return;
-        case 'INVALID_RESTAURANT':
-          router.push('/error?code=invalid-restaurant', 'forward');
-          return;
-        case 'INVALID_LOCATION':
-          router.push('/error?code=invalid-location', 'forward');
-          return;
-      }
-    }
-    setOrderOrigin({ restaurantId, locationId, originId });
-    setRestaurantName(entryInfo.restaurant.name);
-
-    // Handle session restoration
-    const sessionRaw = localStorage.getItem(ORDER_SESSION_KEY);
-    const session = sessionRaw ? JSON.parse(sessionRaw) : null;
-    const now = Date.now();
-
-    if (menus.length > 1) {
-      // persistSession();
-      router.push(Paths.menus(restaurantId, entryInfo.location.locationSlug, locationId, originId), 'forward');
-      return;
-    }
-
-    const menuId = menus[0]._id;
-    const menuSlug = menus[0].menuSlug;
-
-    //todo: dupe logic in store.ts
-    // if (
-    //   session &&
-    //   session.restaurantId === restaurantId &&
-    //   session.locationId === locationId &&
-    //   session.originId === originId &&
-    //   session.menuId === menuId &&
-    //   now - session.timestamp < ORDER_SESSION_TTL
-    // ) {
-    //   // restoreCart(session.cart);
-    // }
-    // persistSession();
-    setOrderOrigin({ restaurantId, locationId, originId });
-    setRestaurantName(entryInfo.restaurant.name);
-    setMenuId(menuId);
-
-    const elapsed = Date.now() - start;
-    const MIN_DURATION = 2000;
-    if (elapsed < MIN_DURATION) await delay(MIN_DURATION - elapsed);
     router.push(
-      Paths.menu(restaurantId, entryInfo.location.locationSlug, locationId, menuSlug, menuId, originId),
-      'forward'
+      Paths.menus(origin?.restaurantId || '', location.locationSlug, origin?.locationId || '', originId),
+      'forward',
     );
     return;
-  };
+  }, [restaurant, location, origin, menus, origin?.restaurantId, origin?.locationId, originId, router]);
 
   useEffect(() => {
-    init();
+    // Only initialize once we have all the data
+    if (allDataLoaded) {
+      init();
+    }
+  }, [allDataLoaded, init]);
+
+  useEffect(() => {
+    if (isRestaurantError) {
+      console.error('Restaurant error:', restaurantError);
+      router.push('/error?code=invalid-restaurant', 'forward');
+    } else if (isLocationError) {
+      console.error('Location error:', locationError);
+      router.push('/error?code=invalid-location', 'forward');
+    } else if (isOriginError && origin?._id && origin._id.length < 0) {
+      console.error('Origin error:', originError);
+      router.push('/error?code=invalid-origin', 'forward');
+    } else if (isMenusError) {
+      console.error('Menus error:', menusError);
+      router.push('/error?code=menus-load-failed', 'forward');
+    }
   }, [
-    menus,
-    entryInfo,
-    restaurantId,
-    locationId,
-    originId,
+    isRestaurantError,
+    restaurantError,
+    isLocationError,
+    locationError,
+    isOriginError,
+    originError,
+    isMenusError,
+    menusError,
+
     router,
-    setOrderOrigin,
-    setRestaurantName,
-    setMenuId,
-    // persistSession,
+    origin,
   ]);
 
-  if (isError) {
-    console.error('Error loading restaurant data:', isError);
-    logApiError(error, `entry/${restaurantId}/${locationId}/${originId}`, {
+  // General error handling
+  if (hasError) {
+    let errorObj = restaurantError || locationError || originError || menusError;
+    console.error('Error loading entry data:', errorObj);
+    logApiError(errorObj, `entry/${origin?.restaurantId || ''}/${origin?.locationId || ''}/${originId}`, {
       operation: 'loadEntryPageData',
-      restaurantId,
-      locationId,
-      originId
+      restaurantId: origin?.restaurantId || '',
+      locationId: origin?.locationId || '',
+      originId,
+      isCampaign: origin?.type === 'campaign',
     });
-    router.push('/error?code=restaurant-load-failed', 'forward');
     return null;
   }
 

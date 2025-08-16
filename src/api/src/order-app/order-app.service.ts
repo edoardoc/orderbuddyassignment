@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { console } from 'inspector';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
@@ -10,25 +10,28 @@ import {
   CartItemInput,
   CartSummaryDto,
   CheckoutFormDto,
-  MenuDto,
   MenuSummaryDto,
   OrderConfirmationDto,
   OrderStatusDto,
 } from './dtos/order-app.controller.dto';
 import { DateTime } from 'luxon';
-import { WorkingHourDto } from 'src/location-settings/dto/create-location-setting.dto';
 
 @Injectable()
 export class OrderAppService {
   constructor(@InjectClient() private readonly db: Db) {}
 
-  async getEntryInfo(restaurantId: string, locationId: string, originId: string) {
-    const restaurantPromise = this.db
+  async getRestaurant(restaurantId: string) {
+    const restaurant = await this.db
       .collection<Restaurant>(COLLECTIONS.RESTAURANTS)
       .findOne({ _id: restaurantId }, { projection: { _id: 1, name: 1, concept: 1, logo: 1 } });
 
-    const locationPromise = this.db.collection<Location>(COLLECTIONS.LOCATIONS).findOne(
-      { _id: new ObjectId(locationId) },
+    if (!restaurant) throw new NotFoundException('INVALID_RESTAURANT');
+    return restaurant;
+  }
+
+  async getLocation(restaurantId: string, locationId: string) {
+    const location = await this.db.collection<Location>(COLLECTIONS.LOCATIONS).findOne(
+      { _id: new ObjectId(locationId), restaurantId },
       {
         projection: {
           _id: 1,
@@ -40,48 +43,99 @@ export class OrderAppService {
           'orderTiming.acceptOrdersAfterMinutes': 1,
           'orderTiming.stopOrdersBeforeMinutes': 1,
           'payment.acceptPayment': 1,
+          'payment.emergepayWalletsPublicId': 1,
         },
       },
     );
 
-    const originPromise = this.db.collection<Origin>(COLLECTIONS.ORIGINS).findOne(
-      { _id: new ObjectId(originId) },
-      {
-        projection: {
-          _id: 1,
-          label: 1,
-        },
-      },
-    );
-
-    const [restaurant, location, origin] = await Promise.all([restaurantPromise, locationPromise, originPromise]);
-
-    if (!restaurant) throw new NotFoundException('INVALID_RESTAURANT');
     if (!location) throw new NotFoundException('INVALID_LOCATION');
-    if (!origin) throw new NotFoundException('INVALID_ORIGIN');
 
     const isOpen = this.isOpen(
       location.workingHours,
       location.timezone,
       location.orderTiming.acceptOrdersAfterMinutes,
       location.orderTiming.stopOrdersBeforeMinutes,
-      restaurant._id,
+      restaurantId,
       location._id.toString(),
     );
 
-    const transformedLocation = {
+    return {
       _id: location._id.toString(),
       locationSlug: location.locationSlug,
       name: location.name,
       isActive: location.isActive,
       acceptPayment: location.payment?.acceptPayment || false,
+      emergepayWalletsPublicId: location.payment?.emergepayWalletsPublicId,
       isOpen,
     };
-    return {
-      restaurant,
-      location: transformedLocation,
-      origin,
-    };
+  }
+
+  async getOrigin(originId: string) {
+    try {
+      const origin = await this.db.collection<Origin>(COLLECTIONS.ORIGINS).findOne(
+        { _id: new ObjectId(originId) },
+        {
+          projection: {
+            _id: 1,
+            label: 1,
+            restaurantId: 1,
+            locationId: 1,
+            type: 1,
+          },
+        },
+      );
+
+      if (!origin) {
+        return {
+          _id: '',
+          label: '',
+          restaurantId: '',
+          locationId: '',
+          type: '',
+        };
+      }
+
+      return {
+        ...origin,
+        locationId: origin.locationId instanceof ObjectId ? origin.locationId.toString() : origin.locationId,
+      };
+    } catch (error) {
+      // If there's an error with the ObjectId or database query, return an empty object
+      console.error('Error fetching origin:', error);
+    }
+  }
+
+  async getCampaign(restaurantId: string, locationId: string, originId: string) {
+    try {
+      const campaign = await this.db.collection(COLLECTIONS.CAMPAIGNS).findOne(
+        {
+          restaurantId,
+          locationId: new ObjectId(locationId),
+          originId: new ObjectId(originId),
+          isActive: true,
+        },
+        {
+          projection: {
+            name: 1,
+            type: 1,
+            reward: 1,
+          },
+        },
+      );
+
+      if (!campaign) {
+        return null;
+      }
+
+      return {
+        name: campaign.name,
+        type: campaign.type,
+        reward: campaign.reward,
+      };
+    } catch (error) {
+      console.error('Error fetching campaign:', error);
+      return null;
+    }
   }
 
   isOpen(

@@ -65,6 +65,8 @@ const GooglePay: React.FC<WalletsProps> = ({
   const resetOrderState = useOrderStore((s) => s.resetOrderState);
   // Use the useUpiPayment hook
   const completeUpiPaymentMutation = useUpiPayment();
+    const discount = useOrderStore((s) => s.discount);
+
   const [requestUuid] = useState<string>(uuid());
   const router = useIonRouter();
   const initiateOrder = (orderNumber: string) => {
@@ -112,6 +114,13 @@ const GooglePay: React.FC<WalletsProps> = ({
       items: orderItems,
       getSms: customerData.getSms,
       transactionDetails: transactionDetails,
+      discount: discount
+        ? {
+            name: discount.name,
+            type: discount.type,
+            amountCents: discount.amountCents,
+          }
+        : undefined,
     };
 
     try {

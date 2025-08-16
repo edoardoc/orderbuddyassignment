@@ -217,6 +217,19 @@ const StatusPage: React.FC = () => {
                 </div>
 
                 <IonGrid className='flex flex-row justify-between mt-3 '>
+                  {orderData.discount && orderData.discount.amountCents && orderData.discount.amountCents > 0 && (
+                    <IonRow className='ion-align-items-center'>
+                      <IonCol className='font-size-14'>
+                        Discount {orderData.discount.type && `(${orderData.discount.type})`}
+                      </IonCol>
+                      <IonCol className='font-size-14 ion-text-end'>
+                        <div className='flex flex-col' style={{ color: '#2dd36f' }}>
+                          - ${((orderData.discount.amountCents || 0) / 100).toFixed(2)}
+                        </div>
+                      </IonCol>
+                    </IonRow>
+                  )}
+
                   <IonRow className='ion-align-items-center'>
                     <IonCol className='font-size-14 '>Total</IonCol>
                     <IonCol className='font-size-14 ion-text-end'>

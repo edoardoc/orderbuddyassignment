@@ -24,6 +24,7 @@ export interface Location {
   };
   payment: {
     acceptPayment: boolean;
+    emergepayWalletsPublicId?: string;
   };
   workingHours: DayWorkingHours[];
   orderTiming: {

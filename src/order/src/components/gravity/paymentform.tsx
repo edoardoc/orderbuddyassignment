@@ -57,6 +57,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const [isFieldsLoading, setIsFieldsLoading] = useState(true);
   const completePaymentMutation = useCompletePayment();
   const router = useIonRouter();
+  const discount = useOrderStore((s) => s.discount);
 
   const { data: tokenData } = useToken(restaurant._id, requestUuid);
 
@@ -108,6 +109,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
       },
       items: orderItems,
       getSms: customerData.getSms,
+      discount: discount
+        ? {
+            name: discount.name,
+            type: discount.type,
+            amountCents: discount.amountCents,
+          }
+        : undefined,
     };
 
     try {

@@ -5,7 +5,7 @@ export interface Origin {
   restaurantId: string;
   locationId: ObjectId; // ObjectId
   qrCodeId: string;
-  type: 'table' | 'parking' | 'kiosk';
+  type: 'table' | 'parking' | 'campaign';
   label: string;
   qrCode: string;
 }

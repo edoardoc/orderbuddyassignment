@@ -14,7 +14,7 @@ import {
 import { chevronForwardOutline } from 'ionicons/icons';
 import { useParams } from 'react-router-dom';
 import Banner from '../menu/components/banner/Banner';
-import { useEntryInfo } from '@/queries/useEntryInfo';
+import { useRestaurant, useLocation, useOrigin } from '@/shared/useEntryInfo';
 import { useQueryParams } from '@/hooks/useQueryParams';
 import { getUserLang, t } from '@/utils/localization';
 import { useOrderStore } from '@/stores/orderStore';
@@ -23,17 +23,23 @@ import React, { useEffect } from 'react';
 import '../../../style.css';
 
 export const MenusPage: React.FC = () => {
-  //todo:standup
   const originId = useQueryParams().get('originId') || 'web';
-
+  // Fetch origin data
+  const { data: origin } = useOrigin(originId);
   const { restaurantId, locationSlug, locationId } = useParams<{
     restaurantId: string;
     locationSlug: string;
     locationId: string;
   }>();
 
-  const { data: entryInfo, isError: entryInfoIsError, error } = useEntryInfo(restaurantId, locationId, originId);
-  const { data: menus, isError } = useMenus(restaurantId, locationId);
+  // Fetch restaurant data using the restaurantId from params or from origin
+  const { data: restaurant } = useRestaurant(restaurantId);
+
+  // Fetch location data using the restaurantId and locationId from params or from origin
+  const { data: location } = useLocation(restaurantId, locationId);
+
+  // Fetch menus using the same pattern
+  const { data: menus } = useMenus(restaurantId, locationId);
   const currentLang = getUserLang();
   const router = useIonRouter();
   const setMenuId = useOrderStore((s) => s.setSelectedMenuId);
@@ -49,17 +55,20 @@ export const MenusPage: React.FC = () => {
       router.push(Paths.menu(restaurantId, locationSlug, locationId, menu.menuSlug, menu._id, originId), 'forward');
     }
   }, [menus, restaurantId, locationSlug, locationId, originId, router, setMenuId]);
+
   return (
     <IonPage>
       <IonHeader>
         <IonGrid class='navbar-color'>
-          <Banner
-            restaurantName={entryInfo?.restaurant.name!}
-            restaurantLogo={entryInfo?.restaurant.logo}
-            origin={entryInfo?.origin.label!}
-            restaurantId={entryInfo?.restaurant._id!}
-            locationName={entryInfo?.location.name!}
-          />
+          {restaurant && location && origin && (
+            <Banner
+              restaurantName={restaurant.name}
+              restaurantLogo={restaurant.logo}
+              origin={origin.label}
+              restaurantId={restaurant._id}
+              locationName={location.name}
+            />
+          )}
         </IonGrid>
       </IonHeader>
 

@@ -23,6 +23,7 @@ interface PaymentModalProps {
     phone: string;
     getSms: boolean;
   };
+  emergepayWalletsPublicId: string;
   onPaymentSuccess: () => void;
   onPaymentError: (error: any) => void;
   onCancel: () => void;
@@ -37,6 +38,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onPaymentError,
   onCancel,
   onPaymentComplete,
+  emergepayWalletsPublicId,
 }) => {
   const [fieldsLoaded, setFieldsLoaded] = useState(false);
   const [showDigitalPayments, setShowDigitalPayments] = useState(false);
@@ -100,7 +102,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <IonCol size='12' className='ion-text-center'>
               {/* <GooglePay
                     amount={amount}
-                    publicId={import.meta.env.VITE_PUBLIC_ID}
+                    publicId={emergepayWalletsPublicId}
                     customerData={customerData}
                     onPaymentComplete={onPaymentComplete || onPaymentSuccess}
                     onError={onPaymentError}
@@ -110,7 +112,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <IonCol size='12' className='ion-text-center'>
               <ApplePay
                 amount={amount}
-                publicId={import.meta.env.VITE_PUBLIC_ID}
+                publicId={emergepayWalletsPublicId}
                 emergepayWalletsUrl={`${import.meta.env.VITE_ASSETS_EMERGEPAY_URL}/cip-hosted-wallets.js`}
                 customerData={customerData}
                 onPaymentComplete={onPaymentComplete || onPaymentSuccess}

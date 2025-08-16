@@ -7,6 +7,7 @@ export const COLLECTIONS = {
   ORDERS: 'orders',
   USERS: 'users',
   SUBSCRIPTIONS: 'subscriptions',
+  CAMPAIGNS: 'campaigns',
 };
 // export const COLLECTIONS = {
 //   RESTAURANTS: 'restaurants_prod',

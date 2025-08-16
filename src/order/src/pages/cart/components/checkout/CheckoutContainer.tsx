@@ -11,13 +11,16 @@ interface CheckoutContainerProps {
     phone: string;
     getSms: boolean;
   };
+  emergepayWalletsPublicId: string;
 }
 
 export const CheckoutContainer: React.FC<CheckoutContainerProps> = ({
   isValidPlaceOrder,
   calculateTotal,
   customerData,
+  emergepayWalletsPublicId,
 }) => {
+  
   const paymentModal = useRef<HTMLIonModalElement>({} as HTMLIonModalElement);
 
   const amount = calculateTotal;
@@ -43,6 +46,7 @@ export const CheckoutContainer: React.FC<CheckoutContainerProps> = ({
         onPaymentError={handlePaymentError}
         onCancel={handleCancel}
         customerData={customerData}
+        emergepayWalletsPublicId={emergepayWalletsPublicId}
       />
     </>
   );

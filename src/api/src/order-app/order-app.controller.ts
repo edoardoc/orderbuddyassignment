@@ -27,23 +27,57 @@ import {
   MenuSummaryDto,
   OrderConfirmationDto,
   OrderStatusDto,
+  RestaurantDto,
+  LocationDto,
+  OriginDto,
+  CampaignDto,
 } from './dtos/order-app.controller.dto';
 
 @Controller('order-app')
 export class OrderAppController {
   constructor(private readonly orderAppService: OrderAppService) {}
 
-  // entry page -> entry info
-  @Get('restaurants/:restaurantId/locations/:locationId/origins/:originId/entry-info')
-  async getEntryInfo(
-    @Param() params: GetEntryInfoDto,
-    @Res() res: Response
-  ): Promise<Response<ApiResponse<EntryInfoDto>>> {
-    if (!ObjectId.isValid(params.locationId)) throw new BadRequestException('INVALID_LOCATION');
-    if (!ObjectId.isValid(params.originId)) throw new BadRequestException('INVALID_ORIGIN');
+  // Get restaurant info
+  @Get('restaurants/:restaurantId')
+  async getRestaurant(
+    @Param('restaurantId') restaurantId: string,
+    @Res() res: Response,
+  ): Promise<Response<ApiResponse<RestaurantDto>>> {
+    const restaurant = await this.orderAppService.getRestaurant(restaurantId);
+    return res.status(HttpStatus.OK).json({ data: restaurant });
+  }
 
-    const entryInfo = await this.orderAppService.getEntryInfo(params.restaurantId, params.locationId, params.originId);
-    return res.status(HttpStatus.OK).json({ data: entryInfo });
+  // Get location info
+  @Get('restaurants/:restaurantId/locations/:locationId')
+  async getLocation(
+    @Param('restaurantId') restaurantId: string,
+    @Param('locationId') locationId: string,
+    @Res() res: Response,
+  ): Promise<Response<ApiResponse<LocationDto>>> {
+    const location = await this.orderAppService.getLocation(restaurantId, locationId);
+    return res.status(HttpStatus.OK).json({ data: location });
+  }
+
+  // Get origin info
+  @Get('restaurants/origins/:originId')
+  async getOrigin(
+    @Param('originId') originId: string,
+    @Res() res: Response,
+  ): Promise<Response<ApiResponse<OriginDto>>> {
+    const origin = await this.orderAppService.getOrigin(originId);
+    return res.status(HttpStatus.OK).json({ data: origin });
+  }
+
+  // Get campaign info
+  @Get('restaurants/:restaurantId/locations/:locationId/origins/:originId/campaign')
+  async getCampaign(
+    @Param('restaurantId') restaurantId: string,
+    @Param('locationId') locationId: string,
+    @Param('originId') originId: string,
+    @Res() res: Response,
+  ): Promise<Response<ApiResponse<CampaignDto>>> {
+    const campaign = await this.orderAppService.getCampaign(restaurantId, locationId, originId);
+    return res.status(HttpStatus.OK).json({ data: campaign });
   }
 
   // entry page -> menus
@@ -51,7 +85,7 @@ export class OrderAppController {
   async getMenus(
     @Param() params: GetMenusParamDto,
 
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<MenuSummaryDto[]>>> {
     const menus = await this.orderAppService.getMenus(params.restaurantId, params.locationId);
     return res.status(HttpStatus.OK).json({ data: menus });
@@ -62,7 +96,7 @@ export class OrderAppController {
   async getMenu(
     @Param() params: GetMenuParamDto,
 
-    @Res() res: Response
+    @Res() res: Response,
   ): Promise<Response<ApiResponse<MenuDto>>> {
     const menu = await this.orderAppService.getMenu(params.restaurantId, params.locationId, params.menuId);
     return res.status(HttpStatus.OK).json({ data: menu });

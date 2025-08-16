@@ -17,8 +17,8 @@ export class OriginsParamsDto {
   @IsString()
   name: string;
   @IsNotEmpty()
-  @IsEnum(['table', 'parking'])
-  type: 'table' | 'parking';
+  @IsEnum(['table', 'parking', 'campaign'])
+  type: 'table' | 'parking' | 'campaign';
 }
 
 // Response
@@ -57,6 +57,6 @@ export class CreateOriginDto {
   @IsString()
   qrCodeId: string;
 
-  @IsEnum(['table', 'parking'])
-  type: 'table' | 'parking';
+  @IsEnum(['table', 'parking', 'campaign'])
+  type: 'table' | 'parking' | 'campaign';
 }

@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Res, HttpStatus, BadRequestException, Query } from '@nestjs/common';
 import { ReportService } from './report.service';
-import { OrderHistoryDto, SalesItemDto } from './dto/reports.dto';
+import { OrderHistoryDto, SalesItemDto,SalesOriginDto } from './dto/reports.dto';
 import { Response } from 'express';
 
 @Controller('report')
@@ -49,4 +49,20 @@ export class ReportController {
       throw new BadRequestException(error.message);
     }
   }
+  @Get('/sales_by_origin/:restaurantId/:locationId/:date')
+  async getSalesByOrigin(
+    @Param() params: SalesOriginDto,
+    @Res() res: Response,
+  ) {
+    try {
+      const salesData = await this.reportService.getSalesByOrigin(params.restaurantId, params.locationId, params.date);
+      return res.status(HttpStatus.OK).json({
+        success: true,
+        data: salesData,
+      });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
 }
+

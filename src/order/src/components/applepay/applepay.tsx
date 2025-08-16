@@ -48,6 +48,7 @@ const ApplePay: React.FC<WalletsProps> = ({
   const resetOrderState = useOrderStore((s) => s.resetOrderState);
   const { locationSlug } = useParams<{ locationSlug: string }>();
   const completeUpiPaymentMutation = useUpiPayment();
+  const discount = useOrderStore((s) => s.discount);
 
   const completeUpiPayment = async (transactionDetails: any) => {
     const orderItems = cartItems.map((item) => ({
@@ -88,6 +89,13 @@ const ApplePay: React.FC<WalletsProps> = ({
       items: orderItems,
       getSms: customerData.getSms,
       transactionDetails,
+      discount: discount
+        ? {
+            name: discount.name,
+            type: discount.type,
+            amountCents: discount.amountCents,
+          }
+        : undefined,
     };
 
     try {

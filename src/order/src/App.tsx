@@ -58,7 +58,7 @@ const App = () => (
         <IonReactRouter>
           <IonRouterOutlet>
             <Switch>
-              <Route exact path='/entry/:restaurantId/:locationSlug/:locationId' component={EntryPage} />
+              <Route exact path='/entry/:originId' component={EntryPage} />
               <Route exact path='/menus/:restaurantId/:locationSlug/:locationId' component={MenusPage} />
               <Route
                 exact

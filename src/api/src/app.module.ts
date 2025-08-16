@@ -24,6 +24,7 @@ import { ReportModule } from './report/report.module';
 import { LocationSettingsModule } from './location-settings/location-settings.module';
 import { PosModule } from './pos/pos.module';
 import { EmailModule } from './email/email.module';
+import { CampaignModule } from './campaign/campaign.module';
 
 @Module({
   imports: [
@@ -120,6 +121,7 @@ import { EmailModule } from './email/email.module';
     LocationSettingsModule,
     PosModule,
     EmailModule,
+    CampaignModule,
   ],
   controllers: [],
   providers: [MongoIndexInitializer, Logger],

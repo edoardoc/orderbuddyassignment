@@ -24,6 +24,10 @@ const alertNumberSchema = z.object({
   _id: z.string().optional(),
   phoneNumber: z.string(),
 });
+const contactSchema = z.object({
+  email: z.string(), // No .email() validation, just a string
+  phoneNumber: z.string().optional(),
+});
 
 const locationSettingsSchema = z.object({
   _id: z.string(),
@@ -35,6 +39,7 @@ const locationSettingsSchema = z.object({
   orderTiming: orderTimingSchema.optional(),
   alertNumbers: z.array(alertNumberSchema).optional().default([]),
   autoAcceptOrder: z.boolean().default(false),
+  contact: contactSchema.optional(),
 });
 
 export type WorkingHour = z.infer<typeof workingHourSchema>;
@@ -99,7 +104,8 @@ export function useUpdateLocationSettings() {
       orderTiming,
       alertNumbers,
       address,
-      autoAccept
+      autoAccept,
+      emailAddress
     }: {
       restaurantId: string;
       locationId: string;
@@ -109,13 +115,14 @@ export function useUpdateLocationSettings() {
       alertNumbers?: AlertNumber[];
       address?: string;
       autoAccept?: boolean;
+      emailAddress?: string;
     }) => {
-
       const autoAcceptOrder=autoAccept
+        const contact = emailAddress ? { email: emailAddress } : {email:""};
       try {
         const response = await axiosInstance.patch<ApiResponse<LocationSettings>>(
           `location-settings/restaurant/${restaurantId}/location/${locationId}`,
-          { workingHours, timezone, orderTiming, alertNumbers, address, autoAcceptOrder },
+          { workingHours, timezone, orderTiming, alertNumbers, address, autoAcceptOrder, contact },
         );
         return handleApiResponse(response);
       } catch (error) {
@@ -142,6 +149,7 @@ export function useCreateLocationSettings() {
       timezone,
       orderTiming,
       alertNumbers,
+      emailAddress
     }: {
       restaurantId: string;
       locationId: string;
@@ -149,7 +157,9 @@ export function useCreateLocationSettings() {
       timezone?: string;
       orderTiming?: OrderTiming;
       alertNumbers?: AlertNumber[];
+      emailAddress?: string;
     }) => {
+        const contact = emailAddress ? { email: emailAddress } : undefined;
       try {
         const response = await axiosInstance.post<ApiResponse<LocationSettings>>(`location-settings`, {
           restaurantId,
@@ -158,6 +168,7 @@ export function useCreateLocationSettings() {
           timezone,
           orderTiming,
           alertNumbers,
+          contact,
         });
         return handleApiResponse(response);
       } catch (error) {

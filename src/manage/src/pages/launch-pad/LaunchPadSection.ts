@@ -1,4 +1,4 @@
-import { MdOutlineDashboard } from 'react-icons/md';
+import { MdCampaign, MdOutlineCampaign, MdOutlineDashboard } from 'react-icons/md';
 import { LuGitBranchPlus } from 'react-icons/lu';
 import { BiFoodMenu } from 'react-icons/bi';
 import { TiPrinter } from 'react-icons/ti';
@@ -6,10 +6,11 @@ import { qrCodeOutline } from 'ionicons/icons';
 import { LaunchPadSection } from './types';
 import { GoHistory } from 'react-icons/go';
 import { SlLocationPin } from 'react-icons/sl';
-import { FaChartBar } from "react-icons/fa";
-import { BiMenuAltLeft } from "react-icons/bi";
-import { MdOutlinePointOfSale } from "react-icons/md";
-import { IoRestaurant } from "react-icons/io5";
+import { FaChartBar } from 'react-icons/fa';
+import { BiMenuAltLeft } from 'react-icons/bi';
+import { MdOutlinePointOfSale } from 'react-icons/md';
+import { IoRestaurant } from 'react-icons/io5';
+import { ImQrcode } from 'react-icons/im';
 
 export const getLaunchPadConfig = (restaurantId: string, locationId: string): LaunchPadSection[] => [
   {
@@ -83,10 +84,18 @@ export const getLaunchPadConfig = (restaurantId: string, locationId: string): La
           size: 32,
         },
       },
-        {
+      {
         name: 'Restaurant',
         icon: IoRestaurant,
         link: `/${restaurantId}/${locationId}/apps/restaurant-settings`,
+        iconProps: {
+          size: 32,
+        },
+      },
+      {
+        name: 'Campaign',
+        icon: MdOutlineCampaign,
+        link: `/${restaurantId}/${locationId}/apps/campaign`,
         iconProps: {
           size: 32,
         },
@@ -112,10 +121,18 @@ export const getLaunchPadConfig = (restaurantId: string, locationId: string): La
           size: 32,
         },
       },
-       {
-        name: 'Sales Item',
+      {
+        name: 'Sales by Item',
         icon: BiMenuAltLeft,
         link: `/${restaurantId}/${locationId}/apps/sales_item`,
+        iconProps: {
+          size: 32,
+        },
+      },
+      {
+        name: 'Sales by Origin',
+        icon: ImQrcode,
+        link: `/${restaurantId}/${locationId}/apps/sales_origin`,
         iconProps: {
           size: 32,
         },
