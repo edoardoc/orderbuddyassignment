@@ -73,7 +73,19 @@ export class OrderOriginDto {
   @IsString()
   name: string;
 }
+export class DiscountDto {
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  type!: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  amountCents!: number;
+}
 export class OrderStatusResponseDto {
   @IsString()
   _id: string;
@@ -114,6 +126,11 @@ export class OrderStatusResponseDto {
 
   @IsOptional()
   getSms?: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DiscountDto)
+  discount?: DiscountDto;
 }
 
 export class CustomerDto {
@@ -387,6 +404,7 @@ export class RestaurantResponseDto {
   // @Type(() => PaymentDto)
   // payment!: PaymentDto
 }
+
 export class CreateOrderDto {
   @IsString()
   @IsNotEmpty()
@@ -426,6 +444,11 @@ export class CreateOrderDto {
 
   @IsOptional()
   transactionDetails?: any;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DiscountDto)
+  discount?: DiscountDto;
 }
 export interface Customer {
   name: string;

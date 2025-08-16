@@ -4,7 +4,7 @@ import { InjectClient } from 'nest-mongodb-driver';
 import { COLLECTIONS } from 'src/db/collections';
 import { Location } from 'src/db/models/location.model';
 import { DateTime } from 'luxon';
-import { SalesByItemResponse } from './dto/reports.dto';
+import { SalesByItemResponse, SalesByOriginResponse } from './dto/reports.dto';
 import { OrderStatus } from 'src/constants';
 
 @Injectable()
@@ -12,11 +12,13 @@ export class ReportService {
   private readonly restaurantsCollection: any;
   private readonly ordersCollection: any;
   private readonly locationCollection: Collection<Location>;
+  private readonly originsCollection: Collection;
 
   constructor(@InjectClient() private readonly db: Db) {
     this.restaurantsCollection = db.collection(COLLECTIONS.RESTAURANTS);
     this.ordersCollection = db.collection(COLLECTIONS.ORDERS);
     this.locationCollection = this.db.collection<Location>(COLLECTIONS.LOCATIONS);
+    this.originsCollection = this.db.collection(COLLECTIONS.ORIGINS);
   }
 
   async getHistoryOrders(restaurantId: string, locationId: string, date: string) {
@@ -238,5 +240,109 @@ export class ReportService {
       ])
       .toArray();
     return salesByItem;
+  }
+  async getSalesByOrigin(restaurantId: string, locationId: string, date: string): Promise<SalesByOriginResponse[]> {
+    // Find the location to get timezone info
+    const location = await this.locationCollection.findOne(
+      {
+        _id: new ObjectId(locationId),
+        restaurantId: restaurantId,
+      },
+      {
+        projection: {
+          timezone: 1,
+          name: 1,
+          _id: 1,
+        },
+      },
+    );
+
+    if (!location) {
+      throw new NotFoundException(`Location ${locationId} not found for restaurant ${restaurantId}`);
+    }
+
+    if (!location.timezone) {
+      throw new Error('Store timezone not configured');
+    }
+
+    const timezone = location.timezone;
+    const localDay = DateTime.fromISO(date).setZone(timezone).startOf('day');
+
+    if (!localDay.isValid) {
+      throw new Error(`Invalid date: ${localDay.invalidReason}`);
+    }
+
+    const startOfDay = localDay.toUTC().toJSDate();
+    const endOfDay = localDay.endOf('day').toUTC().toJSDate();
+
+    const salesByItem = await this.ordersCollection.aggregate([
+      {
+        $match: {
+          restaurantId,
+          locationId: new ObjectId(locationId),
+          status: OrderStatus.OrderCompleted,
+          endedAt: {
+            $gte: startOfDay,
+            $lte: endOfDay,
+          },
+        },
+      },
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.menuItemId',
+          itemName: { $first: '$items.name' },
+          soldCount: { $sum: 1 },
+          grossSalesCents: { $sum: '$items.priceCents' },
+        },
+      },
+      {
+        $addFields: {
+          grossSales: { $divide: ['$grossSalesCents', 100] },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          menuItemId: '$_id',
+          itemName: 1,
+          soldCount: 1,
+          grossSales: 1,
+        },
+      },
+      { $sort: { grossSales: -1 } },
+    ]);
+    const salesByOrigin = await this.ordersCollection
+      .aggregate([
+        {
+          $match: {
+            restaurantId,
+            locationId: new ObjectId(locationId),
+            status: OrderStatus.OrderCompleted,
+            endedAt: {
+              $gte: startOfDay,
+              $lte: endOfDay,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: '$origin.id',
+            soldCount: { $sum: { $size: '$items' } },
+            grossSales: { $sum: { $divide: ['$totalPriceCents', 100] } },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            originId: { $toString: '$_id' },
+            soldCount: 1,
+            grossSales: 1,
+          },
+        },
+        { $sort: { grossSales: -1 } },
+      ])
+      .toArray();
+    return salesByOrigin;
   }
 }

@@ -8,7 +8,7 @@ export const EMAIL_SENDER = 'EMAIL_SENDER';
 
 const EmailSenderProvider: Provider = {
   provide: EMAIL_SENDER,
-  useClass: process.env.NODE_ENV === 'production' ? EmailService : LocalEmailService,
+  useClass: process.env.NODE_ENV === 'local' ? LocalEmailService : EmailService,
 };
 
 @Module({

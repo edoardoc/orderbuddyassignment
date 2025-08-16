@@ -65,8 +65,10 @@ import HistoryPage from './pages/order-history/OrderHistoryPage';
 import LocationSettingsPage from './pages/location-settings/LocationSettingsPage';
 import SalesSummaryReport from './pages/sales-report/SalesSummaryPage';
 import SalesItemPage from './pages/sales-item/SalesItemPage';
+import SalesOriginPage from './pages/sales-origin/SalesOriginPage';
 import PosPage from './pages/pos/PosPage';
 import RestaurantSettingsPage from './pages/restaurant-settings/RestaurantSettingsPage';
+import CampaignPage from './pages/campaign/CampaignPage';
 
 
 setupIonicReact();
@@ -231,6 +233,10 @@ const App: React.FC = () => {
                 path='/:restaurantId/:locationId/apps/sales_item'
                 render={(props) => (isAuthenticated ? <SalesItemPage /> : <Redirect to='/login' />)}
               />
+              <Route
+                path='/:restaurantId/:locationId/apps/sales_origin'
+                render={(props) => (isAuthenticated ? <SalesOriginPage /> : <Redirect to='/login' />)}
+              />
                  <Route
                 path='/:restaurantId/:locationId/apps/pos'
                 render={(props) => (isAuthenticated ? <PosPage /> : <Redirect to='/login' />)}
@@ -239,6 +245,10 @@ const App: React.FC = () => {
               <Route
                 path='/:restaurantId/:locationId/apps/restaurant-settings'
                 render={(props) => (isAuthenticated ? <RestaurantSettingsPage /> : <Redirect to='/login' />)}
+              />
+                  <Route
+                path='/:restaurantId/:locationId/apps/campaign'
+                render={(props) => (isAuthenticated ? <CampaignPage /> : <Redirect to='/login' />)}
               />
               <Route render={() => <Redirect to={isAuthenticated ? '/root-page' : '/login'} />} />
             </Switch>

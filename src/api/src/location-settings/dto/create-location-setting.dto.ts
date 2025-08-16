@@ -36,6 +36,12 @@ export class AlertNumberDto {
   @IsString()
   phoneNumber: string;
 }
+export class ContactDto {
+  @IsString()
+  @IsOptional()
+  email: string;
+}
+
 
 export class CreateLocationSettingDto {
   @IsString()
@@ -71,4 +77,11 @@ export class CreateLocationSettingDto {
   @IsBoolean()
   @IsOptional()
   autoAcceptOrder?: boolean;
+
+   @IsOptional()
+  @ValidateNested()
+  @Type(() => ContactDto)
+  contact: ContactDto;
 }
+
+

@@ -12,6 +12,25 @@ import {
 import { Type } from 'class-transformer';
 import { ObjectId } from 'mongodb';
 
+// Campaign DTOs
+export class CampaignRewardDto {
+  @IsNumber()
+  @IsOptional()
+  flatOffCents?: number;
+}
+
+export class CampaignDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  type: string;
+
+  @Type(() => CampaignRewardDto)
+  @ValidateNested()
+  reward: CampaignRewardDto;
+}
+
 // Request DTOs
 export class GetEntryInfoDto {
   @IsNotEmpty()
@@ -88,15 +107,48 @@ export class LocationDto {
 
   @IsNotEmpty()
   @IsString()
-  locationId: string;
+  locationSlug: string;
 
   @IsNotEmpty()
   @IsString()
   name: string;
 
   @IsNotEmpty()
+  @IsBoolean()
+  isActive: boolean;
+
+  @IsNotEmpty()
+  @IsBoolean()
+  acceptPayment: boolean;
+
   @IsString()
-  isActive: string;
+  emergepayWalletsPublicId?: string;
+
+  @IsNotEmpty()
+  @IsBoolean()
+  isOpen: boolean;
+}
+
+export class OriginDto {
+  @IsNotEmpty()
+  @IsString()
+  _id: string;
+
+  @IsNotEmpty()
+  @IsString()
+  label: string;
+
+  @IsNotEmpty()
+  @IsString()
+  restaurantId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  locationId: string;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
 }
 
 export class OriginInfoDto {

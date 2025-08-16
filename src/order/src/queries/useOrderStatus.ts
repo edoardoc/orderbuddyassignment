@@ -49,6 +49,14 @@ export const orderStatusSchema = z.object({
     id: z.string(),
     name: z.string(),
   }),
+  discount: z
+    .object({
+      name: z.string().optional(),
+      type: z.string().optional(),
+      amountCents: z.number().optional(),
+    })
+    .optional()
+    .nullable(),
   items: z.array(orderItemSchema),
   status: z.string(),
   totalPriceCents: z.number(),

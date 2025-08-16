@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { ORDER_SESSION_KEY, ORDER_SESSION_TTL } from '@/constants/app-config';
 import { produce } from 'immer';
 import _ from 'lodash';
+import { CampaignData } from '@/shared/useEntryInfo';
 
 // interface OrderStore {
 //   validateSession: () => boolean;
@@ -24,7 +25,8 @@ export type RestaurantData = {
     _id: string;
     name: string;
     acceptPayment: boolean;
-    isOpen: boolean; 
+    emergepayWalletsPublicId: string;
+    isOpen: boolean;
   };
   origin: {
     _id: string;
@@ -65,6 +67,7 @@ export type PaymentDetails = {
 };
 export type Cart = {
   items: OrderItem[];
+  subtotalCents: number;
   totalPriceCents: number;
   tax: number;
 };
@@ -79,11 +82,17 @@ type OrderState = {
     _id: string;
     name: string;
     acceptPayment: boolean;
+    emergepayWalletsPublicId: string;
     isOpen: boolean;
   };
   origin: {
     _id: string;
     name: string;
+  };
+  discount?: {
+    name: string;
+    type: string;
+    amountCents: number;
   };
   cart: Cart;
   orderTimeStamp: Date;
@@ -92,6 +101,7 @@ type OrderState = {
 
 type OrderActions = {
   setRestaurant: (data: RestaurantData) => void;
+  setCampaign: (campaign: CampaignData) => void;
   setMenuId: (id: string) => void;
   addOrderItem: (item: OrderItem) => void;
   removeOrderItem: (itemId: string) => void;
@@ -116,8 +126,9 @@ const initialState: OrderState = {
   location: {
     _id: '',
     name: '',
-    isOpen: false, 
-    acceptPayment: false
+    isOpen: false,
+    acceptPayment: false,
+    emergepayWalletsPublicId: '',
   },
   origin: {
     _id: '',
@@ -125,9 +136,11 @@ const initialState: OrderState = {
   },
   cart: {
     items: [],
+    subtotalCents: 0,
     totalPriceCents: 0,
     tax: 0,
   },
+  discount: undefined,
   salesTax: 0,
   orderTimeStamp: new Date(),
 };
@@ -142,12 +155,26 @@ export const useOrderStore = create<OrderState & OrderActions>()(
         return Math.round(subtotal * (taxRate / 100));
       };
 
+      const calculateDiscountAmount = (
+        amountWithTax: number,
+        discount?: { type: string; amountCents: number },
+      ): number => {
+        if (!discount || !discount.amountCents) {
+          return 0;
+        }
+        return Math.min(amountWithTax, discount.amountCents);
+      };
+
       const updateCartTotals = (state: OrderState) => {
         const subtotal = calculateSubtotal(state.cart.items);
         const taxAmount = calculateTaxAmount(subtotal, state.salesTax);
-
         state.cart.tax = taxAmount;
-        state.cart.totalPriceCents = subtotal + taxAmount;
+
+        const subtotalWithTax = subtotal + taxAmount;
+        state.cart.subtotalCents = subtotalWithTax;
+
+        const discountAmount = calculateDiscountAmount(subtotalWithTax, state.discount);
+        state.cart.totalPriceCents = Math.max(0, subtotalWithTax - discountAmount);
       };
 
       const updateMenu = (menuId: string) => {
@@ -165,6 +192,18 @@ export const useOrderStore = create<OrderState & OrderActions>()(
           set(
             produce((state: OrderState) => {
               state.restaurant.name = name;
+            }),
+          );
+        },
+        setCampaign: (campaign: CampaignData) => {
+          set(
+            produce((state: OrderState) => {
+              state.discount = {
+                name: campaign.name,
+                type: campaign.type,
+                amountCents: campaign.reward.flatOffCents,
+              };
+              updateCartTotals(state);
             }),
           );
         },

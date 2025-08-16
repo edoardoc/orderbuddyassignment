@@ -43,3 +43,29 @@ export class SalesByItemResponse {
   @IsNumber()
   grossSales: number;
 }
+export class SalesOriginDto {
+  @IsNotEmpty()
+  @IsString()
+  restaurantId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  locationId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  date: string;
+}
+export class SalesByOriginResponse {
+  @IsNotEmpty()
+  @IsString()
+  originId: string;
+  
+  @IsNotEmpty()
+  @IsNumber()
+  soldCount: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  grossSales: number;
+}

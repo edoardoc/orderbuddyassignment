@@ -11,8 +11,8 @@ import {
   IonCardContent,
   IonButton,
   IonIcon,
-  IonText,
 } from '@ionic/react';
+import './styles/cart.css';
 import React, { useEffect, useState } from 'react';
 
 import { client } from '../../client';
@@ -39,7 +39,7 @@ const CartPage: React.FC = () => {
   const origin = useOrderStore((s) => s.origin);
   const restaurant = useOrderStore((s) => s.restaurant);
   const isStoreOpen = useOrderStore((s) => s.location.isOpen);
-
+  const discount = useOrderStore((s) => s.discount);
   const [isValidPlaceOrder, setIsValidPlaceOrder] = useState(false);
   const { restaurantId, locationSlug, locationId, menuSlug, menuId } = useParams<{
     restaurantId: string;
@@ -51,6 +51,8 @@ const CartPage: React.FC = () => {
   const router = useIonRouter();
   const cartTotalCents = useOrderStore((s) => s.cart.totalPriceCents);
   const cartTaxCents = useOrderStore((s) => s.cart.tax);
+  const subtotalCents = useOrderStore((s) => s.cart.subtotalCents);
+  const discountInDollars = discount ? (discount.amountCents / 100).toFixed(2) : 0;
   const totalInDollars = (cartTotalCents / 100).toFixed(2);
   const taxInDollars = (cartTaxCents / 100).toFixed(2);
   const resetOrderState = useOrderStore((s) => s.resetOrderState);
@@ -87,9 +89,11 @@ const CartPage: React.FC = () => {
       return;
     }
   }, [cartItems.length]);
+
   const RedirectMenu = () => {
     router.push(Paths.menu(restaurantId, locationSlug, locationId, menuSlug, menuId, originId), 'back');
   };
+
   const placeOrder = async () => {
     const orderItems = cartItems.map((item) => ({
       id: item.id,
@@ -128,6 +132,13 @@ const CartPage: React.FC = () => {
       },
       items: orderItems,
       getSms: customerData.getSms,
+      discount: discount
+        ? {
+            name: discount.name,
+            type: discount.type,
+            amountCents: discount.amountCents,
+          }
+        : undefined,
     };
 
     try {
@@ -166,11 +177,29 @@ const CartPage: React.FC = () => {
         </IonList>
         <div className='ion-no-padding ion-padding-start ion-padding-end'>
           <IonGrid>
-            <IonRow>
-              <IonCol className='font-size-14'>Total (Tax)</IonCol>
+            {discount && (
+              <IonRow>
+                <IonCol className='font-size-14'>Sub-total </IonCol>
+                <IonCol class='ion-text-end'>
+                  <span className='font-size-14'>$ {(subtotalCents / 100).toFixed(2)}</span>
+                </IonCol>
+              </IonRow>
+            )}
+
+            {discount && (
+              <IonRow>
+                <IonCol className='font-size-14'>Discount {discount?.type && `(${discount.type})`}</IonCol>
+                <IonCol class='ion-text-end'>
+                  <span className='font-size-14 discount-text'>- $ {discountInDollars}</span>
+                </IonCol>
+              </IonRow>
+            )}
+
+            <IonRow className='cart-total-row'>
+              <IonCol className='font-size-14 font-weight-bold'>Total (Tax)</IonCol>
               <IonCol class='ion-text-end'>
-                <span className='font-size-14'>
-                  $ {totalInDollars} ($ {taxInDollars})
+                <span className='font-size-14 font-weight-bold'>
+                  $ {totalInDollars} (${taxInDollars})
                 </span>
               </IonCol>
             </IonRow>
@@ -183,14 +212,15 @@ const CartPage: React.FC = () => {
       </IonContent>
       {isStoreOpen && (
         <IonFooter>
-          {acceptPayment && (
+          {acceptPayment && Number(totalInDollars) > 0 && (
             <CheckoutContainer
               isValidPlaceOrder={isValidPlaceOrder}
               calculateTotal={Number(totalInDollars)}
               customerData={customerData}
+              emergepayWalletsPublicId={location.emergepayWalletsPublicId}
             />
           )}
-          {!acceptPayment && (
+          {!acceptPayment && Number(totalInDollars) > 0 && (
             <IonButton
               disabled={!isValidPlaceOrder}
               expand='block'

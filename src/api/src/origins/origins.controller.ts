@@ -83,9 +83,7 @@ export class OriginsController {
       });
 
       const redirectUrl =
-        `${menuEndPoint}/entry/${params.restaurantId}/${location.locationSlug}/${params.locationId}?` +
-        `originId=${origin._id}&` +
-        `name=${encodeURIComponent(restaurant.name)}`;
+        `${menuEndPoint}/entry/${origin._id}?name=${encodeURIComponent(restaurant.name)}`;
 
       const { data, status } = await firstValueFrom(
         this.httpService.post(`${smartScanUrl}/add-qrdata`, {
@@ -166,8 +164,6 @@ export class OriginsController {
     @Res() res: Response,
   ): Promise<Response<ApiResponse<void>>> {
     try {
-
-      console.log('Sending QR code link for:', params);
       await this.originsService.sendQrCodeLink(params.restaurantId, params.locationId, params.originId);
 
       return res.status(HttpStatus.OK).json({

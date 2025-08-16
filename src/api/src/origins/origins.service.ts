@@ -101,7 +101,7 @@ export class OriginsService {
       label: createOriginDto.name,
       qrCode: createOriginDto.qrCode,
       qrCodeId: createOriginDto.qrCodeId,
-      type: (createOriginDto.type || 'table') as 'table' | 'parking' | 'kiosk',
+      type: (createOriginDto.type || 'table') as 'table' | 'parking' | 'campaign',
     };
 
     const result = await this.originsCollection.insertOne(origin);
@@ -216,8 +216,6 @@ export class OriginsService {
 
       // Render the HTML from the template
       const html = this.emailTemplateService.renderHtml('qrcode-link', templateData);
-      console.log('Email HTML:', html); // Debugging line to check rendered HTML
-      console.log('Email Service:', this.emailService.constructor.name); // Debugging line to check email service
       // Send email using the email service
       await this.emailService.send({
         

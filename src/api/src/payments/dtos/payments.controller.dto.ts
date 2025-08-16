@@ -21,6 +21,12 @@ export class CreateOrderDto {
   @IsNotEmpty() getSms!: boolean;
   @IsOptional()
   transactionDetails?: any;
+  @IsOptional()
+  discount?: {
+    name: string;
+    type: string;
+    amountCents: number;
+  };
 }
 
 export interface Origin {

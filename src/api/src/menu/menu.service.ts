@@ -110,6 +110,11 @@ export class MenuService {
     const taxRate = this.configService.get<number>('TAX_RATE');
     if (!taxRate) throw new Error('TAX_RATE not configured');
     const totalPriceWithTax = Math.round(orderTotalPrice + orderTotalPrice * taxRate);
+    let OrderTotalPrice = totalPriceWithTax;
+    if (body.discount && body.discount.amountCents) {
+      const discountAmount = Math.min(body.discount.amountCents, totalPriceWithTax);
+      OrderTotalPrice = Math.max(0, totalPriceWithTax - discountAmount);
+    }
 
     const orderId = new ObjectId();
     const orderCode = orderId.toString().slice(-4).toUpperCase();
@@ -143,10 +148,10 @@ export class MenuService {
           item.notes,
         );
       }),
-
+      discount: body.discount,
       status: OrderStatus.OrderCreated,
       startedAt: new Date(),
-      totalPriceCents: totalPriceWithTax,
+      totalPriceCents: OrderTotalPrice,
       getSms: body.getSms,
     };
     // const mockFailedResult = {
@@ -159,13 +164,13 @@ export class MenuService {
     const itemsCount = body.items.length;
     if (result.acknowledged) {
       appInsightsClient.trackMetric({ name: 'orderCount', value: 1 });
-      appInsightsClient.trackMetric({ name: 'orderTotalCents', value: totalPriceWithTax });
+      appInsightsClient.trackMetric({ name: 'orderTotalCents', value: OrderTotalPrice });
       appInsightsClient.trackMetric({ name: 'orderItemsCount', value: itemsCount });
       appInsightsClient.trackEvent({
         name: 'new_order_placed',
         properties: {
           orderItemsCount: itemsCount,
-          orderTotalCents: totalPriceWithTax,
+          orderTotalCents: OrderTotalPrice,
           restaurantId: body.restaurantId,
           orderId: orderId.toString(),
           correlationId,
@@ -389,6 +394,7 @@ export class MenuService {
       items: 1,
       status: 1,
       totalPriceCents: 1,
+      discount: 1
     };
 
     const order = await this.ordersCollection.findOne(query, { projection });

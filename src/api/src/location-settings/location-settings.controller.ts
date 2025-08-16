@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, HttpStatus, Res, ValidationPipe } from '@nestjs/common';
 import { Response } from 'express';
 import { LocationSettingsService } from './location-settings.service';
 import { UpdateLocationSettingDto } from './dto/update-location-setting.dto';
@@ -20,8 +20,8 @@ export class LocationSettingsController {
   async update(
     @Param(ValidationPipe) params: LocationParamsDto,
     @Body() updateLocationSettingDto: UpdateLocationSettingDto,
-    @Res() res: Response,
-  ) {
+    @Res() res: Response
+  ): Promise<any> {
     const result = await this.locationSettingsService.update(
       params.locationId,
       params.restaurantId,

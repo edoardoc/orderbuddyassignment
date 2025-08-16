@@ -19,6 +19,7 @@ export class LocationSettingsService {
     orderTiming: 1,
     alertNumbers: 1,
     autoAcceptOrder: 1,
+    contact: 1,
   };
 
   async findOne(locationId: string, restaurantId: string) {

@@ -20,6 +20,7 @@ import AlertNumbers from './components/AlertNumbers';
 import { useLocationSettings } from './useLocationSettings';
 import Address from './components/Address';
 import AutoAccept from './components/AutoAccept';
+import EmailAddress from './components/EmailAddress';
 
 const LocationSettingsPage: React.FC = () => {
   const {
@@ -46,6 +47,8 @@ const LocationSettingsPage: React.FC = () => {
     updateAddress,
     autoAccept,
     updateAutoAccept,
+    emailAddress,
+    updateEmailAddress,
   } = useLocationSettings();
 
   return (
@@ -121,6 +124,14 @@ const LocationSettingsPage: React.FC = () => {
                   </IonItem>
                   <div className='ion-padding' slot='content'>
                     <AutoAccept autoAccept={autoAccept} updateAutoAccept={updateAutoAccept} />
+                  </div>
+                </IonAccordion>
+                 <IonAccordion value='Email Address'>
+                  <IonItem slot='header' color='light'>
+                    <IonLabel>Email Address</IonLabel>
+                  </IonItem>
+                  <div className='ion-padding' slot='content'>
+                    <EmailAddress address={emailAddress} onAddressChange={updateEmailAddress} />
                   </div>
                 </IonAccordion>
               </IonAccordionGroup>

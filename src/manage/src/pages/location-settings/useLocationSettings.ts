@@ -41,7 +41,12 @@ export function useLocationSettings() {
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [phoneNumberError, setPhoneNumberError] = useState<string>('');
   const [address, setAddress] = useState<string>('');
-  const [autoAccept, setAutoAccept] = useState<boolean>(false); 
+  const [autoAccept, setAutoAccept] = useState<boolean>(false);
+  const [emailAddress, setEmailAddress] = useState<string>('');
+  const updateEmailAddress = (value: string) => {
+    dataChangedByUserRef.current = true;
+    setEmailAddress(value);
+  };
 
   const [orderTiming, setOrderTiming] = useState<OrderTimingSettings>({
     acceptOrdersAfterMinutes: 30,
@@ -84,8 +89,6 @@ export function useLocationSettings() {
   // Initialize state from fetched data
   useEffect(() => {
     if (locationSettingsData) {
-
-
       // Create default working hours with all days of the week
       const defaultWorkingHours: WorkingHour[] = daysOfWeek.map((day) => ({
         day,
@@ -126,11 +129,10 @@ export function useLocationSettings() {
               : 30,
         });
       }
-      if (locationSettingsData.address) {
-        setAddress(locationSettingsData.address);
-      }
-      else {
-        setAddress('');
+      if (locationSettingsData.contact?.email) {
+        setEmailAddress(locationSettingsData.contact.email);
+      } else {
+        setEmailAddress('');
       }
 
       // Set alert numbers if available
@@ -324,6 +326,7 @@ export function useLocationSettings() {
         alertNumbers,
         address,
         autoAccept,
+        emailAddress,
       },
       {
         onSuccess: () => {
@@ -374,13 +377,25 @@ export function useLocationSettings() {
         saveSettings();
       }
     }, 1000);
- 
+
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [workingHours, timezone, orderTiming, alertNumbers, isLoading, isLoadingData, restaurantId, locationId, address, autoAccept]);
+  }, [
+    workingHours,
+    timezone,
+    orderTiming,
+    alertNumbers,
+    isLoading,
+    isLoadingData,
+    restaurantId,
+    locationId,
+    address,
+    autoAccept,
+    emailAddress,
+  ]);
 
   // Phone number formatting utility functions
   const formatPhoneNumber = (phoneNumber: string): string => {
@@ -433,5 +448,7 @@ export function useLocationSettings() {
     updateAddress,
     autoAccept,
     updateAutoAccept,
+    emailAddress,
+    updateEmailAddress,
   };
 }

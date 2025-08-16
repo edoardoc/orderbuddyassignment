@@ -19,7 +19,7 @@ import { Link } from 'react-router-dom';
 import { chevronForward } from 'ionicons/icons';
 import { getUserLang, t } from '@/utils/localization';
 import { useMenu } from '@/queries/useMenu';
-import { useEntryInfo } from '@/queries/useEntryInfo';
+import { useRestaurant, useLocation, useOrigin, useCampaign } from '@/shared/useEntryInfo';
 import Banner from './components/banner/Banner';
 import StoreClosedBanner from './components/banner/StoreClosedBanner';
 import MenuItemModal from './components/menuItemModal/MenuItemModal';
@@ -96,8 +96,32 @@ const MenuPage: React.FC = () => {
   const setSalesTax = useOrderStore((s) => s.setSalesTax);
   const cartItems = useOrderStore((s) => s.cart.items);
 
-  const { data: entryInfo } = useEntryInfo(restaurantId, locationId, originId);
-  const { data: menuData, isLoading, isError } = useMenu(restaurantId, locationId, menuId);
+  // Fetch origin data
+  const { data: origin } = useOrigin(originId);
+
+  // Fetch restaurant data using the restaurantId from params or from origin
+  const { data: restaurant } = useRestaurant(restaurantId);
+
+  // Fetch location data using the restaurantId and locationId from params or from origin
+  const { data: location } = useLocation(restaurantId, locationId);
+  const { data: campaign } = useCampaign(restaurantId, locationId, originId, {
+    enabled: origin?.type === 'campaign',
+  });
+
+  useEffect(() => {
+    if (campaign) {
+      setCampaign({
+        name: campaign.name,
+        type: campaign.type,
+        reward: {
+          flatOffCents: campaign.reward.flatOffCents,
+        },
+      });
+    }
+  }, [origin, campaign]);
+
+  // Fetch menu data for the specific menu ID
+  const { data: menuData, isLoading, isError: isMenuError } = useMenu(restaurantId, locationId, menuId);
   const currentLang = getUserLang();
 
   const [selectedItem, setSelectedItem] = useState<MenuItemStructure | null>(null);
@@ -105,7 +129,7 @@ const MenuPage: React.FC = () => {
   // const validateSession = useOrderStore((s) => s.validateSession);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
-
+  const setCampaign = useOrderStore((s) => s.setCampaign);
   // useEffect(() => {
   //   const isValid = validateSession();
   //   if (!isValid) {
@@ -124,28 +148,29 @@ const MenuPage: React.FC = () => {
   }, [menuData]);
 
   useEffect(() => {
-    if (entryInfo) {
+    if (restaurant && location && origin) {
       const transformedData = {
         restaurant: {
-          _id: entryInfo.restaurant._id,
-          name: entryInfo.restaurant.name,
-          logo: entryInfo.restaurant.logo,
+          _id: restaurant._id,
+          name: restaurant.name,
+          logo: restaurant.logo,
         },
         location: {
-          _id: entryInfo.location._id,
-          name: entryInfo.location.name,
-          acceptPayment: entryInfo.location.acceptPayment,
-          isOpen: entryInfo.location.isOpen,
+          _id: location._id,
+          name: location.name,
+          acceptPayment: location.acceptPayment,
+          emergepayWalletsPublicId: location.emergepayWalletsPublicId,
+          isOpen: location.isOpen,
         },
         origin: {
-          _id: entryInfo.origin._id,
-          name: entryInfo.origin.label,
+          _id: origin._id,
+          name: origin.label,
         },
       };
 
       setRestaurant(transformedData);
     }
-  }, [entryInfo, setRestaurant]);
+  }, [restaurant, location, origin, setRestaurant]);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -244,13 +269,15 @@ const MenuPage: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonGrid class='navbar-color'>
-          <Banner
-            restaurantName={entryInfo?.restaurant.name!}
-            restaurantLogo={entryInfo?.restaurant.logo}
-            origin={entryInfo?.origin.label!}
-            restaurantId={entryInfo?.restaurant._id!}
-            locationName={entryInfo?.location.name!}
-          />
+          {restaurant && location && origin && (
+            <Banner
+              restaurantName={restaurant.name}
+              restaurantLogo={restaurant.logo}
+              origin={origin.label}
+              restaurantId={restaurant._id}
+              locationName={location.name}
+            />
+          )}
         </IonGrid>
 
         <CategoriesButton
