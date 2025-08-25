@@ -11,8 +11,10 @@ import {
   IonCardContent,
   IonButton,
   IonIcon,
+  IonText,
 } from '@ionic/react';
 import './styles/cart.css';
+import useCreatePreviewOrder from './useCreatePreviewOrderQuery';
 import React, { useEffect, useState } from 'react';
 
 import { client } from '../../client';
@@ -20,7 +22,6 @@ import { useParams } from 'react-router-dom';
 import Banner from './components/banner/banner';
 import { CartItem } from './components/cart-item/CartItem';
 import { InputField } from './components/input-field/input';
-import { CheckoutContainer } from './components/checkout/CheckoutContainer';
 import { useOrderStore } from '@/stores/orderStore';
 import { Paths } from '@/routes/paths';
 import { useQueryParams } from '@/hooks/useQueryParams';
@@ -55,8 +56,7 @@ const CartPage: React.FC = () => {
   const discountInDollars = discount ? (discount.amountCents / 100).toFixed(2) : 0;
   const totalInDollars = (cartTotalCents / 100).toFixed(2);
   const taxInDollars = (cartTaxCents / 100).toFixed(2);
-  const resetOrderState = useOrderStore((s) => s.resetOrderState);
-
+  const setOrder = useOrderStore((s) => s.setOrder);
   const [customerData, setCustomerData] = useState({
     name: '',
     phone: '',
@@ -94,7 +94,8 @@ const CartPage: React.FC = () => {
     router.push(Paths.menu(restaurantId, locationSlug, locationId, menuSlug, menuId, originId), 'back');
   };
 
-  const placeOrder = async () => {
+  const createPreviewOrderMutation = useCreatePreviewOrder();
+  const placePreviewOrder = async () => {
     const orderItems = cartItems.map((item) => ({
       id: item.id,
       menuItemId: item.menuItemId,
@@ -113,6 +114,7 @@ const CartPage: React.FC = () => {
           name: mod.name,
           options:
             mod.options?.map((option) => ({
+              id: option.id,
               name: option.name,
               priceCents: option.priceCents,
             })) || [],
@@ -120,11 +122,10 @@ const CartPage: React.FC = () => {
       stationTags: item.stationTags,
     }));
 
-    const createOrder = {
+    const previewOrderData = {
       restaurantId: restaurant._id,
       locationId: location._id,
       locationSlug: locationSlug,
-      paymentId: '',
       origin: origin._id ? { id: origin._id, name: origin.name } : { id: '', name: 'Web' },
       customer: {
         name: customerData.name,
@@ -142,15 +143,33 @@ const CartPage: React.FC = () => {
     };
 
     try {
-      const orderId = await createOrderMutation.mutateAsync(createOrder);
-      initiateOrder(orderId);
-      resetOrderState();
+      const previewResult = await createPreviewOrderMutation.mutateAsync(previewOrderData);
 
-      router.push(`/status/${restaurant._id}/${orderId}`, 'forward');
+      setOrder({
+        previewOrderId: previewResult.previewOrderId,
+        totalPriceCents: previewResult.totalPriceCents,
+      });
+      if (location.acceptPayment) {
+        router.push(
+          Paths.checkout(
+            restaurant._id,
+            locationSlug,
+            location._id,
+            menuSlug,
+            menuId,
+            previewResult.previewOrderId,
+            originId || '',
+          ),
+          'forward',
+        );
+      } else if (!location.acceptPayment) {
+        const orderresult = await createOrderMutation.mutateAsync(previewResult.previewOrderId);
+        router.push(Paths.status(restaurant._id, orderresult.orderId), 'forward');
+      }
     } catch (error) {
-      console.error('Failed to create order:', error);
-      logApiError(error, 'menu-app/restaurant/order', {
-        operation: 'placeOrderCart',
+      console.error('Failed to create preview order:', error);
+      logApiError(error, 'order-app/cart/preview-order', {
+        operation: 'createPreviewOrder',
         restaurantId: restaurant._id,
         locationId: location._id,
       });
@@ -212,23 +231,16 @@ const CartPage: React.FC = () => {
       </IonContent>
       {isStoreOpen && (
         <IonFooter>
-          {acceptPayment && Number(totalInDollars) > 0 && (
-            <CheckoutContainer
-              isValidPlaceOrder={isValidPlaceOrder}
-              calculateTotal={Number(totalInDollars)}
-              customerData={customerData}
-              emergepayWalletsPublicId={location.emergepayWalletsPublicId}
-            />
-          )}
-          {!acceptPayment && Number(totalInDollars) > 0 && (
+          {Number(totalInDollars) > 0 && (
             <IonButton
               disabled={!isValidPlaceOrder}
               expand='block'
               className='solid-button'
               style={{ paddingLeft: '10px', paddingRight: '10px', fontWeight: '700' }}
-              onClick={() => placeOrder()}
+              onClick={placePreviewOrder}
             >
-              Place order
+              {location.acceptPayment && <IonText style={{ color: 'white' }}>checkout</IonText>}{' '}
+              {!location.acceptPayment && <IonText style={{ color: 'white' }}>Place Order</IonText>}
             </IonButton>
           )}
         </IonFooter>

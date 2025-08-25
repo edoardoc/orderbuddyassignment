@@ -17,11 +17,14 @@ import { BiStoreAlt } from 'react-icons/bi';
 import { appStore } from '../../store';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 import '../../../style.css';
+import { useCreateLocation } from '../../queries/useCreateLocation';
+
 const LocationsPage: React.FC = () => {
   const { restaurantId } = useParams<{ restaurantId: string }>();
   const { data: locations } = useLocations(restaurantId);
   const { setLocationName, setLocationSlug } = appStore();
   const router = useIonRouter();
+  const createLocationMutation = useCreateLocation();
 
   const getLocationIcon = (isMobile: boolean) => {
     return isMobile ? <GiFoodTruck size={32} color='#424242' /> : <BiStoreAlt size={32} color='#424242' />;
@@ -30,16 +33,43 @@ const LocationsPage: React.FC = () => {
   const handleLocationClick = (location: { _id: string; name: string; isMobile: boolean }) => {
     setLocationName(location.name);
     router.push(`/${restaurantId}/${location._id}/launch-pad`);
+    return;
   };
+
+
 
   useEffect(() => {
     setLocationName('');
-    if (locations?.length === 1) {
+    if (locations && locations.length === 0) {
+      createLocationMutation.mutate(
+        { restaurantId },
+        {
+          onSuccess: (data) => {
+            setLocationName(data.name);
+            setLocationSlug(data.locationSlug);
+            router.push(`/${restaurantId}/${data._id}/apps/location-settings`);
+            return;
+          },
+        },
+      );
+    } else if (locations?.length === 1) {
       setLocationName(locations[0].name);
       setLocationSlug(locations[0].locationSlug);
-      router.push(`/${restaurantId}/${locations[0]._id}/launch-pad`);
+      if (
+        locations[0].timezone &&
+        locations[0].workingHours &&
+        Array.isArray(locations[0].alertNumbers) && locations[0].alertNumbers.length > 0 &&
+        locations[0].address &&
+        locations[0].contact?.email
+      ) {
+        router.push(`/${restaurantId}/${locations[0]._id}/launch-pad`);
+        return;
+      } else {
+        console.warn('Single location found but missing required fields, redirecting to settings');
+        router.push(`/${restaurantId}/${locations[0]._id}/apps/location-settings`);
+      }
     }
-  }, [locations, restaurantId]);
+  }, [locations]);
 
   return (
     <IonPage className='body'>

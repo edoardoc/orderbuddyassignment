@@ -6,6 +6,13 @@ interface SendEmailOptions {
   subject: string;
   html: string;
   from?: string; // optional override
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string; // Nodemailer uses 'contentType'
+    cid?: string;
+    disposition?: 'attachment' | 'inline';
+  }>;
 }
 
 @Injectable()
@@ -23,14 +30,24 @@ export class LocalEmailService {
     });
   }
 
-  async send(options: SendEmailOptions): Promise<void> {
-    const { to, subject, html, from = 'noreply@orderbuddy.test' } = options;
+ async send(options: SendEmailOptions): Promise<void> {
+    const { to, subject, html, from = 'noreply@orderbuddy.test', attachments } = options;
 
     await this.transporter.sendMail({
       from,
       to,
       subject,
       html,
+      attachments: attachments?.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType,
+        cid: att.cid,
+        contentDisposition: att.disposition,
+      })),
     });
   }
 }
+
+
+

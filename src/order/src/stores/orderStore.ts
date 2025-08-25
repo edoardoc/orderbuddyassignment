@@ -27,6 +27,7 @@ export type RestaurantData = {
     acceptPayment: boolean;
     emergepayWalletsPublicId: string;
     isOpen: boolean;
+    salesTax: number;
   };
   origin: {
     _id: string;
@@ -72,7 +73,6 @@ export type Cart = {
   tax: number;
 };
 type OrderState = {
-  menuId: string;
   restaurant: {
     _id: string;
     name: string;
@@ -84,6 +84,7 @@ type OrderState = {
     acceptPayment: boolean;
     emergepayWalletsPublicId: string;
     isOpen: boolean;
+    salesTax: number;
   };
   origin: {
     _id: string;
@@ -94,15 +95,21 @@ type OrderState = {
     type: string;
     amountCents: number;
   };
+  order:{
+    previewOrderId: string;
+    totalPriceCents: number;
+  }
   cart: Cart;
   orderTimeStamp: Date;
-  salesTax: number;
 };
+interface Order {
+  previewOrderId: string;
+  totalPriceCents: number;
+}
 
 type OrderActions = {
   setRestaurant: (data: RestaurantData) => void;
   setCampaign: (campaign: CampaignData) => void;
-  setMenuId: (id: string) => void;
   addOrderItem: (item: OrderItem) => void;
   removeOrderItem: (itemId: string) => void;
 
@@ -111,13 +118,12 @@ type OrderActions = {
   // persistSession: () => void;
   setRestaurantName: (name: string) => void;
   validateSession: () => boolean;
-  setSelectedMenuId: (id: string) => void;
   setOrderOrigin: (origin: OrderOrigin) => void;
   resetOrderState: () => void;
+  setOrder: (order: Order) => void;
 };
 
 const initialState: OrderState = {
-  menuId: '',
   restaurant: {
     _id: '',
     name: '',
@@ -129,6 +135,7 @@ const initialState: OrderState = {
     isOpen: false,
     acceptPayment: false,
     emergepayWalletsPublicId: '',
+    salesTax: 0,
   },
   origin: {
     _id: '',
@@ -140,8 +147,11 @@ const initialState: OrderState = {
     totalPriceCents: 0,
     tax: 0,
   },
+  order: {
+    previewOrderId: '',
+    totalPriceCents: 0,
+  },
   discount: undefined,
-  salesTax: 0,
   orderTimeStamp: new Date(),
 };
 export const useOrderStore = create<OrderState & OrderActions>()(
@@ -167,7 +177,7 @@ export const useOrderStore = create<OrderState & OrderActions>()(
 
       const updateCartTotals = (state: OrderState) => {
         const subtotal = calculateSubtotal(state.cart.items);
-        const taxAmount = calculateTaxAmount(subtotal, state.salesTax);
+        const taxAmount = calculateTaxAmount(subtotal, state.location.salesTax);
         state.cart.tax = taxAmount;
 
         const subtotalWithTax = subtotal + taxAmount;
@@ -177,16 +187,19 @@ export const useOrderStore = create<OrderState & OrderActions>()(
         state.cart.totalPriceCents = Math.max(0, subtotalWithTax - discountAmount);
       };
 
-      const updateMenu = (menuId: string) => {
-        set({ menuId });
-      };
-
       return {
         ...initialState,
 
         resetOrderState: () => {
           set(initialState);
           localStorage.removeItem(ORDER_SESSION_KEY);
+        },
+       setOrder(order: Order) {
+          set(
+            produce((state: OrderState) => {
+              state.order = order;
+            }),
+          );
         },
         setRestaurantName(name: string) {
           set(
@@ -226,7 +239,6 @@ export const useOrderStore = create<OrderState & OrderActions>()(
               state.origin = data.origin;
             }),
           ),
-        setMenuId: (id) => set({ menuId: id }),
         addOrderItem: (item: OrderItem) =>
           set(
             produce((state: OrderState) => {
@@ -245,11 +257,14 @@ export const useOrderStore = create<OrderState & OrderActions>()(
               }
             }),
           ),
-
-        setSalesTax: (tax) => set({ salesTax: tax }),
+        setSalesTax: (salesTax: number) =>
+          set(
+            produce((state: OrderState) => {
+              state.location.salesTax = salesTax;
+            }),
+          ),
 
         restoreCartFromSession: (cart) => set({ cart }),
-        setSelectedMenuId: (id: string) => updateMenu(id),
 
         validateSession: () => {
           const sessionRaw = localStorage.getItem(ORDER_SESSION_KEY);

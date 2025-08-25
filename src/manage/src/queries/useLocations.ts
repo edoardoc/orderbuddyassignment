@@ -12,6 +12,24 @@ const locationSchema = z.object({
   isMobile: z.boolean(),
   locationSlug: z.string(),
   name: z.string(),
+  alertNumbers: z.array(z.any()).optional(),
+  address: z.string().optional(),
+  contact: z
+    .object({
+      email: z.string().optional(),
+    })
+    .optional(),
+  workingHours: z
+    .array(
+      z.object({
+        day: z.string(),
+        isOpen: z.boolean(),
+        startTime: z.string().optional().nullable(),
+        endTime: z.string().optional().nullable(),
+      }),
+    )
+    .optional(),
+  timezone: z.string().optional(),
 });
 
 // Response schema for API validation
@@ -31,7 +49,7 @@ export function useLocations(restaurantId: string) {
       }
 
       const response = await axiosInstance.get<ApiResponse<Location[]>>(
-        `/restaurant/restaurants/${restaurantId}/locations`
+        `/restaurant/restaurants/${restaurantId}/locations`,
       );
       try {
         const validatedData = locationsResponseSchema.parse(response.data);
@@ -39,19 +57,15 @@ export function useLocations(restaurantId: string) {
       } catch (error) {
         console.error('Location data validation failed:', error);
         // Log to Application Insights
-        logExceptionError(
-          new Error('Invalid location data format'),
-          'useLocations.validation',
-          {
-            restaurantId,
-            zodError: error instanceof z.ZodError ? JSON.stringify(error.errors) : 'Unknown validation error',
-            endpoint: `/restaurant/restaurants/${restaurantId}/locations`
-          }
-        );
+        logExceptionError(new Error('Invalid location data format'), 'useLocations.validation', {
+          restaurantId,
+          zodError: error instanceof z.ZodError ? JSON.stringify(error.errors) : 'Unknown validation error',
+          endpoint: `/restaurant/restaurants/${restaurantId}/locations`,
+          responseData: JSON.stringify(response.data),
+        });
         throw new Error('Invalid location data format');
       }
     },
     enabled: Boolean(restaurantId),
-    staleTime: 5 * 60 * 1000,
   });
 }

@@ -20,6 +20,7 @@ export const useHistoryOrders = (restaurantId: string, locationId: string, selec
     locationId: locationId,
     locationName: appState.selection.location.name!,
   };
+
   useEffect(() => {
     if (printers) {
       const ordersPrinter = printers.find((printer) => printer.name.toLowerCase() === 'orders');
@@ -28,11 +29,13 @@ export const useHistoryOrders = (restaurantId: string, locationId: string, selec
       }
     }
   }, [printers]);
+
   useEffect(() => {
     if (printersData && printersData) {
       setPrinters(printersData);
     }
   }, [printersData]);
+  
   const printOrder = debounce((order: Order) => {
     try {
       if (selectedPrinter) {

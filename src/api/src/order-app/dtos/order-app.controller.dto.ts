@@ -484,3 +484,45 @@ export class CategoryDto {
   @MaxLength(4, { message: 'Only one emoji allowed' })
   emoji?: string;
 }
+export class CreateOrderDto {
+  @IsNotEmpty() restaurantId!: string;
+  @IsNotEmpty() locationId!: string;
+  @IsNotEmpty() locationSlug!: string;
+  @IsOptional()
+  paymentId?: string;
+  @IsNotEmpty() origin!: Origin;
+  @IsNotEmpty() customer!: Customer;
+  @IsNotEmpty() items!: OrderItemDto[];
+  @IsNotEmpty() getSms!: boolean;
+  @IsOptional()
+  transactionDetails?: any;
+  @IsOptional()
+  discount?: {
+    name: string;
+    type: string;
+    amountCents: number;
+  };
+}
+
+export interface Origin {
+  id: string;
+  name: string;
+}
+
+export interface Customer {
+  name: string;
+  phone: string;
+}
+
+export interface OrderItemDto {
+  id: string;
+  menuItemId: string;
+  name: string;
+  price: number;
+  notes?: string;
+  startedAt: Date;
+  completedAt: Date;
+  modifiers?: any[];
+  variants?: any[];
+  stationTags?: string[];
+}

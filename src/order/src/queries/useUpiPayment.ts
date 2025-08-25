@@ -19,38 +19,10 @@ interface Modifier {
   options?: ModifierOption[];
 }
 
-interface OrderItem {
-  id: string;
-  menuItemId: string;
-  name: string;
-  price: number;
-  notes?: string;
-  variants?: Variant[];
-  modifiers?: Modifier[];
-  stationTags?: string[];
-}
-
-interface Customer {
-  name: string;
-  phone: string;
-}
-
-interface Origin {
-  id: string;
-  name: string;
-}
 
 interface CreateOrderRequest {
-  restaurantId: string;
-  locationId?: string;
-  locationSlug?: string;
-  paymentId: string;
-  origin: Origin;
-  customer: Customer;
-  items: OrderItem[];
-  getSms: boolean;
+  previewOrderId: string;
   transactionDetails: any;
-  stationTags?: string[];
 }
 
 export interface UpiPaymentError {
@@ -73,7 +45,7 @@ export const useUpiPayment = () => {
       } catch (error) {
         logApiError(error, 'payments/complete-upi-transaction', {
           operation: 'completeUpiPayment',
-          restaurantId: payload.restaurantId,
+          restaurantId: payload.previewOrderId,
           requestId: requestId,
         });
         throw error;

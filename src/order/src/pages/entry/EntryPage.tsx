@@ -36,17 +36,17 @@ export function EntryPage() {
     error: menusError,
   } = useMenus(origin?.restaurantId || '', origin?.locationId || '');
 
-
   const allDataLoaded = restaurant && location && origin && menus;
   const hasError = isRestaurantError || isLocationError || isOriginError || isMenusError;
 
   const init = useCallback(async () => {
     if (!restaurant || !location || !origin) return;
     if (!menus || menus.length === 0) return;
-    router.push(
-      Paths.menus(origin?.restaurantId || '', location.locationSlug, origin?.locationId || '', originId),
-      'forward',
-    );
+
+    // Use IonRouter to navigate with route replacement
+    const path = Paths.menus(origin?.restaurantId || '', location.locationSlug, origin?.locationId || '', originId);
+    router.push(path, 'forward', 'replace');
+
     return;
   }, [restaurant, location, origin, menus, origin?.restaurantId, origin?.locationId, originId, router]);
 

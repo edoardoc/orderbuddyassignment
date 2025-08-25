@@ -34,6 +34,8 @@
           Access QR Code
         </mj-button>
 
+        <mj-image width="200px" src="{{qrCodeImageUrl}}" alt="QR Code"></mj-image>
+
         <mj-text font-size="14px" color="#666666" padding-top="10px">Or copy this URL:</mj-text>
 
         <mj-text font-size="14px" color="#0066CC">{{qrCodeUrl}}</mj-text>

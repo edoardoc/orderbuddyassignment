@@ -4,25 +4,20 @@ import {
   Post,
   Param,
   Body,
-  NotFoundException,
-  Inject,
+
   Res,
   HttpStatus,
-  BadRequestException,
+  Req,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ObjectId } from 'mongodb';
 import { OrderAppService } from './order-app.service';
 import { ApiResponse } from 'src/models/api-response';
 import {
-  CartItemInput,
-  CartSummaryDto,
   CheckoutFormDto,
-  EntryInfoDto,
   GetMenuParamDto,
   GetMenusParamDto,
   GetOrderStatusParamDto,
-  GetEntryInfoDto,
   MenuDto,
   MenuSummaryDto,
   OrderConfirmationDto,
@@ -31,6 +26,7 @@ import {
   LocationDto,
   OriginDto,
   CampaignDto,
+  CreateOrderDto,
 } from './dtos/order-app.controller.dto';
 
 @Controller('order-app')
@@ -102,10 +98,18 @@ export class OrderAppController {
     return res.status(HttpStatus.OK).json({ data: menu });
   }
 
-  // Cart Preview
-  @Post('cart/preview')
-  previewCart(@Body() body: { originId: string; menuId: string; items: CartItemInput[] }): Promise<CartSummaryDto> {
-    return this.orderAppService.previewCart(body);
+  // Create preview order
+  @Post('cart/preview-order')
+  async createPreviewOrder(
+    @Body()
+    body: CreateOrderDto,
+    @Res() res: Response,
+    @Req() req: Request
+  ): Promise<Response<ApiResponse<{ previewOrderId: string; totalPriceCents: number }>>> {
+        const requestId = req['requestId'];
+
+    const result = await this.orderAppService.createPreviewOrder(body,requestId);
+    return res.status(HttpStatus.OK).json({ data: result });
   }
 
   // Checkout

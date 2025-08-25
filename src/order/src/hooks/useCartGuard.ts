@@ -13,7 +13,6 @@ type MenuParams = {
 };
 export const useCartGuard = () => {
   const router = useIonRouter();
-  const menuIdState = useOrderStore((s) => s.menuId);
   const restaurantData = useOrderStore((state) => ({
     restaurant: state.restaurant,
     location: state.location,
@@ -24,7 +23,7 @@ export const useCartGuard = () => {
   let originId = searchParams.get('originId');
 
   useEffect(() => {
-    if (!restaurantData.restaurant._id || !restaurantData.location._id || !menuIdState) {
+    if (!restaurantData.restaurant._id || !restaurantData.location._id || !menuId) {
       console.warn('Missing required cart parameters, redirecting to menu');
 
       // Only redirect if we have minimum required params

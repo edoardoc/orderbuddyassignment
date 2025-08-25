@@ -84,9 +84,41 @@ export class RestaurantService {
     return restaurantDetails;
   }
 
+  async createRestaurant(userId: string): Promise<{ restaurant: RestaurantDto }> {
+    // Create a restaurant with default values
+    const randomFourDigit = Math.floor(1000 + Math.random() * 9000);
+    const restaurantId = `store-${userId.slice(0, 8)}-${randomFourDigit}`;
+
+    const restaurant = {
+      _id: restaurantId,
+      name: 'New Restaurant',
+      concept: 'Default Concept',
+      logo: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Insert the new restaurant
+    const result = await this.restaurantsCollection.insertOne(restaurant);
+
+    if (!result.acknowledged) {
+      throw new Error('Failed to create restaurant');
+    }
+
+    // Associate the restaurant with the user
+    await this.db.collection(COLLECTIONS.USERS).updateOne({ userId }, { $addToSet: { restaurants: restaurantId } });
+
+    return {
+      restaurant: restaurant as RestaurantDto,
+    };
+  }
+
   async getRestaurants(userId: string) {
     try {
       const restaurantIds = await this.getUserRestaurantIds(userId);
+      if (!restaurantIds || restaurantIds.length === 0) {
+        return [];
+      }
       const restaurantDetails = await this.getRestaurantDetailsByIds(restaurantIds);
 
       return restaurantDetails;
@@ -107,16 +139,104 @@ export class RestaurantService {
             locationSlug: 1,
             name: 1,
             isMobile: 1,
+            address: 1,
+            contact: 1,
+            workingHours: 1,
+            timezone: 1,
+            alertNumbers: 1,
+            
           },
         },
       )
       .toArray();
 
     if (!locations?.length) {
-      throw new Error('No locations found for restaurant');
+      return [];
     }
 
     return locations;
+  }
+
+  async createLocation(restaurantId: string): Promise<LocationDto> {
+    // Verify restaurant exists
+    const restaurant = await this.restaurantsCollection.findOne({
+      _id: restaurantId,
+    });
+
+    if (!restaurant) {
+      throw new NotFoundException(`Restaurant ${restaurantId} not found`);
+    }
+
+    // Create a default location for this restaurant
+    const locationId = new ObjectId();
+    const defaultLocation: Location = {
+      _id: locationId,
+      restaurantId,
+      name: 'Main Location',
+      locationSlug: 'main-location',
+      address: '',
+      isActive: true,
+      qrCodeStyle: {
+        width: 300,
+        height: 300,
+        type: 'svg',
+        data: 'default',
+        margin: 10,
+        qrOptions: {
+          typeNumber: 0,
+          errorCorrectionLevel: 'Q',
+        },
+        imageOptions: {
+          hideBackgroundDots: true,
+          imageSize: 0.4,
+          margin: 5,
+          crossOrigin: 'anonymous',
+        },
+        dotsOptions: {
+          color: '#000000',
+          type: 'square',
+        },
+        backgroundOptions: {
+          color: '#ffffff',
+        },
+        cornersSquareOptions: {
+          color: '#000000',
+          type: 'square',
+        },
+        cornersDotOptions: {
+          color: '#000000',
+          type: 'square',
+        },
+        shape: 'square',
+      },
+      qrCodeImage: '',
+      qrCodeId: new ObjectId().toString(),
+      timezone: 'America/New_York',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isMobile: false,
+      contact: {
+        email: '',
+      },
+      payment: {
+        acceptPayment: true,
+      },
+      workingHours: [],
+      orderTiming: {
+        acceptOrdersAfterMinutes: 0,
+        stopOrdersBeforeMinutes: 0,
+      },
+      autoAcceptOrder: true,
+      printers: [],
+      alertNumbers: [],
+    };
+
+    const result = await this.locationCollection.insertOne(defaultLocation);
+
+    if (!result.acknowledged) {
+      throw new Error('Failed to create location');
+    }
+    return defaultLocation as LocationDto;
   }
 
   async getTodayOrders(restaurantId: string, locationId: string) {
@@ -466,7 +586,6 @@ export class RestaurantService {
 
     return result.acknowledged;
   }
-
 
   async getRestaurantDetails(restaurantId: string, locationId: string): Promise<any> {
     const restaurant = await this.restaurantsCollection.findOne({

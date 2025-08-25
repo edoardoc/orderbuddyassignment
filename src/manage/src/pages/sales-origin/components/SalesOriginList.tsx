@@ -17,7 +17,7 @@ export const SalesOriginList: React.FC<SalesOriginProps> = ({ items, calculateWi
               <div className='placeholder-image'>{index + 1}</div>
             </div>
             <div className='sales-item-details'>
-              <h3>Origin ID: {item.originId}</h3>
+              <h3>{item.name ? `${item.name}` : `Origin ID: ${item.originId}`}</h3>
               <p>{item.soldCount} sold</p>
             </div>
             <div className='sales-item-amount'>{formatCurrency(item.grossSales)}</div>

@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { console } from 'inspector';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
 import { COLLECTIONS } from 'src/db/collections';
@@ -7,18 +6,72 @@ import { Origin, Location, DayWorkingHours } from 'src/db/models';
 import { Menu } from 'src/db/models/menu.model';
 import { Restaurant } from 'src/db/models/restaurant.model';
 import {
-  CartItemInput,
-  CartSummaryDto,
   CheckoutFormDto,
+  CreateOrderDto,
   MenuSummaryDto,
   OrderConfirmationDto,
   OrderStatusDto,
 } from './dtos/order-app.controller.dto';
 import { DateTime } from 'luxon';
+import { OrderItem } from 'src/models/order';
+import { OrderStatus } from 'src/constants';
 
 @Injectable()
 export class OrderAppService {
-  constructor(@InjectClient() private readonly db: Db) {}
+  private readonly previewOrdersCollection: any;
+
+  constructor(@InjectClient() private readonly db: Db) {
+    this.previewOrdersCollection = db.collection(COLLECTIONS.ORDERS_PREVIEWS);
+  }
+
+  private calculateModifierPrice(modifier: any, selectedOptions: any[], options: any[]): number {
+    const freeChoices = modifier.freeChoices;
+    const maxChoices = modifier.maxChoices;
+
+    // Enforce maxChoices limit - take only up to maxChoices options
+    const enforcedSelectedOptions = selectedOptions.slice(0, maxChoices);
+
+    // Log if we had to enforce the maxChoices limit
+    if (enforcedSelectedOptions.length < selectedOptions.length) {
+      console.warn(
+        `Enforced maxChoices ${maxChoices} for modifier ${modifier.id}. Selected: ${selectedOptions.length}, Used: ${enforcedSelectedOptions.length}`,
+      );
+    }
+
+    // Calculate total price based on the selected options
+    let total = 0;
+    enforcedSelectedOptions.forEach((optionItem, index) => {
+      // Handle both string IDs and object options
+      // const optionId = typeof optionItem === 'string' ? optionItem : optionItem.id;
+      const optionId = optionItem.id;
+
+      const option = options.find((o) => o.id === optionId);
+      if (!option) {
+        console.warn(`Option not found for ID: ${optionId}`);
+        return;
+      }
+
+      // Logic for determining price based on index and free choices
+      if (index < freeChoices) {
+        // If this is a free choice and freeChoices > 0, don't add to price
+        if (freeChoices === 0) {
+          // But if freeChoices is 0, we still charge the option price
+          total += option.priceCents;
+        }
+      } else {
+        // This is beyond the free choices limit
+        if (modifier.extraChoicePriceCents > 0) {
+          // Use the extraChoicePriceCents for additional options
+          total += modifier.extraChoicePriceCents;
+        } else {
+          // If no extra choice price specified, use the individual option price
+          total += option.priceCents;
+        }
+      }
+    });
+
+    return total;
+  }
 
   async getRestaurant(restaurantId: string) {
     const restaurant = await this.db
@@ -214,24 +267,234 @@ export class OrderAppService {
     return menus;
   }
 
-  async previewCart(input: { originId: string; menuId: string; items: CartItemInput[] }): Promise<CartSummaryDto> {
-    // This would normally include validation and pricing rules
-    const items = input.items.map((i) => ({
-      menuItemId: i.menuItemId,
-      name: 'Sample Item', // fetched from menu_items in real app
-      quantity: i.quantity,
-      priceCents: 500,
-      subtotalCents: i.quantity * 500,
-    }));
 
-    const total = items.reduce((sum, i) => sum + i.subtotalCents, 0);
-    const taxes = Math.round(total * 0.1);
+//comments for testing purposes
+
+  // async createPreviewOrder(
+  //   body: CreateOrderDto,
+  //   correlationId: string,
+  // ): Promise<{ previewOrderId: string; totalPriceCents: number }> {
+  //   const previewOrderId = new ObjectId();
+  //   const orderCode = previewOrderId.toString().slice(-4).toUpperCase();
+  //   const orderTotalPrice = body.items.reduce(
+  //     (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
+  //     0,
+  //   );
+  //   const taxRate = this.configService.get<number>('TAX_RATE');
+
+  //   if (!taxRate) throw new Error('TAX_RATE not configured');
+  //   const totalPriceWithTax = Math.round(orderTotalPrice + orderTotalPrice * taxRate);
+  //   let OrderTotalPrice = totalPriceWithTax;
+  //   if (body.discount && body.discount.amountCents) {
+  //     const discountAmount = Math.min(body.discount.amountCents, totalPriceWithTax);
+  //     OrderTotalPrice = Math.max(0, totalPriceWithTax - discountAmount);
+  //   }
+
+  //   const previewOrderToCreate = {
+  //     _id: previewOrderId,
+  //     orderCode: orderCode,
+  //     paymentId: body.paymentId,
+  //     restaurantId: body.restaurantId,
+  //     locationId: new ObjectId(body.locationId),
+  //     locationSlug: body.locationSlug,
+  //     meta: {
+  //       correlationId: correlationId,
+  //     },
+  //     customer: body.customer,
+  //     origin: {
+  //       id: body.origin.id ? body.origin.id : '',
+  //       name: body.origin.name,
+  //     },
+  //     items: body.items.map((item) => {
+  //       return new OrderItem(
+  //         item.id,
+  //         item.menuItemId,
+  //         item.name,
+  //         item.price,
+  //         item.startedAt,
+  //         item.completedAt,
+  //         item.modifiers,
+  //         item.variants,
+  //         item.stationTags,
+  //         item.notes,
+  //       );
+  //     }),
+  //     discount: body.discount,
+  //     status: OrderStatus.OrderCreated,
+  //     startedAt: new Date(),
+  //     totalPriceCents: OrderTotalPrice,
+  //     getSms: body.getSms,
+  //   };
+  //   // Save the preview order to database
+  //   await this.previewOrdersCollection.insertOne(previewOrderToCreate);
+
+  //   return {
+  //     previewOrderId: previewOrderId.toString(),
+  //     totalPriceCents: OrderTotalPrice,
+  //   };
+  // }
+
+  async createPreviewOrder(
+    body: CreateOrderDto,
+    correlationId: string,
+  ): Promise<{ previewOrderId: string; totalPriceCents: number }> {
+    const previewOrderId = new ObjectId();
+    const orderCode = previewOrderId.toString().slice(-4).toUpperCase();
+
+    // Fetch the menu to validate items and prices
+    const menusCollection = this.db.collection<Menu>(COLLECTIONS.MENUS);
+    const menu = await menusCollection.findOne({
+      restaurantId: body.restaurantId,
+      locationId: new ObjectId(body.locationId),
+    });
+
+    if (!menu) {
+      throw new NotFoundException(`Menu not found for restaurant ${body.restaurantId} and location ${body.locationId}`);
+    }
+
+    // Validate each item against the menu and get the correct prices
+    let calculatedOrderTotal = 0;
+
+    // Process each order item to validate and update prices
+    for (const orderItem of body.items) {
+      // Find the menu item by ID
+      const menuItem = menu.items.find((item) => item.id === orderItem.menuItemId);
+      if (!menuItem) {
+        throw new NotFoundException(`Menu item ${orderItem.menuItemId} not found in menu`);
+      }
+
+      // Check if the item is available
+      if (!menuItem.isAvailable) {
+        throw new NotFoundException(`Menu item ${orderItem.menuItemId} is not available`);
+      }
+
+      // Calculate the correct price based on variants and modifiers
+      let itemPrice = menuItem.priceCents;
+      // Check variants if present
+      if (orderItem.variants && orderItem.variants.length > 0) {
+        for (const variantItem of orderItem.variants) {
+          // Handle both string IDs and object variants
+
+          const variant = menuItem.variants.find((v) => v.id === variantItem.id);
+          if (!variant) {
+            throw new NotFoundException(`Variant ${variantItem.id} not found for menu item ${orderItem.menuItemId}`);
+          }
+
+          // Use the variant price instead of the base price
+          itemPrice = variant.priceCents;
+        }
+      }
+
+      // Check modifiers if present
+      if (orderItem.modifiers && orderItem.modifiers.length > 0) {
+        for (const modifier of orderItem.modifiers) {
+          const menuModifier = menuItem.modifiers.find((m) => m.id === modifier.id);
+          if (!menuModifier) {
+            throw new NotFoundException(`Modifier ${modifier.id} not found for menu item ${orderItem.menuItemId}`);
+          }
+
+          // Calculate additional costs from modifier options
+          if (modifier.options && modifier.options.length > 0) {
+            // Check if we need to enforce maxChoices
+            const maxChoices = menuModifier.maxChoices;
+            const selectedOptionsCount = modifier.options.length;
+
+            // Log if the user tried to select more than maxChoices
+            if (selectedOptionsCount > maxChoices) {
+              console.warn(
+                `Item ${menuItem.id} modifier ${menuModifier.id}: User tried to select ${selectedOptionsCount} options but maxChoices is ${maxChoices}. Enforcing limit.`,
+              );
+              // Note: we don't modify the options here - that's handled in calculateModifierPrice
+            }
+
+            // Calculate the modifier price using the same logic as in MenuItemModal.tsx
+            const modifierPrice = this.calculateModifierPrice(menuModifier, modifier.options, menuModifier.options);
+            itemPrice += modifierPrice;
+          }
+        }
+      }
+      orderItem.price = itemPrice;
+      calculatedOrderTotal += itemPrice;
+    }
+
+    // Use the salesTax from the menu
+    const salesTax = (menu as any).salesTax;
+
+    const totalPriceWithTax = Math.round(calculatedOrderTotal + calculatedOrderTotal * (salesTax / 100));
+
+    // Get discount from campaigns collection based on restaurantId and locationId
+    let discountAmountCents = 0;
+    try {
+      // Get active campaign for this restaurant and location
+      const campaign = await this.db.collection(COLLECTIONS.CAMPAIGNS).findOne({
+        restaurantId: body.restaurantId,
+        locationId: new ObjectId(body.locationId),
+        originId: new ObjectId(body.origin.id),
+        isActive: true,
+      });
+
+      if (campaign && campaign.reward) {
+        // Check if the campaign has a flat discount amount
+        if (campaign.reward.flatOffCents) {
+          discountAmountCents = campaign.reward.flatOffCents;
+        }
+      } else {
+        console.warn(`No active campaign found for restaurant ${body.restaurantId} and location ${body.locationId}`);
+      }
+    } catch (error) {
+      console.error('Error fetching campaign discount:', error);
+    }
+
+    // Apply the discount from campaign
+    let OrderTotalPrice = totalPriceWithTax;
+    if (discountAmountCents > 0) {
+      // Use campaign discount
+      const discountAmount = Math.min(discountAmountCents, totalPriceWithTax);
+      OrderTotalPrice = Math.max(0, totalPriceWithTax - discountAmount);
+    }
+
+    const previewOrderToCreate = {
+      _id: previewOrderId,
+      orderCode: orderCode,
+      paymentId: body.paymentId,
+      restaurantId: body.restaurantId,
+      locationId: new ObjectId(body.locationId),
+      locationSlug: body.locationSlug,
+      meta: {
+        correlationId: correlationId,
+      },
+      customer: body.customer,
+      origin: {
+        id: body.origin.id ? body.origin.id : '',
+        name: body.origin.name,
+      },
+      items: body.items.map((item) => {
+        return new OrderItem(
+          item.id,
+          item.menuItemId,
+          item.name,
+          item.price, 
+          item.startedAt,
+          item.completedAt,
+          item.modifiers,
+          item.variants,
+          item.stationTags,
+          item.notes,
+        );
+      }),
+      discount: body.discount,
+      status: OrderStatus.OrderCreated,
+      startedAt: new Date(),
+      totalPriceCents: OrderTotalPrice,
+      getSms: body.getSms,
+    };
+
+    // Save the preview order to database
+    await this.previewOrdersCollection.insertOne(previewOrderToCreate);
 
     return {
-      items,
-      totalCents: total,
-      taxesCents: taxes,
-      grandTotalCents: total + taxes,
+      previewOrderId: previewOrderId.toString(),
+      totalPriceCents: OrderTotalPrice,
     };
   }
 

@@ -7,7 +7,6 @@ import { ApiConfigModule } from './config/config.module';
 import { PaymentsModule } from './payments/payments.module';
 import { MenuModule } from './menu/menu.module';
 import { EventsModule } from './events/events.module';
-const logLevel = process.env.NODE_ENV === 'local' ? 'debug' : 'info';
 import * as admin from 'firebase-admin';
 import { WebPushModule } from './web-push/web-push.module';
 import { AuthModule } from './auth/auth.module';

@@ -9,6 +9,7 @@ const salesByOriginSchema = z.object({
   originId: z.string(),
   soldCount: z.number(),
   grossSales: z.number(),
+  name: z.string(),
 });
 
 export type salesOrigin = z.infer<typeof salesByOriginSchema>;
@@ -26,11 +27,11 @@ export function useSalesOriginApi(restaurantId: string, locationId: string, date
       if (!restaurantId || !locationId || !date) {
         return [];
       }
-      const formattedDate = format(new Date(date), 'yyyy-MM-dd');
+      //const formattedDate = format(new Date(date), 'yyyy-MM-dd');
 
       try {
         const response = await axiosInstance.get<ApiResponse<salesOrigin[]>>(
-          `/report/sales_by_origin/${restaurantId}/${locationId}/${formattedDate}`,
+          `/report/sales_by_origin/${restaurantId}/${locationId}/${date}`,
         );
 
         const validatedData = salesByOriginResponseSchema.parse(response.data);
@@ -41,7 +42,7 @@ export function useSalesOriginApi(restaurantId: string, locationId: string, date
           // Log validation error to Application Insights
           logExceptionError(new Error('Invalid sales by item data format'), 'SalesOriginApi', {
             zodError: JSON.stringify(error.errors),
-            endpoint: `/report/sales_by_origin/${restaurantId}/${locationId}/${formattedDate}`,
+            endpoint: `/report/sales_by_origin/${restaurantId}/${locationId}/${date}`,
             restaurantId,
             locationId,
             date,

@@ -92,8 +92,6 @@ const MenuPage: React.FC = () => {
   }
 
   const setRestaurant = useOrderStore((s) => s.setRestaurant);
-  const setMenuId = useOrderStore((s) => s.setMenuId);
-  const setSalesTax = useOrderStore((s) => s.setSalesTax);
   const cartItems = useOrderStore((s) => s.cart.items);
 
   // Fetch origin data
@@ -140,15 +138,10 @@ const MenuPage: React.FC = () => {
   //   }
   // }, [validateSession]);
 
-  useEffect(() => {
-    if (menuData) {
-      setSalesTax(menuData.salesTax);
-      setMenuId(menuData._id);
-    }
-  }, [menuData]);
+ 
 
   useEffect(() => {
-    if (restaurant && location && origin) {
+    if (restaurant && location && origin && menuData) {
       const transformedData = {
         restaurant: {
           _id: restaurant._id,
@@ -161,6 +154,7 @@ const MenuPage: React.FC = () => {
           acceptPayment: location.acceptPayment,
           emergepayWalletsPublicId: location.emergepayWalletsPublicId,
           isOpen: location.isOpen,
+          salesTax: menuData.salesTax, 
         },
         origin: {
           _id: origin._id,
@@ -170,7 +164,7 @@ const MenuPage: React.FC = () => {
 
       setRestaurant(transformedData);
     }
-  }, [restaurant, location, origin, setRestaurant]);
+  }, [restaurant, location, origin, setRestaurant, menuData]);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
 

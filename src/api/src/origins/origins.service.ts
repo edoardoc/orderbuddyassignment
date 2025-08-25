@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Db, Collection, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
+import { ConfigService } from '@nestjs/config';
 import { CreateOriginDto } from './dto/create-origin.dto';
 import { COLLECTIONS } from '../db/collections';
 import { Origin } from '../db/models/origin.model';
@@ -11,7 +12,9 @@ import { UpdateQrStyleDto } from './dto/update-origin.dtos';
 import { AzureStorageService } from 'src/storage/storage.service';
 import { EMAIL_SENDER } from '../email/email.module';
 import { EmailTemplateService } from '../email/email-template.service';
-
+const { QRCodeStyling } = require('qr-code-styling/lib/qr-code-styling.common.js');
+const nodeCanvas = require('canvas');
+const { JSDOM } = require('jsdom');
 @Injectable()
 export class OriginsService {
   private readonly originsCollection: Collection<Origin>;
@@ -23,6 +26,7 @@ export class OriginsService {
     private readonly storageService: AzureStorageService,
     @Inject(EMAIL_SENDER) private readonly emailService: any,
     private readonly emailTemplateService: EmailTemplateService,
+    private readonly configService: ConfigService,
   ) {
     this.originsCollection = this.db.collection<Origin>(COLLECTIONS.ORIGINS);
     this.restaurantsCollection = this.db.collection(COLLECTIONS.RESTAURANTS);
@@ -202,9 +206,32 @@ export class OriginsService {
       }
 
       // Get the smart scan URL
-      const smartScanUrl = process.env.SMART_SCAN_URL || 'https://scan.orderbuddyapp.com';
+      const smartScanUrl = this.configService.get<string>('SMART_SCAN_URL');
       const qrCodeUrl = `${smartScanUrl}/${origin.qrCodeId}`;
 
+      const qrOptions = {
+        width: 300,
+        height: 300,
+        data: qrCodeUrl,
+        // Optionally add logo or styling here
+        dotsOptions: {
+          color: '#4267b2',
+          type: 'rounded',
+        },
+        backgroundOptions: {
+          color: '#e9ebee',
+        },
+        imageOptions: {
+          crossOrigin: 'anonymous',
+          margin: 20,
+          saveAsBlob: true,
+        },
+        jsdom: JSDOM,
+        nodeCanvas,
+      };
+      const qrCodeImage = new QRCodeStyling(qrOptions);
+      const qrPngBuffer = await qrCodeImage.getRawData('png');
+      const qrCodeImageUrl = `data:image/png;base64,${qrPngBuffer.toString('base64')}`;
       // Create the email HTML using the template service
       const templateData = {
         restaurantName: restaurant.name,
@@ -212,16 +239,24 @@ export class OriginsService {
         originName: origin.label,
         qrCodeUrl: qrCodeUrl,
         originType: origin.type || 'table',
+         qrCodeImageUrl
       };
 
       // Render the HTML from the template
       const html = this.emailTemplateService.renderHtml('qrcode-link', templateData);
-      // Send email using the email service
+
+      // --- Send email with attachment ---
       await this.emailService.send({
-        
         to: location.contact.email,
         subject: `QR Code Link for ${origin.label} at ${location.name}`,
         html: html,
+        attachments: [
+          {
+            filename: `${origin.label || 'qrname'}.png`,
+            content: qrPngBuffer,
+            contentType: 'image/png',
+          },
+        ],
       });
     } catch (error) {
       if (error instanceof NotFoundException) {

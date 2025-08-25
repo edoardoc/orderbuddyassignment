@@ -25,6 +25,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EntryPage from './pages/entry/EntryPage';
 import MenuPage from './pages/menu/MenuPage';
 import CartPage from './pages/cart/Cart';
+import CheckoutPage from './pages/checkout/checkoutPage';
 import StatusPage from './pages/status/Status';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import TermsPage from './pages/terms/Terms';
@@ -70,6 +71,11 @@ const App = () => (
                 path='/cart/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId'
                 component={CartPage}
               />
+              <Route
+                exact
+                path='/checkout/:restaurantId/:locationSlug/:locationId/:menuSlug/:menuId/:previewOrderId'
+                component={CheckoutPage}
+              />
               <Route exact path='/status/:restaurantId/:orderId' component={StatusPage} />
               <Route exact path='/terms' component={TermsPage} />
               <Route exact path='/privacy' component={PrivacyPage} />
@@ -82,7 +88,7 @@ const App = () => (
           </IonRouterOutlet>
         </IonReactRouter>
       </IonApp>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   </ErrorBoundary>
 );

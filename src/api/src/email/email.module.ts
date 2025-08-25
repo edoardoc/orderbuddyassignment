@@ -1,4 +1,5 @@
 import { Module, Provider } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EmailService } from './email.service';
 import { LocalEmailService } from './local-email.service';
 import { EmailTemplateService } from './email-template.service';
@@ -8,7 +9,11 @@ export const EMAIL_SENDER = 'EMAIL_SENDER';
 
 const EmailSenderProvider: Provider = {
   provide: EMAIL_SENDER,
-  useClass: process.env.NODE_ENV === 'local' ? LocalEmailService : EmailService,
+  useFactory: (configService: ConfigService, localEmailService: LocalEmailService, emailService: EmailService) => {
+    const nodeEnv = configService.getOrThrow<string>('NODE_ENV');
+    return nodeEnv === 'local' ? localEmailService : emailService;
+  },
+  inject: [ConfigService, LocalEmailService, EmailService],
 };
 
 @Module({

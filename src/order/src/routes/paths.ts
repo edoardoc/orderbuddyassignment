@@ -29,7 +29,7 @@ export const Paths = {
     locationId: string,
     menuSlug: string,
     menuId: string,
-    originId: string
+    originId: string,
   ): string => {
     assertParam('restaurantId', restaurantId);
     assertParam('locationSlug', locationSlug);
@@ -54,7 +54,7 @@ export const Paths = {
     locationId: string,
     menuSlug: string,
     menuId: string,
-    originId: string
+    originId: string,
   ): string => {
     assertParam('restaurantId', restaurantId);
     assertParam('locationSlug', locationSlug);
@@ -70,6 +70,25 @@ export const Paths = {
     assertParam('orderId', orderId);
 
     return `/status/${restaurantId}/${orderId}`;
+  },
+  checkout: (
+    restaurantId: string,
+    locationSlug: string,
+    locationId: string,
+    menuSlug: string,
+    menuId: string,
+    previewOrderId: string,
+    originId: string,
+  ): string => {
+    assertParam('restaurantId', restaurantId);
+    assertParam('locationSlug', locationSlug);
+    assertParam('locationId', locationId);
+    assertParam('menuSlug', menuSlug);
+    assertParam('menuId', menuId);
+    assertParam('previewOrderId', previewOrderId);
+    assertParam('originId', originId);
+
+    return `/checkout/${restaurantId}/${locationSlug}/${locationId}/${menuSlug}/${menuId}/${previewOrderId}?originId=${originId}`;
   },
   terms: (): string => '/terms',
   privacy: (): string => '/privacy',

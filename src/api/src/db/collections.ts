@@ -8,6 +8,7 @@ export const COLLECTIONS = {
   USERS: 'users',
   SUBSCRIPTIONS: 'subscriptions',
   CAMPAIGNS: 'campaigns',
+  ORDERS_PREVIEWS: 'orders_preview',
 };
 // export const COLLECTIONS = {
 //   RESTAURANTS: 'restaurants_prod',

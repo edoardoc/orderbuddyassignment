@@ -137,6 +137,7 @@ export const usePos = () => {
           name: mod.name,
           options:
             mod.options?.map((option) => ({
+              id: option.id,
               name: option.name,
               priceCents: option.priceCents,
             })) || [],
@@ -160,7 +161,6 @@ export const usePos = () => {
 
     try {
       const orderId = await createOrderMutation.mutateAsync(createOrder);
-      console.log('Order placed successfully with ID:', orderId);
       clearOrder(); 
       present({
         message: `Order placed successfully! Order ID: ${orderId}`,

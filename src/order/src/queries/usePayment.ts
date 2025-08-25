@@ -2,26 +2,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { axiosInstance } from './axiosInstance';
 import { logApiError } from '@/utils/errorLogger';
 
-interface OrderItem {
-  id: string;
-  menuItemId: string;
-  name: string;
-  price: number;
-}
-
-interface Origin {
-  id: string;
-  name: string;
-}
-
-interface CreateOrderRequest {
-  restaurantId: string;
-  paymentId: string;
-  origin: Origin;
-  customer: Customer;
-  items: OrderItem[];
-  getSms: boolean;
-}
 interface Customer {
   name: string;
   phone: string;
@@ -36,6 +16,12 @@ interface TransactionResponse {
 
 interface TokenResponse {
   transactionToken: string;
+}
+
+interface CreateOrderRequest {
+  previewOrderId: string;
+  transactionToken: string;
+  
 }
 
 export function useToken(restaurantId: string, requestUuid: string) {
@@ -72,7 +58,7 @@ export function useToken(restaurantId: string, requestUuid: string) {
 }
 
 export function useCompletePayment() {
-  return useMutation<TransactionResponse, Error, { order: CreateOrderRequest; requestUuid: string }>({
+  return useMutation<TransactionResponse, Error, { order:CreateOrderRequest ; requestUuid: string }>({
     mutationFn: async ({ order, requestUuid }) => {
       try {
         const response = await axiosInstance.post<TransactionResponse>('payments/complete-transaction', order, {
@@ -85,7 +71,7 @@ export function useCompletePayment() {
         // Add Application Insights logging
         logApiError(error, 'payments/complete-transaction', {
           operation: 'completePayment',
-          restaurantId: order.restaurantId,
+          restaurantId: order.previewOrderId,
           requestId: requestUuid
         });
         throw error;

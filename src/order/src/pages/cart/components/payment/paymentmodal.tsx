@@ -85,13 +85,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         </IonToolbar>
       </IonHeader>
       <IonContent className='ion-padding-top'>
-        <PaymentForm
+        {/* <PaymentForm
           amount={amount}
           customerData={customerData}
           onPaymentSuccess={onPaymentSuccess}
           onPaymentError={onPaymentError}
           onFieldsLoaded={setFieldsLoaded}
-        />
+        /> */}
 
         <div style={{ padding: '20px 0', margin: '10px 0' }}>
           <hr style={{ borderTop: '1px solid #ddd', margin: '0 16px' }} />
@@ -100,17 +100,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <IonGrid className='ion-padding'>
           <IonRow>
             <IonCol size='12' className='ion-text-center'>
-              {/* <GooglePay
-                    amount={amount}
-                    publicId={emergepayWalletsPublicId}
-                    customerData={customerData}
-                    onPaymentComplete={onPaymentComplete || onPaymentSuccess}
-                    onError={onPaymentError}
-                    onCancel={handleCancel}
-                  /> */}
-            </IonCol>
-            <IonCol size='12' className='ion-text-center'>
-              <ApplePay
+              <GooglePay
                 amount={amount}
                 publicId={emergepayWalletsPublicId}
                 emergepayWalletsUrl={`${import.meta.env.VITE_ASSETS_EMERGEPAY_URL}/cip-hosted-wallets.js`}
@@ -119,6 +109,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onError={onPaymentError}
                 onCancel={handleCancel}
               />
+            </IonCol>
+            <IonCol size='12' className='ion-text-center'>
+              {/* <ApplePay
+                amount={amount}
+                publicId={emergepayWalletsPublicId}
+                emergepayWalletsUrl={`${import.meta.env.VITE_ASSETS_EMERGEPAY_URL}/cip-hosted-wallets.js`}
+                customerData={customerData}
+                onPaymentComplete={onPaymentComplete || onPaymentSuccess}
+                onError={onPaymentError}
+                onCancel={handleCancel}
+              /> */}
             </IonCol>
           </IonRow>
         </IonGrid>
