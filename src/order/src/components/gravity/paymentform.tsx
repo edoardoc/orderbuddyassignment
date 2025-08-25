@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { IonSpinner, IonText, useIonRouter } from '@ionic/react';
-import moment from 'moment-timezone';
 import { useCompletePayment, useToken } from '../../queries/usePayment';
 import { useOrderStore } from '@/stores/orderStore';
+import { Paths } from '../../routes/paths';
 import { v4 as uuid } from 'uuid';
 import { client } from '@/client';
-import { useParams } from 'react-router-dom';
 import '../../../style.css';
 import { logApiError, logExceptionError } from '@/utils/errorLogger';
 declare global {
@@ -19,11 +18,7 @@ declare global {
 
 interface PaymentFormProps {
   amount: number;
-  customerData: {
-    name: string;
-    phone: string;
-    getSms: boolean;
-  };
+  previewOrderId: string;
   onPaymentSuccess: () => void;
   onPaymentError: (error: any) => void;
   onFieldsLoaded?: (isLoaded: boolean) => void;
@@ -31,27 +26,23 @@ interface PaymentFormProps {
 
 export const PaymentForm: React.FC<PaymentFormProps> = ({
   amount,
+  previewOrderId,
   onPaymentSuccess,
   onPaymentError,
-  customerData,
   onFieldsLoaded,
 }) => {
   const [requestUuid] = useState<string>(uuid());
   const hostedRef = useRef<any>(null);
   const initialized = useRef(false);
   const restaurant = useOrderStore((s) => s.restaurant);
-  const location = useOrderStore((s) => s.location);
   const resetOrderState = useOrderStore((s) => s.resetOrderState);
-  const { locationSlug } = useParams<{ locationSlug: string }>();
   const initiateOrder = (orderNumber: string) => {
     const payload = {
-       orderId: orderNumber,
-     };
-     client.emit('order_joined', payload);
+      orderId: orderNumber,
+    };
+    client.emit('order_joined', payload);
   };
 
-  const origin = useOrderStore((s) => s.origin);
-  const cartItems = useOrderStore((s) => s.cart.items);
   const [transcationErrorText, setTranscationErrorText] = useState('');
   const [isDisabledPayment, setIsDisabledPayment] = useState(false);
   const [isFieldsLoading, setIsFieldsLoading] = useState(true);
@@ -72,50 +63,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   }, [tokenData]);
 
   const completePayment = async (transactionToken: string) => {
-    const orderItems = cartItems.map((item) => ({
-      id: item.id,
-      menuItemId: item.menuItemId,
-      name: item.name,
-      price: item.price,
-      notes: item.notes,
-      variants:
-        item.variants?.map((variant) => ({
-          id: variant.id,
-          name: variant.name,
-          priceCents: variant.priceCents,
-        })) || [],
-      modifiers:
-        item.modifiers?.map((mod) => ({
-          id: mod.id,
-          name: mod.name,
-          options:
-            mod.options?.map((option) => ({
-              name: option.name,
-              priceCents: option.priceCents,
-            })) || [],
-        })) || [],
-      stationTags: item.stationTags,
-    }));
-
     const createOrder = {
-      restaurantId: restaurant._id,
-      locationId: location._id,
-      locationSlug: locationSlug,
-      paymentId: transactionToken,
-      origin: origin._id ? { id: origin._id, name: origin.name } : { id: '', name: 'Web' },
-      customer: {
-        name: customerData.name,
-        phone: customerData.phone,
-      },
-      items: orderItems,
-      getSms: customerData.getSms,
-      discount: discount
-        ? {
-            name: discount.name,
-            type: discount.type,
-            amountCents: discount.amountCents,
-          }
-        : undefined,
+      previewOrderId: previewOrderId,
+      transactionToken,
+
     };
 
     try {
@@ -225,17 +176,16 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             }
             onPaymentSuccess();
             resetOrderState();
-
-            router.push(`/status/${restaurant._id}/${data.orderId}`, 'forward');
+            router.push(Paths.status(restaurant._id, data.orderId), 'forward', 'replace');
           } catch (error) {
             console.log('error', error);
           }
         },
         onFieldError: (error: any) => {
-          console.error('Field error:', error);          
+          console.error('Field error:', error);
           logExceptionError(error, 'PaymentFormFieldError', {
             formType: 'gravity',
-            transactionToken: token
+            transactionToken: token,
           });
           onPaymentError(error);
           setIsDisabledPayment(false);
@@ -244,19 +194,19 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
           console.log('Transaction successful: payment form', response);
         },
         onTransactionFailure: (error: any) => {
-          console.error('Transaction failed:', error);          
+          console.error('Transaction failed:', error);
           logApiError(error, 'paymentTransaction', {
             operation: 'processPayment',
             formType: 'gravity',
-            transactionToken: token
+            transactionToken: token,
           });
           onPaymentError(error);
         },
         onabort: (error: any) => {
-          console.error('Transaction aborted:', error);          
+          console.error('Transaction aborted:', error);
           logApiError(error, 'paymentTransaction', {
             operation: 'abortedPayment',
-            formType: 'gravity'
+            formType: 'gravity',
           });
           onPaymentError(error);
         },
@@ -282,10 +232,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     } catch (error) {
       setIsDisabledPayment(false);
       console.log('Error processing payment:', error);
-      console.error('Error processing payment:', error);      
+      console.error('Error processing payment:', error);
       logExceptionError(error, 'PaymentProcessing', {
         operation: 'processPaymentClick',
-        formType: 'gravity'
+        formType: 'gravity',
       });
       onPaymentError(error);
     }

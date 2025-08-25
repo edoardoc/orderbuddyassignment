@@ -1,7 +1,5 @@
-import { IonIcon, useIonRouter } from '@ionic/react';
+import {  useIonRouter } from '@ionic/react';
 import React, { useEffect, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import moment from 'moment';
 import { useUpiPayment } from '../../queries/useUpiPayment';
 import styled from 'styled-components';
 import { FaGooglePay } from 'react-icons/fa';
@@ -9,7 +7,8 @@ import { useOrderStore } from '@/stores/orderStore';
 import { useParams } from 'react-router-dom';
 import { v4 as uuid } from 'uuid';
 import { client } from '@/client';
-import { logApiError, logExceptionError } from '@/utils/errorLogger';
+import {  logExceptionError } from '@/utils/errorLogger';
+import { Paths } from '../../routes/paths';
 
 interface WalletsProps {
   amount: number;
@@ -19,6 +18,7 @@ interface WalletsProps {
     getSms: boolean;
   };
   publicId: string;
+  emergepayWalletsUrl: string;
   onPaymentComplete?: (response: any) => void;
   onError?: (error: any) => void;
   onCancel?: () => void;
@@ -51,6 +51,7 @@ const GooglePay: React.FC<WalletsProps> = ({
   amount,
   customerData,
   publicId,
+  emergepayWalletsUrl,
   onPaymentComplete,
   onError,
   onCancel,
@@ -65,12 +66,13 @@ const GooglePay: React.FC<WalletsProps> = ({
   const resetOrderState = useOrderStore((s) => s.resetOrderState);
   // Use the useUpiPayment hook
   const completeUpiPaymentMutation = useUpiPayment();
-    const discount = useOrderStore((s) => s.discount);
+  const discount = useOrderStore((s) => s.discount);
 
   const [requestUuid] = useState<string>(uuid());
   const router = useIonRouter();
+
   const initiateOrder = (orderNumber: string) => {
-   const payload = {
+    const payload = {
       orderId: orderNumber,
     };
     client.emit('order_joined', payload);
@@ -94,6 +96,7 @@ const GooglePay: React.FC<WalletsProps> = ({
           name: mod.name,
           options:
             mod.options?.map((option) => ({
+              id: option.id,
               name: option.name,
               priceCents: option.priceCents,
             })) || [],
@@ -123,57 +126,50 @@ const GooglePay: React.FC<WalletsProps> = ({
         : undefined,
     };
 
-    try {
-      const result = await completeUpiPaymentMutation.mutateAsync({
-        payload: createOrder,
-        requestId: requestUuid,
-      });
-      if (onPaymentComplete) {
-        onPaymentComplete(result);
-      }
-      if (client.connected) {
-        initiateOrder(result.orderId);
-      }
-      if (result && result.orderId) {
-        resetOrderState();
+    // try {
+    //   const result = await completeUpiPaymentMutation.mutateAsync({
+    //     payload: createOrder,
+    //     requestId: requestUuid,
+    //   });
+    //   if (onPaymentComplete) {
+    //     onPaymentComplete(result);
+    //   }
+    //   if (client.connected) {
+    //     initiateOrder(result.orderId);
+    //   }
+    //   if (result && result.orderId) {
+    //     resetOrderState();
 
-        router.push(`/status/${restaurant._id}/${result.orderId}`);
-      }
+    //     router.push(Paths.status(restaurant._id, result.orderId), 'forward', 'replace');
+    //   }
 
-      return result;
-    } catch (error) {
-      console.error('completePayment upi error:', error);
-      logApiError(error, 'payments/complete-upi-transaction', {
-        operation: 'completeGooglePayPayment',
-        restaurantId: restaurant._id,
-        requestId: requestUuid
-      });
-      if (onError) {
-        onError(error);
-      }
-      throw error;
-    }
+    //   return result;
+    // } catch (error) {
+    //   console.error('completePayment upi error:', error);
+    //   logApiError(error, 'payments/complete-upi-transaction', {
+    //     operation: 'completeGooglePayPayment',
+    //     restaurantId: restaurant._id,
+    //     requestId: requestUuid,
+    //   });
+    //   if (onError) {
+    //     onError(error);
+    //   }
+    //   throw error;
+    // }
   };
 
   useEffect(() => {
-    // Initialize wallets after script loads
-    const initializeWallets = async () => {
-      if (!window.emergepayWallets) {
-        console.error('Wallets SDK not loaded');
-        return;
-      }
+    const script = document.createElement('script');
+    script.src = emergepayWalletsUrl;
+    script.async = true;
 
-      walletsRef.current = new window.emergepayWallets(publicId);
-
+    script.onload = async () => {
       try {
+        walletsRef.current = new window.emergepayWallets(publicId);
+
         await walletsRef.current.setRequiredFields({
           billing: {
             address: true,
-          },
-          shipping: {
-            address: true,
-            email: true,
-            phoneNumber: true,
           },
         });
 
@@ -205,7 +201,7 @@ const GooglePay: React.FC<WalletsProps> = ({
         walletsRef.current.onerror = (error: any) => {
           console.log(error);
           logExceptionError(error, 'GooglePayProcessing', {
-            operation: 'googlePayWalletError'
+            operation: 'googlePayWalletError',
           });
           onError?.(error);
         };
@@ -247,34 +243,14 @@ const GooglePay: React.FC<WalletsProps> = ({
         console.error('Error initializing wallets:', err);
         logExceptionError(err, 'GooglePayInitialization', {
           operation: 'initializeGooglePayWallet',
-          publicId: publicId?.substring(0, 8) // Only log part of ID for security
+          publicId: publicId?.substring(0, 8), // Only log part of ID for security
         });
         onError?.(err);
       }
     };
 
-    // const script = document.createElement('script')
-    // script.src = 'https://assets.emergepay-sandbox.chargeitpro.com/cip-hosted-wallets.js'
-    // script.async = true
-    // console.log('Loading Google Pay script...')
-    // // Call initializeWallets after script loads
-    // script.onload = () => {
-    //   console.log('Script loaded, initializing wallets...')
-    //   initializeWallets()
-    // }
-
-    // script.onerror = (error) => {
-    //   console.error('Failed to load Google Pay script:', error)
-    //   onError?.(error)
-    // }
-
-    // document.body.appendChild(script)
-
-    // return () => {
-    //   document.body.removeChild(script)
-    // }
-    initializeWallets();
-  }, [publicId, onPaymentComplete, onError, onCancel]);
+    document.body.appendChild(script);
+  }, [publicId]);
 
   return (
     <WalletContainer>

@@ -8,7 +8,7 @@ export const restaurantSchema = z.object({
   _id: z.string(),
   name: z.string(),
   concept: z.string(),
-  logo: z.string().url().optional(),
+  logo: z.string().optional(),
 });
 
 export const restaurantsResponseSchema = z.object({

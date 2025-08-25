@@ -27,6 +27,7 @@ import {
   IonDatetimeButton,
 } from '@ionic/react';
 import React, { use, useEffect, useRef, useState } from 'react';
+import DateStepper from '../shared/date-stepper';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
 
 import { useParams } from 'react-router-dom';
@@ -35,25 +36,14 @@ import OrderDetail from '../orders-page/components/OrderDetail';
 import { useHistoryOrders } from './usehistory';
 import { Order } from '../orders-page/types';
 import EmptyState from '../orders-page/components/EmptyState';
+import { getYesterdayDateYYYMMDD } from '../../utils/datetimeUtil';
 
 const OrderHistoryPage: React.FC = () => {
   const { restaurantId, locationId } = useParams<any>();
   const modalRef = useRef<HTMLIonModalElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
-  // const getYesterdayDate = (): string => {
-  //   const date = new Date();
-  //   date.setDate(date.getDate() - 1);
-  //   return date.toISOString();
-  // };
-  const getYesterdayDate = (): string => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    return yesterday.toISOString();
-  };
-
-  const [selectedDate, setSelectedDate] = useState<string>(getYesterdayDate());
+  const [selectedDate, setSelectedDate] = useState<string>(getYesterdayDateYYYMMDD());
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const { historyOrders, printOrder, isLoading } = useHistoryOrders(restaurantId, locationId, selectedDate);
 
@@ -78,19 +68,9 @@ const OrderHistoryPage: React.FC = () => {
       <LaunchPadNavBar title='History' />
       <IonContent>
         <IonGrid>
-          <IonRow className='ion-justify-content-center ion-padding-top'>
-            <IonDatetimeButton datetime='date'></IonDatetimeButton>
-            <IonModal ref={modalRef} keepContentsMounted={true}>
-              <IonDatetime
-                id='date'
-                presentation='date'
-                value={selectedDate}
-                onIonChange={(e) => handleDateChange(e.detail.value as string)}
-              ></IonDatetime>
-            </IonModal>
-          </IonRow>
+          <DateStepper selectedDate={selectedDate} onDateChange={setSelectedDate} />
 
-          {!historyOrders.size  && (
+          {!historyOrders.size && (
             <EmptyState
               title='📄 No orders processed on this day'
               subTitle='Looks like there were no orders recorded. This report reflects all completed activity.'

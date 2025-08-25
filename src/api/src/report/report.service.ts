@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Collection, Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
+import { ConfigService } from '@nestjs/config';
 import { COLLECTIONS } from 'src/db/collections';
 import { Location } from 'src/db/models/location.model';
 import { DateTime } from 'luxon';
@@ -14,7 +15,10 @@ export class ReportService {
   private readonly locationCollection: Collection<Location>;
   private readonly originsCollection: Collection;
 
-  constructor(@InjectClient() private readonly db: Db) {
+  constructor(
+    @InjectClient() private readonly db: Db,
+    private readonly configService: ConfigService,
+  ) {
     this.restaurantsCollection = db.collection(COLLECTIONS.RESTAURANTS);
     this.ordersCollection = db.collection(COLLECTIONS.ORDERS);
     this.locationCollection = this.db.collection<Location>(COLLECTIONS.LOCATIONS);
@@ -90,8 +94,8 @@ export class ReportService {
       throw new Error('Store timezone not configured');
     }
 
-    // Get tax rate from environment variable
-    const TAX_RATE = parseFloat(process.env.TAX_RATE || '0.065');
+    // Get tax rate from config service
+    const TAX_RATE = this.configService.getOrThrow<number>('TAX_RATE');
 
     const daysAgo = DateTime.now()
       .setZone(location.timezone)
@@ -328,6 +332,7 @@ export class ReportService {
         {
           $group: {
             _id: '$origin.id',
+            name: { $first: '$origin.name' },
             soldCount: { $sum: { $size: '$items' } },
             grossSales: { $sum: { $divide: ['$totalPriceCents', 100] } },
           },
@@ -336,6 +341,7 @@ export class ReportService {
           $project: {
             _id: 0,
             originId: { $toString: '$_id' },
+            name: 1,
             soldCount: 1,
             grossSales: 1,
           },

@@ -87,7 +87,7 @@ export const getLaunchPadConfig = (restaurantId: string, locationId: string): La
       {
         name: 'Restaurant',
         icon: IoRestaurant,
-        link: `/${restaurantId}/${locationId}/apps/restaurant-settings`,
+        link: `/${restaurantId}/apps/restaurant-settings`,
         iconProps: {
           size: 32,
         },

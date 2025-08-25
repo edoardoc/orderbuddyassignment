@@ -3,18 +3,16 @@ import { emergepaySdk, TransactionType } from 'emergepay-sdk';
 import { InjectClient } from 'nest-mongodb-driver';
 import { Db, ObjectId } from 'mongodb';
 import { ConfigService } from '@nestjs/config';
-import { v4 } from 'uuid';
 import axios from 'axios';
-import { CreateOrderDto, OrderItemDto } from './dtos/payments.controller.dto';
+import { CreateOrderBody, CreateOrderUpiBody } from './dtos/payments.controller.dto';
 import { MenuService } from '../menu/menu.service';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { COLLECTIONS } from 'src/db/collections';
 import { logger } from 'src/logger/pino.logger';
-import { json } from 'stream/consumers';
 
 @Injectable()
 export class PaymentsService {
   private readonly locationCollection;
+  private readonly previewOrdersCollections;
   private readonly logger: typeof logger;
 
   constructor(
@@ -23,6 +21,7 @@ export class PaymentsService {
     @InjectClient() private readonly db: Db,
   ) {
     this.locationCollection = db.collection(COLLECTIONS.LOCATIONS);
+    this.previewOrdersCollections = db.collection(COLLECTIONS.ORDERS_PREVIEWS);
     this.logger = logger.child({ context: 'PaymentsService' });
   }
 
@@ -59,10 +58,24 @@ export class PaymentsService {
     }
   }
 
-  async completeTranscation(body: CreateOrderDto, requestId: string) {
+  async completeTranscation(body: CreateOrderBody, requestId: string) {
+    // Get preview order data using previewOrderId
+    const previewOrder = await this.previewOrdersCollections.findOne({ _id: new ObjectId(body.previewOrderId) });
+    if (!previewOrder) {
+      throw new Error('Preview order not found');
+    }
+
+    // Extract data from preview order
+    const restaurantId = previewOrder.restaurantId;
+    const locationId: string = previewOrder.locationId;
+    const orderTotalPrice = previewOrder.totalPriceCents;
+
     let emergepay: any;
     const projection = { payment: 1 };
-    const PaymentDetails = await this.locationCollection.findOne({ restaurantId: body.restaurantId }, { projection });
+    const PaymentDetails = await this.locationCollection.findOne(
+      { _id: new ObjectId(locationId), restaurantId: restaurantId },
+      { projection },
+    );
     const oid = PaymentDetails.payment.oid;
     const authToken = PaymentDetails.payment.auth;
     const environmentUrl = this.configService.get<string>('EMERGEPAY_ENVIRONMENT_URL');
@@ -75,24 +88,14 @@ export class PaymentsService {
       environmentUrl,
     });
 
-    const orderTotalPrice = body.items.reduce(
-      (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
-      0,
-    );
-    const orderTotalPriceInDollars = orderTotalPrice / 100;
-
-    const taxRate = this.configService.get<number>('TAX_RATE');
-    if (!taxRate) {
-      throw new Error('taxRate not found');
-    }
-    const totalPriceWithTax = (orderTotalPriceInDollars + orderTotalPriceInDollars * taxRate).toFixed(2);
+    const orderTotalPriceInDollars = (orderTotalPrice / 100).toFixed(2);
     if (!emergepay) {
       throw new Error('EmergePay SDK not properly initialized');
     }
     const response = await emergepay.checkoutTransaction({
-      transactionToken: body.paymentId,
+      transactionToken: body.transactionToken,
       transactionType: 'CreditSale',
-      amount: totalPriceWithTax,
+      amount: orderTotalPriceInDollars,
       externalTransactionId: emergepay.getExternalTransactionId(),
     });
     let orderId = '';
@@ -102,20 +105,23 @@ export class PaymentsService {
           module: 'payment',
           event: 'payment_successful',
           correlationId: requestId,
-          restaurantId: body.restaurantId,
-          amount: totalPriceWithTax,
-          transactionId: body.paymentId,
+          restaurantId: restaurantId,
+          amount: orderTotalPriceInDollars,
+          transactionId: body.transactionToken,
         },
         'Payment completed',
       );
-
-      orderId = await this.menuService.createOrder(body, requestId);
+      const orderCreateRequest = {
+        previewOrderId: body.previewOrderId,
+        paymentId: body.transactionToken,
+      };
+      orderId = await this.menuService.createOrder(orderCreateRequest, requestId);
     } else {
       this.logger.trace(
         {
           module: 'payment',
           event: 'payment_failed',
-          restaurantId: body.restaurantId,
+          restaurantId: restaurantId,
           correlationId: requestId,
           error: response.data.resultMessage,
         },
@@ -125,10 +131,70 @@ export class PaymentsService {
     return { transaction: response.data, orderId: orderId };
   }
 
-  async completeTranscationUpi(body: CreateOrderDto, requestId: string) {
+  async placeOrderWithoutPayment(previewOrderId: string, requestId: string) {
+    try {
+      // Get preview order data
+      const previewOrder = await this.previewOrdersCollections.findOne({ _id: new ObjectId(previewOrderId) });
+
+      if (!previewOrder) {
+        throw new Error('Preview order not found');
+      }
+
+      // Create order without payment
+      const orderCreateRequest = {
+        previewOrderId: previewOrderId,
+        paymentId: ''
+      };
+
+      // Log the no-payment order creation
+      this.logger.trace(
+        {
+          module: 'payment',
+          event: 'order_without_payment',
+          correlationId: requestId,
+          restaurantId: previewOrder.restaurantId,
+          previewOrderId: previewOrderId,
+        },
+        'Creating order without payment',
+      );
+
+      // Use the menu service to create the order
+      const orderId = await this.menuService.createOrder(orderCreateRequest, requestId);
+
+      return {
+        orderId,
+        success: true,
+        message: 'Order created successfully without payment',
+      };
+    } catch (error) {
+      this.logger.error(
+        {
+          module: 'payment',
+          event: 'order_without_payment_failed',
+          correlationId: requestId,
+          error: error.message,
+        },
+        'Failed to create order without payment',
+      );
+      throw error;
+    }
+  }
+
+  async completeTranscationUpi(body: CreateOrderUpiBody, requestId: string) {
+    // Get preview order data using previewOrderId
+    const previewOrder = await this.previewOrdersCollections.findOne({ _id: new ObjectId(body.previewOrderId) });
+    if (!previewOrder) {
+      throw new Error('Preview order not found');
+    }
+
+    // Extract data from preview order
+    const restaurantId = previewOrder.restaurantId;
+    const locationId = previewOrder.locationId;
+    const orderTotalPrice = previewOrder.totalPriceCents;
+
     const projection = { payment: 1 };
     const PaymentDetails = await this.locationCollection.findOne(
-      { _id: new ObjectId(body.locationId), restaurantId: body.restaurantId },
+      { _id: typeof locationId === 'string' ? new ObjectId(locationId) : locationId, restaurantId: restaurantId },
       { projection },
     );
     const oid = PaymentDetails.payment.oid;
@@ -143,16 +209,9 @@ export class PaymentsService {
       throw new Error('EmergePay environment URL not found');
     }
 
-    const orderTotalPrice = body.items.reduce(
-      (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
-      0,
-    );
     const orderTotalPriceInDollars = orderTotalPrice / 100;
-    const taxRate = this.configService.get<number>('TAX_RATE');
-    if (!taxRate) {
-      throw new Error('taxRate not found');
-    }
-    const totalPriceWithTax = (orderTotalPriceInDollars + orderTotalPriceInDollars * taxRate).toFixed(2);
+
+    const totalPriceWithTax = orderTotalPriceInDollars.toFixed(2);
     const requestConfig = {
       headers: {
         'Content-Type': 'application/json',
@@ -174,7 +233,6 @@ export class PaymentsService {
 
     try {
       const response = await axios.post(url, { transactionData }, requestConfig);
-      
       let orderId = '';
       if (response.data && response.data.transactionResponse.resultMessage === 'Approved') {
         this.logger.trace(
@@ -182,20 +240,23 @@ export class PaymentsService {
             module: 'payment',
             event: 'upi_payment_successful',
             correlationId: requestId,
-            restaurantId: body.restaurantId,
+            restaurantId: restaurantId,
             amount: totalPriceWithTax,
-            transactionId: body.paymentId,
+            transactionId: requestId,
           },
           'UPI Payment completed',
         );
-
-        orderId = await this.menuService.createOrder(body, requestId);
+        const orderCreateRequest = {
+          previewOrderId: body.previewOrderId,
+          paymentId: body.transactionDetails.token.data,
+        };
+        orderId = await this.menuService.createOrder(orderCreateRequest, requestId);
       } else {
         this.logger.trace(
           {
             module: 'payment',
             event: 'upi_payment_failed',
-            restaurantId: body.restaurantId,
+            restaurantId: restaurantId,
             correlationId: requestId,
             error: response.data,
           },

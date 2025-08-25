@@ -1,6 +1,6 @@
 import { Body, Controller, HttpException, HttpStatus, Param, Post, Req, Res } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreateOrderDto, GetStoreInfoDto } from './dtos/payments.controller.dto';
+import { CreateOrderBody, CreateOrderUpiBody, GetStoreInfoDto } from './dtos/payments.controller.dto';
 import e, { Response } from 'express';
 import { logger } from 'src/logger/pino.logger';
 
@@ -57,7 +57,7 @@ export class PaymentsController {
   }
 
   @Post('complete-transaction')
-  async completeTransaction(@Body() body: CreateOrderDto, @Res() res: Response, @Req() req: Request) {
+  async completeTransaction(@Body() body: CreateOrderBody, @Res() res: Response, @Req() req: Request) {
     const requestId = req['requestId'];
 
     try {
@@ -91,7 +91,7 @@ export class PaymentsController {
   }
 
   @Post('complete-upi-transaction')
-  async completeUpiTransaction(@Body() body: CreateOrderDto, @Res() res: Response, @Req() req: Request) {
+  async completeUpiTransaction(@Body() body: CreateOrderUpiBody, @Res() res: Response, @Req() req: Request) {
     try {
       const requestId = req['requestId'];
       const data = await this.paymentsService.completeTranscationUpi(body, requestId);
@@ -103,4 +103,29 @@ export class PaymentsController {
         .json({ message: 'Transaction upi failed', error: error.message });
     }
   }
+
+ @Post('place-order-without-payment')
+async placeOrderWithoutPayment(@Body() body: { previewOrderId: any }, @Res() res: Response, @Req() req: Request) {
+  const requestId = req['requestId'];
+  try {
+    const data = await this.paymentsService.placeOrderWithoutPayment(body.previewOrderId, requestId);
+    return res.status(HttpStatus.OK).json(data);
+  } catch (error: any) {
+    this.logger.error(
+      {
+        module: 'payment',
+        event: 'place-order-without-payment',
+        correlationId: requestId,
+        error: error.message,
+        stack: error.stack,
+      },
+      'Exception - Failed to place order without payment'
+    );
+
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ 
+      message: 'Failed to place order without payment', 
+      error: error.message 
+    });
+  }
+}
 }

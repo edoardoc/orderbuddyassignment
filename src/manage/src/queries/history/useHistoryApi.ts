@@ -65,10 +65,8 @@ export function useHistoryOrdersApi(restaurantId: string, locationId: string, se
   return useQuery<Order[]>({
     queryKey: ['historyOrders', restaurantId, locationId, selectedDate],
     queryFn: async () => {
-      const formattedDate = format(new Date(selectedDate), 'yyyy-MM-dd');
-
       const res = await axiosInstance.get<Order[]>(
-        `report/order_history/${restaurantId}/${locationId}/${formattedDate}`,
+        `report/order_history/${restaurantId}/${locationId}/${selectedDate}`,
       );
       if (!res.data) {
         throw new Error('No today orders found');

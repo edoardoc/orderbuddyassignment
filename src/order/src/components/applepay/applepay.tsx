@@ -6,14 +6,11 @@ import { useOrderStore } from '@/stores/orderStore';
 import { useUpiPayment } from '../../queries/useUpiPayment';
 import { client } from '@/client';
 import { logApiError, logExceptionError } from '@/utils/errorLogger';
+import { Paths } from '../../routes/paths';
 
 interface WalletsProps {
   amount: number;
-  customerData: {
-    name: string;
-    phone: string;
-    getSms: boolean;
-  };
+  previewOrderId: string;
   publicId: string;
   emergepayWalletsUrl: string;
   onPaymentComplete?: (response: any) => void;
@@ -29,8 +26,8 @@ declare global {
 
 const ApplePay: React.FC<WalletsProps> = ({
   amount,
-  customerData,
   publicId,
+  previewOrderId,
   emergepayWalletsUrl,
   onPaymentComplete,
   onError,
@@ -41,61 +38,16 @@ const ApplePay: React.FC<WalletsProps> = ({
   const [requestUuid] = useState(() => uuid());
   const router = useIonRouter();
 
-  const origin = useOrderStore((s) => s.origin);
   const cartItems = useOrderStore((s) => s.cart.items);
   const restaurant = useOrderStore((s) => s.restaurant);
-  const location = useOrderStore((s) => s.location);
   const resetOrderState = useOrderStore((s) => s.resetOrderState);
-  const { locationSlug } = useParams<{ locationSlug: string }>();
   const completeUpiPaymentMutation = useUpiPayment();
-  const discount = useOrderStore((s) => s.discount);
 
   const completeUpiPayment = async (transactionDetails: any) => {
-    const orderItems = cartItems.map((item) => ({
-      id: item.id,
-      menuItemId: item.menuItemId,
-      name: item.name,
-      price: item.price,
-      notes: item.notes,
-      variants:
-        item.variants?.map((variant) => ({
-          id: variant.id,
-          name: variant.name,
-          priceCents: variant.priceCents,
-        })) || [],
-      modifiers:
-        item.modifiers?.map((mod) => ({
-          id: mod.id,
-          name: mod.name,
-          options:
-            mod.options?.map((option) => ({
-              name: option.name,
-              priceCents: option.priceCents,
-            })) || [],
-        })) || [],
-      stationTags: item.stationTags,
-    }));
 
     const createOrder = {
-      restaurantId: restaurant._id,
-      locationId: location._id,
-      locationSlug,
-      paymentId: transactionDetails.token.data,
-      origin: origin._id ? { id: origin._id, name: origin.name } : { id: '', name: 'Web' },
-      customer: {
-        name: customerData.name,
-        phone: customerData.phone,
-      },
-      items: orderItems,
-      getSms: customerData.getSms,
+      previewOrderId,
       transactionDetails,
-      discount: discount
-        ? {
-            name: discount.name,
-            type: discount.type,
-            amountCents: discount.amountCents,
-          }
-        : undefined,
     };
 
     try {
@@ -108,7 +60,7 @@ const ApplePay: React.FC<WalletsProps> = ({
       if (client.connected) client.emit('order_joined', { orderId: result.orderId });
       if (result?.orderId) {
         resetOrderState();
-        router.push(`/status/${restaurant._id}/${result.orderId}`);
+        router.push(Paths.status(restaurant._id, result.orderId), 'forward', 'replace');
       }
 
       return result;
@@ -131,7 +83,6 @@ const ApplePay: React.FC<WalletsProps> = ({
 
     script.onload = async () => {
       try {
-        console.log('Initializing EmergePay Wallets SDK with publicId:', publicId);
         const wallets = new window.emergepayWallets(publicId);
         walletsRef.current = wallets;
 

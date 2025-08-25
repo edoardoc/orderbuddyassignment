@@ -34,4 +34,8 @@ export const validationSchema = Joi.object({
   AZURE_STORAGE_CONNECTION_STRING: Joi.string().required(),
   APPLICATIONINSIGHTS_CONNECTION_STRING: Joi.string().required(),
   // APPINSIGHTS_INSTRUMENTATIONKEY: Joi.string().required(),
+
+  // SendGrid
+  SENDGRID_API_KEY: Joi.string().required(),
+  FROM_EMAIL: Joi.string().email().default('noreply@orderbuddy.com'),
 });

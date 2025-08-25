@@ -243,7 +243,7 @@ const App: React.FC = () => {
               />
 
               <Route
-                path='/:restaurantId/:locationId/apps/restaurant-settings'
+                path='/:restaurantId/apps/restaurant-settings'
                 render={(props) => (isAuthenticated ? <RestaurantSettingsPage /> : <Redirect to='/login' />)}
               />
                   <Route

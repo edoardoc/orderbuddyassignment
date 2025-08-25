@@ -4,18 +4,11 @@ import { MenuService } from './menu.service';
 import { EventsModule } from '../events/events.module';
 import { WebPushModule } from '../web-push/web-push.module';
 import { MessageModule } from 'src/message/message.module';
-// import { EventsGateway } from '../events/events.gateway'
-// import { EventsService } from '../events/events.service'
-// import { EventsModule } from '../events/events.module'
-// import { WebPushModule } from '../web-push/web-push.module'
+import { OrderAppModule } from 'src/order-app/order-app.module';
 
 @Module({
-  // imports: [EventsModule, WebPushModule],
-  // providers: [MenuService, EventsGateway, EventsService, EventsModule],
-  // controllers: [MenuController],
-  // exports: [MenuService],
 
-  imports: [EventsModule, WebPushModule, MessageModule],
+  imports: [EventsModule, WebPushModule, MessageModule,OrderAppModule],
   providers: [MenuService],
   controllers: [MenuController],
   exports: [MenuService],

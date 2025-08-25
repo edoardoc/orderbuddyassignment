@@ -27,11 +27,10 @@ export function useSalesItemApi(restaurantId: string, locationId: string, date: 
       if (!restaurantId || !locationId || !date) {
         return [];
       }
-      const formattedDate = format(new Date(date), 'yyyy-MM-dd');
-      
+
       try {
         const response = await axiosInstance.get<ApiResponse<SalesItem[]>>(
-          `/report/sales_by_item/${restaurantId}/${locationId}/${formattedDate}`,
+          `/report/sales_by_item/${restaurantId}/${locationId}/${date}`,
         );
         const validatedData = salesByItemResponseSchema.parse(response.data);
         return validatedData.data;
@@ -39,30 +38,22 @@ export function useSalesItemApi(restaurantId: string, locationId: string, date: 
         if (error instanceof z.ZodError) {
           console.error('Sales by item data validation failed:', error.errors);
           // Log validation error to Application Insights
-          logExceptionError(
-            new Error('Invalid sales by item data format'),
-            'SalesItemApi',
-            {
-              zodError: JSON.stringify(error.errors),
-              endpoint: `/report/sales_by_item/${restaurantId}/${locationId}/${formattedDate}`,
-              restaurantId,
-              locationId,
-              date
-            }
-          );
-          throw new Error('Invalid sales by item data format');
-        }
-        // Log other errors to Application Insights
-        logExceptionError(
-          error,
-          'SalesItemApi',
-          {
+          logExceptionError(new Error('Invalid sales by item data format'), 'SalesItemApi', {
+            zodError: JSON.stringify(error.errors),
             endpoint: `/report/sales_by_item/${restaurantId}/${locationId}/${date}`,
             restaurantId,
             locationId,
-            date
-          }
-        );
+            date,
+          });
+          throw new Error('Invalid sales by item data format');
+        }
+        // Log other errors to Application Insights
+        logExceptionError(error, 'SalesItemApi', {
+          endpoint: `/report/sales_by_item/${restaurantId}/${locationId}/${date}`,
+          restaurantId,
+          locationId,
+          date,
+        });
         throw error;
       }
     },

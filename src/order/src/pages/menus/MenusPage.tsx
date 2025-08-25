@@ -42,19 +42,16 @@ export const MenusPage: React.FC = () => {
   const { data: menus } = useMenus(restaurantId, locationId);
   const currentLang = getUserLang();
   const router = useIonRouter();
-  const setMenuId = useOrderStore((s) => s.setSelectedMenuId);
 
   const handleMenuClick = (menu: any) => {
-    setMenuId(menu._id);
     router.push(Paths.menu(restaurantId, locationSlug, locationId, menu.menuSlug, menu._id, originId), 'forward');
   };
   useEffect(() => {
     if (menus && menus.length === 1) {
       const menu = menus[0];
-      setMenuId(menu._id);
       router.push(Paths.menu(restaurantId, locationSlug, locationId, menu.menuSlug, menu._id, originId), 'forward');
     }
-  }, [menus, restaurantId, locationSlug, locationId, originId, router, setMenuId]);
+  }, [menus, restaurantId, locationSlug, locationId, originId, router]);
 
   return (
     <IonPage>

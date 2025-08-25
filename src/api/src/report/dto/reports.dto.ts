@@ -60,7 +60,11 @@ export class SalesByOriginResponse {
   @IsNotEmpty()
   @IsString()
   originId: string;
-  
+
+  @IsNotEmpty()
+  @IsString()
+  name: string;
+
   @IsNotEmpty()
   @IsNumber()
   soldCount: number;

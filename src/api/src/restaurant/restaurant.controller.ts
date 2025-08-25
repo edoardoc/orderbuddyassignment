@@ -61,6 +61,34 @@ export class RestaurantController {
     return res.status(HttpStatus.OK).json({ data: restaurants });
   }
 
+  @Post('/create/:userId')
+  async createRestaurant(
+    @Param('userId') userId: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<Response<ApiResponse<{ restaurant: RestaurantDto }>>> {
+    const requestId = req['requestId'];
+
+    try {
+      const result = await this.restaurantService.createRestaurant(userId);
+      return res.status(HttpStatus.CREATED).json({
+        data: result,
+      });
+    } catch (error) {
+      this.logger.error(
+        {
+          module: 'restaurant',
+          event: 'create_restaurant',
+          correlationId: requestId,
+          error: error.message,
+          userId,
+        },
+        'Error creating restaurant',
+      );
+      throw new BadRequestException(error.message);
+    }
+  }
+
   // @RequireRestaurant() //restaurant.guard.ts
   @Get('/restaurants/:restaurantId/locations')
   async getRestaurantLocations(
@@ -76,8 +104,37 @@ export class RestaurantController {
       });
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw error;
+        throw new NotFoundException(error.message);
       }
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Post('/:restaurantId/location/create')
+  async createLocation(
+    @Param('restaurantId') restaurantId: string,
+    @Res() res: Response,
+    @Req() req: Request,
+  ): Promise<Response<ApiResponse<LocationDto>>> {
+    const requestId = req['requestId'];
+
+    try {
+      const location = await this.restaurantService.createLocation(restaurantId);
+
+      return res.status(HttpStatus.CREATED).json({
+        data: location,
+      });
+    } catch (error) {
+      this.logger.error(
+        {
+          module: 'restaurant',
+          event: 'create_location',
+          correlationId: requestId,
+          error: error.message,
+          restaurantId,
+        },
+        'Error creating location',
+      );
       throw new BadRequestException(error.message);
     }
   }

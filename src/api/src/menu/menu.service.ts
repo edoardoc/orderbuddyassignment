@@ -2,8 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
 import {
-  CreateOrderDto,
-  OrderItemDto,
   OrderStatusResponseDto,
   RestaurantResponseDto,
 } from './dtos/menu.controller.dto';
@@ -17,6 +15,7 @@ import { MessageService } from '../message/message.service';
 import { COLLECTIONS } from 'src/db/collections';
 import { logger } from 'src/logger/pino.logger';
 import { appInsightsClient } from 'src/logger/appinsightss-transport';
+import { CreateOrderFromPreviewDto } from './dtos/create-order-from-preview.dto';
 
 @Injectable()
 export class MenuService {
@@ -91,55 +90,50 @@ export class MenuService {
     }
   }
 
-  async createOrder(body: CreateOrderDto, correlationId: string) {
+  async createOrder(body: CreateOrderFromPreviewDto, correlationId: string) {
+    const previewOrderId = body.previewOrderId ;
     this.logger.trace(
       {
         module: 'order',
         event: 'create_order_started',
         correlationId,
-        restaurantId: body.restaurantId,
+        previewOrderId,
       },
       'Order initiated',
     );
 
-    const orderTotalPrice = body.items.reduce(
-      (accumulator: number, currentValue: OrderItemDto) => accumulator + currentValue.price,
-      0,
-    );
-    const orderTotalPriceInDollars = orderTotalPrice / 100;
-    const taxRate = this.configService.get<number>('TAX_RATE');
-    if (!taxRate) throw new Error('TAX_RATE not configured');
-    const totalPriceWithTax = Math.round(orderTotalPrice + orderTotalPrice * taxRate);
-    let OrderTotalPrice = totalPriceWithTax;
-    if (body.discount && body.discount.amountCents) {
-      const discountAmount = Math.min(body.discount.amountCents, totalPriceWithTax);
-      OrderTotalPrice = Math.max(0, totalPriceWithTax - discountAmount);
+    // Get the preview order from the collection
+    const previewOrdersCollection = this.db.collection(COLLECTIONS.ORDERS_PREVIEWS);
+    const previewOrder = await previewOrdersCollection.findOne({
+      _id: typeof previewOrderId === 'string' ? new ObjectId(previewOrderId) : previewOrderId,
+    });
+
+    if (!previewOrder) {
+      throw new Error(`Preview order not found with id: ${previewOrderId}`);
     }
 
     const orderId = new ObjectId();
     const orderCode = orderId.toString().slice(-4).toUpperCase();
 
+    // Create the order from the preview order
     const orderToCreate = {
       _id: orderId,
       orderCode: orderCode,
       paymentId: body.paymentId,
-      restaurantId: body.restaurantId,
-      locationId: new ObjectId(body.locationId),
-      locationSlug: body.locationSlug,
+      restaurantId: previewOrder.restaurantId,
+      locationId: previewOrder.locationId,
+      locationSlug: previewOrder.locationSlug,
       meta: {
         correlationId: correlationId,
       },
-      customer: body.customer,
-      origin: {
-        id: body.origin.id ? body.origin.id : '',
-        name: body.origin.name,
-      },
-      items: body.items.map((item) => {
+      customer: previewOrder.customer,
+      origin: previewOrder.origin,
+      items: previewOrder.items.map((item) => {
         return new OrderItem(
           item.id,
           item.menuItemId,
           item.name,
-          item.price,
+          item.priceCents,
           item.startedAt,
           item.completedAt,
           item.modifiers,
@@ -148,30 +142,25 @@ export class MenuService {
           item.notes,
         );
       }),
-      discount: body.discount,
+      discount: previewOrder.discount,
       status: OrderStatus.OrderCreated,
       startedAt: new Date(),
-      totalPriceCents: OrderTotalPrice,
-      getSms: body.getSms,
+      totalPriceCents: previewOrder.totalPriceCents,
+      getSms: previewOrder.getSms,
     };
-    // const mockFailedResult = {
-    //   acknowledged: false,
-    //   insertedId: new ObjectId(),
-    // };
-    // const result = mockFailedResult;
 
     const result = await this.ordersCollection.insertOne(orderToCreate);
-    const itemsCount = body.items.length;
+    const itemsCount = orderToCreate.items.length;
     if (result.acknowledged) {
       appInsightsClient.trackMetric({ name: 'orderCount', value: 1 });
-      appInsightsClient.trackMetric({ name: 'orderTotalCents', value: OrderTotalPrice });
+      appInsightsClient.trackMetric({ name: 'orderTotalCents', value: orderToCreate.totalPriceCents });
       appInsightsClient.trackMetric({ name: 'orderItemsCount', value: itemsCount });
       appInsightsClient.trackEvent({
         name: 'new_order_placed',
         properties: {
           orderItemsCount: itemsCount,
-          orderTotalCents: OrderTotalPrice,
-          restaurantId: body.restaurantId,
+          orderTotalCents: orderToCreate.totalPriceCents,
+          restaurantId: orderToCreate.restaurantId,
           orderId: orderId.toString(),
           correlationId,
         },
@@ -181,7 +170,7 @@ export class MenuService {
           module: 'order',
           event: 'create_order_success',
           correlationId,
-          restaurantId: body.restaurantId,
+          restaurantId: orderToCreate.restaurantId,
           orderId: orderId.toString(),
         },
         'Order created',
@@ -194,14 +183,14 @@ export class MenuService {
           module: 'order',
           event: 'create_order_failed',
           correlationId,
-          restaurantId: body.restaurantId,
+          restaurantId: orderToCreate.restaurantId,
         },
         'Order creation failed',
       );
       throw new Error('Failed to create order');
     }
 
-    const restaurantId = body.restaurantId;
+    const restaurantId = orderToCreate.restaurantId;
 
     const restaurantData = await this.getRestaurantById(restaurantId);
 
@@ -213,9 +202,9 @@ export class MenuService {
     const statusLink = `${menuEndpoint}/status/${restaurantData._id}/${orderId}`;
     const message = `OrderBuddy-${restaurantData.name}: your order #${orderCode} has been accepted, track progress here ${statusLink}`; //order number
 
-    if (body.getSms) {
+    if (orderToCreate.getSms) {
       try {
-        const result = await this.messageService.sendMessage(body.customer.phone, message);
+        const result = await this.messageService.sendMessage(orderToCreate.customer.phone, message);
         if (!result) {
           throw new Error('Failed to notify customer');
         }
@@ -224,7 +213,7 @@ export class MenuService {
             module: 'order',
             event: 'sms_sent',
             correlationId,
-            phone: body.customer.phone,
+            phone: orderToCreate.customer.phone,
           },
           'Order notified to customer',
         );
@@ -235,7 +224,7 @@ export class MenuService {
             event: 'sms_failed',
             correlationId,
             error: error.message,
-            phone: body.customer.phone,
+            phone: previewOrder.customer.phone,
           },
           'Exception - Failed to notify customer',
         );
@@ -245,7 +234,7 @@ export class MenuService {
             event: 'sms_failed',
             correlationId,
             error: error.message,
-            phone: body.customer.phone,
+            phone: previewOrder.customer.phone,
           },
           'Exception - Failed to notify customer',
         );
@@ -253,7 +242,10 @@ export class MenuService {
     } else {
       this.logger.debug('SMS not requested');
     }
-    const alertNumbersData = await this.getAlertNumbers(body.restaurantId, body.locationId);
+    const alertNumbersData = await this.getAlertNumbers(
+      orderToCreate.restaurantId,
+      orderToCreate.locationId.toString(),
+    );
     if (alertNumbersData && alertNumbersData.alertNumbers && alertNumbersData.alertNumbers.length > 0) {
       const orderReadySms = `OrderBuddy- you have received an order #${orderCode}`;
       for (const alertNumber of alertNumbersData.alertNumbers) {
@@ -262,7 +254,7 @@ export class MenuService {
         }
       }
     }
-    const locationId = body.locationId;
+    const locationId = orderToCreate.locationId;
     const locationRoom = `${restaurantId}_${locationId}`;
     this.eventsGateway.server.to(locationRoom).emit('order_received', {
       orderId,
@@ -270,10 +262,14 @@ export class MenuService {
       locationId,
       correlationId,
     });
-
     // Check autoAcceptOrder from location collection
     const location = await this.locationsCollection.findOne(
-      { _id: new ObjectId(body.locationId) },
+      {
+        _id:
+          typeof orderToCreate.locationId === 'string'
+            ? new ObjectId(orderToCreate.locationId)
+            : orderToCreate.locationId,
+      },
       { projection: { autoAcceptOrder: 1 } },
     );
     const autoAcceptOrder = location?.autoAcceptOrder === true;
@@ -289,19 +285,20 @@ export class MenuService {
           },
         },
       );
-      const stationTags = [...new Set(body.items.flatMap((item) => item.stationTags))].filter(
+      const stationTags = [...new Set(orderToCreate.items.flatMap((item) => item.stationTags))].filter(
         (tag): tag is string => tag !== undefined,
       );
       const orderData = {
         orderId: orderId.toString(),
-        restaurantId: body.restaurantId,
-        locationId: body.locationId,
+        restaurantId: orderToCreate.restaurantId,
+        locationId:
+          typeof orderToCreate.locationId === 'string' ? orderToCreate.locationId : orderToCreate.locationId.toString(),
         stationTags,
         correlationId,
 
         orderDetails: {
           status: OrderStatus.OrderCreated,
-          items: body.items.map((item) => ({
+          items: orderToCreate.items.map((item) => ({
             name: item.name,
           })),
         },
@@ -313,7 +310,7 @@ export class MenuService {
           event: 'auto_accept',
           correlationId,
           orderId: orderId.toString(),
-          restaurantId: body.restaurantId,
+          restaurantId: orderToCreate.restaurantId,
           meta: {
             acceptedBy: 'system',
             acceptedAt: new Date().toISOString(),
@@ -346,7 +343,7 @@ export class MenuService {
             event: 'notifications_sent',
             correlationId: correlationId,
             orderId: orderId.toString(),
-            restaurantId: body.restaurantId,
+            restaurantId: orderToCreate.restaurantId,
           },
           'Order notified to store',
         );
@@ -371,7 +368,7 @@ export class MenuService {
           event: 'notifications_error',
           correlationId: correlationId,
           orderId: orderId.toString(),
-          restaurantId: body.restaurantId,
+          restaurantId: previewOrder.restaurantId,
           error: error.message,
         },
         'Failed to notify store',
@@ -394,7 +391,7 @@ export class MenuService {
       items: 1,
       status: 1,
       totalPriceCents: 1,
-      discount: 1
+      discount: 1,
     };
 
     const order = await this.ordersCollection.findOne(query, { projection });

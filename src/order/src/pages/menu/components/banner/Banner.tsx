@@ -19,12 +19,12 @@ const Banner: React.FC<BannerProps> = (props) => {
   const isStoreOpen = useOrderStore((s) => s.location.isOpen);
   const originId = useQueryParams().get('originId') || 'web';
   const cartItems = useOrderStore((s) => s.cart.items);
-  const menuId = useOrderStore((s) => s.menuId);
-  const { locationSlug, menuSlug, restaurantId, locationId } = useParams<{
+  const { locationSlug, menuSlug, restaurantId, locationId,menuId } = useParams<{
     locationSlug: string;
     menuSlug: string;
     restaurantId: string;
     locationId: string;
+    menuId: string;
   }>();
   const navigateCart = () => {
     if (cartItems.length > 0 && isStoreOpen) {

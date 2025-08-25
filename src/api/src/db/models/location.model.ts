@@ -34,6 +34,7 @@ export interface Location {
   alertNumbers?: AlertNumber[];
   isMobile: boolean;
   printers: PrinterData[];
+  autoAcceptOrder: boolean;
 }
 
 export interface PrinterData {

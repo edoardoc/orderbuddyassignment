@@ -51,3 +51,14 @@ export interface OrderItemDto {
   variants?: any[];
   stationTags?: string[];
 }
+
+
+export class CreateOrderBody {
+  @IsNotEmpty() previewOrderId: string;
+  @IsNotEmpty() transactionToken: string;
+}
+
+export class CreateOrderUpiBody {
+  @IsNotEmpty() previewOrderId: string;
+  @IsNotEmpty() transactionDetails: any;
+}

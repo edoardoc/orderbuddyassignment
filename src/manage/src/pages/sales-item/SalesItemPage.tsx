@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import DateStepper from '../shared/date-stepper';
 import {
   IonContent,
   IonPage,
@@ -9,10 +10,6 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonText,
-  IonDatetime,
-  IonDatetimeButton,
-  IonModal,
   IonRefresher,
   IonRefresherContent,
   RefresherEventDetail,
@@ -23,18 +20,11 @@ import EmptyState from '../orders-page/components/EmptyState';
 import { SalesItemList } from './components/SalesItemList';
 import { SalesItemMetrics } from './components/SalesItemMetrics';
 import '../../../style.css';
+import { getYesterdayDateYYYMMDD } from '../../utils/datetimeUtil';
 
 const SalesItemPage: React.FC = () => {
   const modalRef = useRef<HTMLIonModalElement>(null);
-
-  const getYesterdayDate = (): string => {
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    return yesterday.toISOString();
-  };
-
-  const [selectedDate, setSelectedDate] = useState<string>(getYesterdayDate());
+  const [selectedDate, setSelectedDate] = useState<string>(getYesterdayDateYYYMMDD());
 
   const {
     salesItems,
@@ -68,18 +58,7 @@ const SalesItemPage: React.FC = () => {
         </IonRefresher>
 
         <IonGrid>
-          <IonRow className='ion-justify-content-center ion-padding-top'>
-            <IonDatetimeButton datetime='item-sales-date'></IonDatetimeButton>
-            <IonModal ref={modalRef} keepContentsMounted={true}>
-              <IonDatetime
-                id='item-sales-date'
-                presentation='date'
-                value={selectedDate}
-                onIonChange={(e) => handleDateChange(e.detail.value as string)}
-              ></IonDatetime>
-            </IonModal>
-          </IonRow>
-
+          <DateStepper selectedDate={selectedDate} onDateChange={setSelectedDate} />
           {isLoading && (
             <IonRow>
               <IonCol>
@@ -137,7 +116,6 @@ const SalesItemPage: React.FC = () => {
                 />
 
                 <IonCard>
-           
                   <IonCardContent>
                     <SalesItemList items={salesItems} calculateWidth={calculateWidth} formatCurrency={formatCurrency} />
                   </IonCardContent>

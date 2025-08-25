@@ -10,28 +10,20 @@ export function useCreateOrder() {
   const requestUuid = uuid();
 
   return useMutation<any, Error, any>({
-    mutationFn: async (orderData: any) => {
+    mutationFn: async (previewOrderId: any) => {
       try {
-        const response = await axiosInstance.post<ApiResponse<any>>('menu-app/restaurant/order', orderData, {
+        const response = await axiosInstance.post<ApiResponse<any>>('payments/place-order-without-payment', {previewOrderId}, {
           headers: {
             'X-Request-Id': requestUuid,
           },
         });
-     
         return response.data;
       } catch (error) {
-        logApiError(error, 'menu-app/restaurant/order', {
-          operation: 'createOrder',
-          restaurantId: orderData.restaurantId,
-          locationId: orderData.locationId,
-          requestId: requestUuid,
-          orderItems: orderData.items?.length
-        });
         throw error;
       }
     },
     onError: (error) => {
-      logApiError(error, 'menu-app/restaurant/order', { 
+      logApiError(error, 'payments/place-order-without-payment', { 
         operation: 'createOrderMutation',
         requestId: requestUuid
       });

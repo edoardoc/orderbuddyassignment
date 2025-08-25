@@ -8,19 +8,24 @@ import {
   useIonRouter,
   IonText,
   IonCardContent,
+  useIonToast,
 } from '@ionic/react';
 import React, { useEffect, useState } from 'react';
 import { useRestaurants } from '../../queries/useRestaurants';
 import Session from 'supertokens-web-js/recipe/session';
 import { appStore } from '../../store';
 import LaunchPadNavBar from '../../components/LanunchpadNavBar';
+import { useCreateRestaurant } from '../../queries/useCreateRestaurant';
+import { add, close } from 'ionicons/icons';
 
 const RestaurantsPage: React.FC = () => {
   const [userId, setUserId] = useState<string | undefined>();
   const { setRestaurantName } = appStore();
   const { setLocationName } = appStore();
   const { setRestaurantLogo } = appStore();
+  const [presentToast] = useIonToast();
 
+  const createRestaurantMutation = useCreateRestaurant();
   useEffect(() => {
     const getJWT = async () => {
       if (await Session.doesSessionExist()) {
@@ -44,9 +49,34 @@ const RestaurantsPage: React.FC = () => {
   React.useEffect(() => {
     setRestaurantName('');
     setLocationName('');
-    if (restaurantsData && restaurantsData.length === 1) {
-      setRestaurantLogo(restaurantsData[0].logo || '');
-      handleRestaurantClick(restaurantsData[0]._id);
+
+    if (restaurantsData) {
+      if (restaurantsData.length === 0 && userId) {
+        createRestaurantMutation.mutate(userId, {
+          onSuccess: (data) => {
+            const restaurant = data.restaurant;
+            setRestaurantLogo(restaurant.logo || '');
+            setRestaurantName(restaurant.name || '');
+            router.push(`/${restaurant._id}/apps/restaurant-settings`);
+            return;
+          },
+        });
+      } else if (restaurantsData.length === 1) {
+        setRestaurantLogo(restaurantsData[0].logo || '');
+
+        if (restaurantsData[0].name && restaurantsData[0]._id && restaurantsData[0].logo && restaurantsData[0].concept) {
+          handleRestaurantClick(restaurantsData[0]._id);
+        }
+        else {
+          presentToast({
+            message: 'Restaurant data is incomplete. Please check the restaurant details.',
+            duration: 2000,
+            color: 'warning',
+          });
+            router.push(`/${ restaurantsData[0]._id }/apps/restaurant-settings`);
+            return
+        }
+      }
     }
   }, [restaurantsData]);
   return (
@@ -66,7 +96,12 @@ const RestaurantsPage: React.FC = () => {
                     {restaurant.logo && <img src={restaurant.logo} alt={restaurant.name} style={{ height: '64px' }} />}
 
                     <IonText
-                      style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}
+                      style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: 'block',
+                      }}
                     >
                       {restaurant.name}
                     </IonText>
