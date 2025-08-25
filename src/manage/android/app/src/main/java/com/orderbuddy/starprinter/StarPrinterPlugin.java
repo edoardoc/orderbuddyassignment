@@ -27,44 +27,34 @@ public class StarPrinterPlugin extends Plugin {
             PrintPayload payload = adapter.fromJson(data);
 
             if (payload == null) {
-                call.reject("Payload is null after parsing");
+                call.reject("print payload is null");
                 return;
             }
 
-            String ip = payload.printerInfo != null ? payload.printerInfo.ip : "unknown";
-            Log.d("printer", ip);
-
-            if (payload.order != null && payload.order._id != null) {
-                if ("socket".equals(payload.source) && !PrintGuard.INSTANCE.tryPrint(payload.order._id)) {
-                    call.resolve(); 
-                    return;
-                } else if ("manual".equals(payload.source)) {
-                    Log.d("PrintGuard", "Manual print requested for order " + payload.order._id + ", allowing");
-                }
+            if (payload.printerInfo == null || payload.printerInfo.ip == null) {
+                call.reject("printer identifier payload is null");
+                return;
             }
-            Log.d("printing first", "print");
+
+            if (payload.order == null || payload.order._id == null) {
+                call.reject("order in payload is null");
+                return;
+            }
+
+            if ("socket".equals(payload.source) && !PrintGuard.INSTANCE.canPrint(payload.order._id)) {
+                Log.d("print", "printed already");
+                call.resolve();
+                return;
+            }
+
             Context context = getContext();
-            StarPrinterManager starPrinterManager = new StarPrinterManager(ip, context);
-            starPrinterManager.print(payload.order, payload.restaurantInfo, payload.printerInfo);// remove when production
+            StarPrinterManager starPrinterManager = new StarPrinterManager(payload.printerInfo.ip, context);
+            starPrinterManager.print(payload.order, payload.restaurantInfo, payload.printerInfo);
 
             call.resolve();
         } catch (Exception e) {
-            call.reject("Failed to parse JSON using Moshi", e);
-            Log.d("PrintGuard", "PrintGuard failed" );
-
-    PrintPayload payload = null;
-    try {
-        Moshi moshi = new Moshi.Builder().build();
-        JsonAdapter<PrintPayload> adapter = moshi.adapter(PrintPayload.class);
-        payload = adapter.fromJson(data);
-        
-        if (payload != null && payload.order != null && payload.order._id != null) {
-            PrintGuard.INSTANCE.clear(payload.order._id);
-            Log.d("PrintGuard", "Cleared failed print for order " + payload.order._id);
+            call.reject("Print failed", e);
+            //todo: trace to app insights
         }
-    } catch (Exception parseEx) {
-        Log.d("PrintGuard", "Failed to clear print guard due to parsing error");
-    }
-}
     }
 }
