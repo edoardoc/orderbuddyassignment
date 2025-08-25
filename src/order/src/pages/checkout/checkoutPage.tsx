@@ -187,7 +187,7 @@ const CheckoutPage: React.FC = () => {
 
                 {/* Apple Pay */}
                 {location.emergepayWalletsPublicId && (
-                  <div className='payment-method-section' style={{display:"flex",flexDirection:"row",justifyContent:"center"}}>
+                  <div className='payment-method-section' style={{display:"flex",flexDirection:"row",justifyContent:"center",alignItems:"center",paddingTop:"120px"}}>
                     {previewOrderDetails && (
                       <ApplePay
                         previewOrderId={previewOrderId}

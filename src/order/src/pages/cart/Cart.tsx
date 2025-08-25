@@ -57,6 +57,7 @@ const CartPage: React.FC = () => {
   const totalInDollars = (cartTotalCents / 100).toFixed(2);
   const taxInDollars = (cartTaxCents / 100).toFixed(2);
   const setOrder = useOrderStore((s) => s.setOrder);
+  const resetOrderState = useOrderStore((s) => s.resetOrderState);
   const [customerData, setCustomerData] = useState({
     name: '',
     phone: '',
@@ -164,6 +165,10 @@ const CartPage: React.FC = () => {
         );
       } else if (!location.acceptPayment) {
         const orderresult = await createOrderMutation.mutateAsync(previewResult.previewOrderId);
+        if (client.connected) {
+          initiateOrder(orderresult.orderId);
+        }
+        resetOrderState();
         router.push(Paths.status(restaurant._id, orderresult.orderId), 'forward');
       }
     } catch (error) {

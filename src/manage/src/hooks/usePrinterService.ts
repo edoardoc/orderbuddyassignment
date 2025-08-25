@@ -17,7 +17,12 @@ interface PrinterInfo {
   type: string;
 }
 export function usePrinterService() {
-  const printOrder = async (order: Order, restaurantInfo: RestaurantInfo, printerInfo: PrinterInfo) => {
+  const printOrder = async (
+    order: Order,
+    restaurantInfo: RestaurantInfo,
+    printerInfo: PrinterInfo,
+    source: string,
+  ) => {
     if (!printerInfo) {
       console.warn('No printer configured for orders');
       return;
@@ -29,6 +34,7 @@ export function usePrinterService() {
       order: JSON.parse(JSON.stringify(order)),
       printerInfo: JSON.parse(JSON.stringify(printerInfo)),
       restaurantInfo: JSON.parse(JSON.stringify(restaurantInfo)),
+      source: source, 
     };
 
     await StarPrinter.printOverNetwork({ data: JSON.stringify(payload) });

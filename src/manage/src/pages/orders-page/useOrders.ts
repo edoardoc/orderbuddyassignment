@@ -87,7 +87,7 @@ export const useOrders = (restaurantId: string, locationId: string) => {
   };
   const printOrder = debounce((order: Order) => {
     if (selectedPrinter) {
-      printOrderService(order, restaurantInfo, selectedPrinter);
+      printOrderService(order, restaurantInfo, selectedPrinter, 'manual');
     }
   }, 1000);
 
@@ -124,7 +124,7 @@ export const useOrders = (restaurantId: string, locationId: string) => {
           orderData.correlationId,
         );
         if (newOrder && selectedPrinter) {
-          printOrderService(newOrder, restaurantInfo, selectedPrinter);
+          printOrderService(newOrder, restaurantInfo, selectedPrinter, 'socket');
           sortOrder(newOrder);
           playNotificationSound();
         }

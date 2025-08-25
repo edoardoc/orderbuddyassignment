@@ -35,11 +35,10 @@ export const useHistoryOrders = (restaurantId: string, locationId: string, selec
       setPrinters(printersData);
     }
   }, [printersData]);
-  
   const printOrder = debounce((order: Order) => {
     try {
       if (selectedPrinter) {
-        printOrderService(order, restaurantInfo, selectedPrinter);
+        printOrderService(order, restaurantInfo, selectedPrinter, 'manual');
       }
     } catch (error) {
       logExceptionError(error instanceof Error ? error : new Error(String(error)), 'useHistoryOrders.printOrder', {
