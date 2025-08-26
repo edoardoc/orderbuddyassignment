@@ -15,7 +15,6 @@ public class StarPrinterPlugin extends Plugin {
 
     @PluginMethod
     public void printOverNetwork(PluginCall call) {
-
         String data = call.getString("data");
         if (data == null) {
             call.reject("Missing data");
@@ -28,20 +27,34 @@ public class StarPrinterPlugin extends Plugin {
             PrintPayload payload = adapter.fromJson(data);
 
             if (payload == null) {
-                call.reject("Payload is null after parsing");
+                call.reject("print payload is null");
                 return;
             }
 
-            String ip = payload.printerInfo != null ? payload.printerInfo.ip : "unknown";
-            Log.d("printer", ip);
+            if (payload.printerInfo == null || payload.printerInfo.ip == null) {
+                call.reject("printer identifier payload is null");
+                return;
+            }
+
+            if (payload.order == null || payload.order._id == null) {
+                call.reject("order in payload is null");
+                return;
+            }
+
+            if ("socket".equals(payload.source) && !PrintGuard.INSTANCE.canPrint(payload.order._id)) {
+                Log.d("print", "printed already");
+                call.resolve();
+                return;
+            }
 
             Context context = getContext();
-            StarPrinterManager starPrinterManager = new com.orderbuddy.starprinter.StarPrinterManager(ip, context);
+            StarPrinterManager starPrinterManager = new StarPrinterManager(payload.printerInfo.ip, context);
             starPrinterManager.print(payload.order, payload.restaurantInfo, payload.printerInfo);
 
             call.resolve();
         } catch (Exception e) {
-            call.reject("Failed to parse JSON using Moshi", e);
+            call.reject("Print failed", e);
+            //todo: trace to app insights
         }
     }
 }
