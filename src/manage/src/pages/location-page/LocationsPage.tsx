@@ -36,8 +36,6 @@ const LocationsPage: React.FC = () => {
     return;
   };
 
-
-
   useEffect(() => {
     setLocationName('');
     if (locations && locations.length === 0) {
@@ -55,19 +53,22 @@ const LocationsPage: React.FC = () => {
     } else if (locations?.length === 1) {
       setLocationName(locations[0].name);
       setLocationSlug(locations[0].locationSlug);
-      if (
-        locations[0].timezone &&
-        locations[0].workingHours &&
-        Array.isArray(locations[0].alertNumbers) && locations[0].alertNumbers.length > 0 &&
-        locations[0].address &&
-        locations[0].contact?.email
-      ) {
-        router.push(`/${restaurantId}/${locations[0]._id}/launch-pad`);
-        return;
-      } else {
-        console.warn('Single location found but missing required fields, redirecting to settings');
-        router.push(`/${restaurantId}/${locations[0]._id}/apps/location-settings`);
-      }
+      router.push(`/${restaurantId}/${locations[0]._id}/launch-pad`);
+      return;
+
+      // if (
+      //   locations[0].timezone &&
+      //   locations[0].workingHours &&
+      //   Array.isArray(locations[0].alertNumbers) && locations[0].alertNumbers.length > 0 &&
+      //   locations[0].address &&
+      //   locations[0].contact?.email
+      // ) {
+      //   router.push(`/${restaurantId}/${locations[0]._id}/launch-pad`);
+      //   return;
+      // } else {
+      //   console.warn('Single location found but missing required fields, redirecting to settings');
+      //   router.push(`/${restaurantId}/${locations[0]._id}/apps/location-settings`);
+      // }
     }
   }, [locations]);
 
