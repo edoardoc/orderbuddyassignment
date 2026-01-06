@@ -25,9 +25,9 @@ logs/
 .env.development
 .env.production
 .env.test
+.env.example
 
 # IDEs & Editors
-.vscode/
 .idea/
 *.sw?
 *.DS_Store
