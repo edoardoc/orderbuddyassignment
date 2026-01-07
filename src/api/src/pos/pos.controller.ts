@@ -2,8 +2,8 @@ import { Controller, Get, Param, Res, HttpStatus, UseGuards } from '@nestjs/comm
 import { Response } from 'express';
 import { PosService } from './pos.service';
 import { GetMenuParamDto, GetMenusParamDto, MenuDto, MenuSummaryDto } from './dto/create-po.dto';
-import { ApiResponse } from 'src/models/api-response';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { ApiResponse } from '../models/api-response';
+import { AuthGuard } from '../auth/auth.guard';
 @UseGuards(AuthGuard)
 @Controller('pos')
 export class PosController {

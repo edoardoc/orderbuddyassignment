@@ -9,7 +9,7 @@ import { Restaurant } from '../db/models/restaurant.model';
 import { Location } from '../db/models/location.model';
 import { OriginDto, OriginsResponseDto } from './dto/get-origin.dtos';
 import { UpdateQrStyleDto } from './dto/update-origin.dtos';
-import { AzureStorageService } from 'src/storage/storage.service';
+import { AzureStorageService } from '../storage/storage.service';
 import { EMAIL_SENDER } from '../email/email.module';
 import { EmailTemplateService } from '../email/email-template.service';
 const { QRCodeStyling } = require('qr-code-styling/lib/qr-code-styling.common.js');

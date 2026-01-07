@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { QrCodeStyle } from 'src/origins/dto/update-origin.dtos';
+import { QrCodeStyle } from '../../origins/dto/update-origin.dtos';
 
 export interface AlertNumber {
   _id?: string | ObjectId;

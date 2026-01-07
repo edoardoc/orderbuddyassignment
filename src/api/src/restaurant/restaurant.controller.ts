@@ -30,10 +30,10 @@ import {
 import { Response } from 'express';
 import { UpdateOrderStatusDto } from './dto/create-restaurant.dto';
 import { AuthGuard } from '../auth/auth.guard';
-import { ApiResponse } from 'src/models/api-response';
-import { OrderStatus } from 'src/constants';
-import { MessageService } from 'src/message/message.service';
-import { logger } from 'src/logger/pino.logger';
+import { ApiResponse } from '../models/api-response';
+import { OrderStatus } from '../constants';
+import { MessageService } from '../message/message.service';
+import { logger } from '../logger/pino.logger';
 import { UpdateItemAvailabilityParamDto } from './dto/update-restaurant.dto';
 import { RestaurantUpdateDto } from './dto/restaurant-update.dto';
 @UseGuards(AuthGuard)

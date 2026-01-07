@@ -6,8 +6,8 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { CreateOrderBody, CreateOrderUpiBody } from './dtos/payments.controller.dto';
 import { MenuService } from '../menu/menu.service';
-import { COLLECTIONS } from 'src/db/collections';
-import { logger } from 'src/logger/pino.logger';
+import { COLLECTIONS } from '../db/collections';
+import { logger } from '../logger/pino.logger';
 
 @Injectable()
 export class PaymentsService {

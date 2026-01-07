@@ -4,7 +4,7 @@ import * as webPush from 'web-push';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
 import * as admin from 'firebase-admin';
-import { COLLECTIONS } from 'src/db/collections';
+import { COLLECTIONS } from '../db/collections';
 interface NotificationPayload {
   title: string;
   body: string;

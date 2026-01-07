@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import * as webpush from 'web-push';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
-import { COLLECTIONS } from 'src/db/collections';
+import { COLLECTIONS } from '../db/collections';
 
 @Controller('web-push')
 export class WebPushController {

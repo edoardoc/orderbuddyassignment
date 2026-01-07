@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Headers, Req,
 import { CampaignService } from './campaign.service';
 import { CampaignParams, CampaignParamsWithId, CreateCampaignDto } from './dto/create-campaign.dto';
 import { Request } from 'express';
-import { AuthGuard } from 'src/auth/auth.guard';
+import { AuthGuard } from '../auth/auth.guard';
 @UseGuards(AuthGuard)
 @Controller('campaign')
 export class CampaignController {

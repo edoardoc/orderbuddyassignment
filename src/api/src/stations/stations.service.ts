@@ -9,9 +9,9 @@ import {
   UpdateOrderItemDto,
 } from './dto/create-station.dto';
 import { COLLECTIONS } from '../db/collections';
-import { Stations } from 'src/db/models/station.model';
+import { Stations } from '../db/models/station.model';
 import { DateTime } from 'luxon';
-import { OrderStatus } from 'src/constants';
+import { OrderStatus } from '../constants';
 
 export interface OrderItem {
   id: string;

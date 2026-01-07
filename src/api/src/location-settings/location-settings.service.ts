@@ -2,8 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectClient } from 'nest-mongodb-driver';
 import { Db, ObjectId } from 'mongodb';
 import { UpdateLocationSettingDto } from './dto/update-location-setting.dto';
-import { COLLECTIONS } from 'src/db/collections';
-import { Location } from 'src/db/models';
+import { COLLECTIONS } from '../db/collections';
+import { Location } from '../db/models';
 
 @Injectable()
 export class LocationSettingsService {

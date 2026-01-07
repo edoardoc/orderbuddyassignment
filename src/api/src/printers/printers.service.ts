@@ -3,8 +3,8 @@ import { CreatePrinterDto } from './dto/create-printer.dto';
 import { UpdatePrinterDto } from './dto/update-printer.dto';
 import { InjectClient } from 'nest-mongodb-driver';
 import { Db, ObjectId } from 'mongodb';
-import { COLLECTIONS } from 'src/db/collections';
-import { Location } from 'src/db/models';
+import { COLLECTIONS } from '../db/collections';
+import { Location } from '../db/models';
 
 @Injectable()
 export class PrintersService {

@@ -22,8 +22,8 @@ import {
 } from './dto/create-origin.dto';
 import { ApiTags } from '@nestjs/swagger';
 import { GetOriginsParamsDto, OriginDto, OriginsResponseDto } from './dto/get-origin.dtos';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { ApiResponse } from 'src/models/api-response';
+import { AuthGuard } from '../auth/auth.guard';
+import { ApiResponse } from '../models/api-response';
 import { Response } from 'express';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';

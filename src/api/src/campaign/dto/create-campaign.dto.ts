@@ -9,7 +9,7 @@ import {
   IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CampaignType, Reward } from 'src/db/models';
+import { CampaignType, Reward } from '../../db/models';
 
 export class CampaignParams {
   @IsString()

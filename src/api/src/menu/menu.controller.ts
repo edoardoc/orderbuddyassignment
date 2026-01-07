@@ -18,9 +18,9 @@ import { OrderAppService } from '../order-app/order-app.service';
 import _ from 'lodash';
 import { GetRestaurantInfoDto } from '../restaurant/dto/restaurant.dto';
 import { ApiResponse } from '../models/api-response';
-import { CreateOrderDto } from 'src/payments/dtos/payments.controller.dto';
+import { CreateOrderDto } from '../payments/dtos/payments.controller.dto';
 import { CreateOrderFromPreviewDto } from './dtos/create-order-from-preview.dto';
-import { logger } from 'src/logger/pino.logger';
+import { logger } from '../logger/pino.logger';
 
 @Controller('menu-app/')
 export class MenuController {

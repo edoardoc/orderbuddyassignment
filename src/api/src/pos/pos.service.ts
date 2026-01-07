@@ -2,8 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectClient } from 'nest-mongodb-driver';
 import { Db, ObjectId } from 'mongodb';
 import { MenuSummaryDto } from './dto/create-po.dto';
-import { COLLECTIONS } from 'src/db/collections';
-import { Menu } from 'src/db/models/menu.model';
+import { COLLECTIONS } from '../db/collections';
+import { Menu } from '../db/models/menu.model';
 
 @Injectable()
 export class PosService {

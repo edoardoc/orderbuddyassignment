@@ -3,7 +3,7 @@ import { RestaurantService } from './restaurant.service';
 import { RestaurantController } from './restaurant.controller';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
-import { MessageModule } from 'src/message/message.module';
+import { MessageModule } from '../message/message.module';
 
 @Module({
   imports: [MessageModule],

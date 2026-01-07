@@ -10,7 +10,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { ObjectId } from 'mongodb';
-import { VariantDto, ModifierDto } from 'src/restaurant/dto/restaurant.dto';
+import { VariantDto, ModifierDto } from '../../restaurant/dto/restaurant.dto';
 export class GetMenusParamDto {
   @IsNotEmpty()
   @IsString()

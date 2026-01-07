@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Socket } from 'socket.io';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
-import { COLLECTIONS } from 'src/db/collections';
+import { COLLECTIONS } from '../db/collections';
 
 @Injectable()
 export class EventsService {

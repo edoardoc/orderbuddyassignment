@@ -2,7 +2,7 @@ import { Body, Controller, HttpException, HttpStatus, Param, Post, Req, Res } fr
 import { PaymentsService } from './payments.service';
 import { CreateOrderBody, CreateOrderUpiBody, GetStoreInfoDto } from './dtos/payments.controller.dto';
 import e, { Response } from 'express';
-import { logger } from 'src/logger/pino.logger';
+import { logger } from '../logger/pino.logger';
 
 @Controller('payments')
 export class PaymentsController {

@@ -12,7 +12,7 @@ import {
 import { Response } from 'express';
 import { ObjectId } from 'mongodb';
 import { OrderAppService } from './order-app.service';
-import { ApiResponse } from 'src/models/api-response';
+import { ApiResponse } from '../models/api-response';
 import {
   CheckoutFormDto,
   GetMenuParamDto,

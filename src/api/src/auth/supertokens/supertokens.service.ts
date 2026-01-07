@@ -7,9 +7,9 @@ import { TwilioService } from 'supertokens-node/recipe/passwordless/smsdelivery'
 import { ConfigService } from '@nestjs/config';
 import { Db, Collection, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
-import { User } from 'src/models/users';
-import { COLLECTIONS } from 'src/db/collections';
-import { Location } from 'src/db/models';
+import { User } from '../../models/users';
+import { COLLECTIONS } from '../../db/collections';
+import { Location } from '../../db/models';
 import { createJWT } from 'supertokens-node/recipe/session';
 @Injectable()
 export class SupertokensService {

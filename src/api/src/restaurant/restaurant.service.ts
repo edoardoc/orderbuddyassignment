@@ -4,12 +4,12 @@ import { Collection, Db, ObjectId } from 'mongodb';
 import { OrderStatus } from '../constants';
 import { CategoryDto, GetMenuItemDto, LocationDto, MenuSummaryDto, RestaurantDto } from './dto/restaurant.dto';
 import { RestaurantUpdateDto } from './dto/restaurant-update.dto';
-import { User } from 'src/models/users';
-import { COLLECTIONS } from 'src/db/collections';
-import { Menu, Restaurant } from 'src/db/models';
-import { Location } from 'src/db/models/location.model';
+import { User } from '../models/users';
+import { COLLECTIONS } from '../db/collections';
+import { Menu, Restaurant } from '../db/models';
+import { Location } from '../db/models/location.model';
 import { DateTime } from 'luxon';
-import { logger } from 'src/logger/pino.logger';
+import { logger } from '../logger/pino.logger';
 interface Station {
   id: string;
   name: string;

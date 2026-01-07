@@ -21,7 +21,7 @@ import {
   OrderAcceptedDto,
 } from './dtos/events.gateway.dto';
 import * as dotenv from 'dotenv'; // Change import statement
-import { logger as pinoLoggerTrace } from 'src/logger/pino.logger';
+import { logger as pinoLoggerTrace } from '../logger/pino.logger';
 
 dotenv.config();
 

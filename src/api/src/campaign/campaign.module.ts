@@ -3,7 +3,7 @@ import { CampaignService } from './campaign.service';
 import { CampaignController } from './campaign.controller';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 
 @Module({
   imports: [HttpModule, ConfigModule],

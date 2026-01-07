@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
-import { COLLECTIONS } from 'src/db/collections';
-import { Origin, Location, DayWorkingHours } from 'src/db/models';
-import { Menu } from 'src/db/models/menu.model';
-import { Restaurant } from 'src/db/models/restaurant.model';
+import { COLLECTIONS } from '../db/collections';
+import { Origin, Location, DayWorkingHours } from '../db/models';
+import { Menu } from '../db/models/menu.model';
+import { Restaurant } from '../db/models/restaurant.model';
 import {
   CheckoutFormDto,
   CreateOrderDto,
@@ -13,8 +13,8 @@ import {
   OrderStatusDto,
 } from './dtos/order-app.controller.dto';
 import { DateTime } from 'luxon';
-import { OrderItem } from 'src/models/order';
-import { OrderStatus } from 'src/constants';
+import { OrderItem } from '../models/order';
+import { OrderStatus } from '../constants';
 
 @Injectable()
 export class OrderAppService {

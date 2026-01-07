@@ -2,7 +2,7 @@ import { Controller, Get, Param, Res, HttpStatus, UseGuards, Body, Post, Query, 
 import { Response } from 'express';
 import { StationsService } from './stations.service';
 import { AuthGuard } from '../auth/auth.guard';
-import { ApiResponse } from 'src/models/api-response';
+import { ApiResponse } from '../models/api-response';
 import {
   CreateStationDto,
   GetStationOrderParamsDto,
@@ -11,7 +11,7 @@ import {
   StationOrderResponseDto,
   UpdateOrderItemDto,
 } from './dto/create-station.dto';
-import { logger } from 'src/logger/pino.logger';
+import { logger } from '../logger/pino.logger';
 
 @UseGuards(AuthGuard)
 @Controller('stations')

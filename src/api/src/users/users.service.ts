@@ -3,7 +3,7 @@ import { InjectClient } from 'nest-mongodb-driver';
 import { Db } from 'mongodb';
 import { deleteUser } from 'supertokens-node';
 import { User } from '../models/users';
-import { COLLECTIONS } from 'src/db/collections';
+import { COLLECTIONS } from '../db/collections';
 
 @Injectable()
 export class UsersService {

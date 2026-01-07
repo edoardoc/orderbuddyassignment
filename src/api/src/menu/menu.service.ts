@@ -12,9 +12,9 @@ import { EventsGateway } from '../events/events.gateway';
 import { WebPushService } from '../web-push/web-push.service';
 import { plainToClass } from 'class-transformer';
 import { MessageService } from '../message/message.service';
-import { COLLECTIONS } from 'src/db/collections';
-import { logger } from 'src/logger/pino.logger';
-import { appInsightsClient } from 'src/logger/appinsightss-transport';
+import { COLLECTIONS } from '../db/collections';
+import { logger } from '../logger/pino.logger';
+import { appInsightsClient } from '../logger/appinsightss-transport';
 import { CreateOrderFromPreviewDto } from './dtos/create-order-from-preview.dto';
 
 @Injectable()

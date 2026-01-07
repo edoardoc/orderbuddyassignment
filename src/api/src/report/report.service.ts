@@ -2,11 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Collection, Db, ObjectId } from 'mongodb';
 import { InjectClient } from 'nest-mongodb-driver';
 import { ConfigService } from '@nestjs/config';
-import { COLLECTIONS } from 'src/db/collections';
-import { Location } from 'src/db/models/location.model';
+import { COLLECTIONS } from '../db/collections';
+import { Location } from '../db/models/location.model';
 import { DateTime } from 'luxon';
 import { SalesByItemResponse, SalesByOriginResponse } from './dto/reports.dto';
-import { OrderStatus } from 'src/constants';
+import { OrderStatus } from '../constants';
 
 @Injectable()
 export class ReportService {
