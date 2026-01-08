@@ -9,14 +9,15 @@ This monorepo contains the full system architecture:
 - **Order App**: Customer-facing app for browsing menus, placing orders, and tracking status.
 - **Manage App**: Restaurant-side dashboard for managing menus and order routing.
 - **API**: Shared backend services, database integration, and routing logic.
-
+- **Web**: (Planned).
 ## 📁 Monorepo Structure
 
 ```
 src/
   ├── order/     # QR-based customer ordering app
   ├── manage/    # Manager dashboard (stubbed)
-  └── api/       # Backend service layer
+  ├── api/       # Backend service layer
+  └── web/       # Web app
 
 docs/            # Tasks, requirements, architecture, and knowledge base
 dev/             # Local dev tools (hooks, Nova, docker)
