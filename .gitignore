@@ -66,3 +66,7 @@ screenshots/
 
 # Optional: ignore agent-generated scratch
 agents/nova/tmp/
+
+# Codex et all
+.codex_mcp_home
+bassets/

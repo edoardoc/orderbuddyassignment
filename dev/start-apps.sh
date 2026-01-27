@@ -16,10 +16,15 @@ tmux split-window -h -t "$SESSION:0" -c ./src/manage 'npm run dev'
 tmux select-pane -t "$SESSION:0.0"
 tmux split-window -v -c ./src/api 'npm run dev'
 
+# Split vertically from API pane for Go GraphQL demo
+tmux select-pane -t "$SESSION:0.2"
+tmux split-window -v -c ./src/go-graphql-demo 'go run .'
+
 # Optional: rename the panes
 tmux select-pane -t "$SESSION:0.0" -T "order"
 tmux select-pane -t "$SESSION:0.1" -T "manage"
 tmux select-pane -t "$SESSION:0.2" -T "api"
+tmux select-pane -t "$SESSION:0.3" -T "go-graphql"
 
 # Attach to session
 tmux attach-session -t "$SESSION"

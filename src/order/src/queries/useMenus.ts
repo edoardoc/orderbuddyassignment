@@ -21,15 +21,59 @@ const menusResponseSchema = z.array(
 
 export type MenusResponse = z.infer<typeof menusResponseSchema>;
 
+const graphqlEndpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT as string | undefined;
+
+async function fetchMenusViaGraphql(restaurantId: string, locationId: string) {
+  const query = `
+    query Menus($restaurantId: String!, $locationId: String!) {
+      menus(restaurantId: $restaurantId, locationId: $locationId) {
+        _id
+        menuSlug
+        name {
+          en
+          es
+          pt
+        }
+        available
+      }
+    }
+  `;
+
+  const response = await fetch(graphqlEndpoint as string, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query,
+      variables: { restaurantId, locationId },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}`);
+  }
+
+  const payload = await response.json();
+  if (payload.errors?.length) {
+    throw new Error(payload.errors[0]?.message || 'GraphQL error');
+  }
+
+  return payload.data?.menus;
+}
+
 export function useMenus(restaurantId: string, locationId: string) {
   return useQuery<MenusResponse>({
     queryKey: ['menus', restaurantId, locationId],
     queryFn: async () => {
       try {
-        const response = await axiosInstance.get<ApiResponse<MenusResponse>>(
-          `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`
-        );
-        const data = handleApiResponse(response);
+        const data = graphqlEndpoint
+          ? await fetchMenusViaGraphql(restaurantId, locationId)
+          : handleApiResponse(
+              await axiosInstance.get<ApiResponse<MenusResponse>>(
+                `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`
+              )
+            );
         try {
           const validatedData = menusResponseSchema.parse(data);
           return validatedData.map((menu) => ({
@@ -57,7 +101,7 @@ export function useMenus(restaurantId: string, locationId: string) {
       } catch (error) {
         // Add Application Insights logging
         logApiError(error, `order-app/restaurants/${restaurantId}/locations/${locationId}/menus`, {
-          operation: 'fetchMenus',
+          operation: graphqlEndpoint ? 'fetchMenusGraphql' : 'fetchMenus',
           restaurantId,
           locationId,
         });

@@ -48,31 +48,35 @@ import { CampaignModule } from './campaign/campaign.module';
         },
       },
     }),
-    AuthModule.forRootAsync({
-      useFactory: async (configService: ConfigService) => {
-        const connectionURI = configService.get<string>('SUPERTOKENS_CONNECTION_URI');
-        const apiKey = configService.get<string>('SUPERTOKENS_API_KEY');
-        const apiDomain = configService.get<string>('API_ENDPOINT');
-        const websiteDomain = configService.get<string>('STORE_ENDPOINT');
+    ...(process.env.DISABLE_AUTH === 'true'
+      ? []
+      : [
+          AuthModule.forRootAsync({
+            useFactory: async (configService: ConfigService) => {
+              const connectionURI = configService.get<string>('SUPERTOKENS_CONNECTION_URI');
+              const apiKey = configService.get<string>('SUPERTOKENS_API_KEY');
+              const apiDomain = configService.get<string>('API_ENDPOINT');
+              const websiteDomain = configService.get<string>('STORE_ENDPOINT');
 
-        if (!connectionURI || !apiKey || !apiDomain || !websiteDomain) {
-          throw new Error('Required auth configuration is missing');
-        }
+              if (!connectionURI || !apiKey || !apiDomain || !websiteDomain) {
+                throw new Error('Required auth configuration is missing');
+              }
 
-        return {
-          connectionURI,
-          apiKey,
-          appInfo: {
-            appName: 'OrderBuddy',
-            apiDomain,
-            websiteDomain,
-            apiBasePath: '/login',
-            websiteBasePath: '/login',
-          },
-        };
-      },
-      inject: [ConfigService],
-    }),
+              return {
+                connectionURI,
+                apiKey,
+                appInfo: {
+                  appName: 'OrderBuddy',
+                  apiDomain,
+                  websiteDomain,
+                  apiBasePath: '/login',
+                  websiteBasePath: '/login',
+                },
+              };
+            },
+            inject: [ConfigService],
+          }),
+        ]),
     MongoDbDriverModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
@@ -110,7 +114,6 @@ import { CampaignModule } from './campaign/campaign.module';
     PaymentsModule,
     MenuModule,
     OrderAppModule,
-    AuthModule,
     StationsModule,
     OriginsModule,
     StorageModule,
