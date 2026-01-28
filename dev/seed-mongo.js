@@ -128,6 +128,7 @@ const menus = menuFiles.map(readJson);
 
 const locationMap = new Map(); // key: `${restaurantId}:${locationIdString}` -> ObjectId
 const menuLocationMap = new Map(); // key: `${restaurantId}:${menuId}` -> ObjectId
+const originMap = new Map(); // key: `${restaurantId}:${locationSlug}` -> ObjectId
 
 restaurants.forEach((restaurant) => {
   const restaurantDoc = {
@@ -171,6 +172,19 @@ restaurants.forEach((restaurant) => {
     (location.menus || []).forEach((menuRef) => {
       menuLocationMap.set(`${restaurant._id}:${menuRef.id}`, locationId);
     });
+
+    const originId = stableObjectId(`origin:${restaurant._id}:${location.id}`);
+    originMap.set(`${restaurant._id}:${location.id}`, originId);
+    const originDoc = {
+      _id: originId,
+      restaurantId: restaurant._id,
+      locationId: locationId,
+      qrCodeId: `origin_${restaurant._id}_${location.id}`,
+      type: 'table',
+      label: 'Table 1',
+      qrCode: 'https://order.orderbuddyapp.com/',
+    };
+    db.getCollection('origins').updateOne({ _id: originDoc._id }, { $set: originDoc }, { upsert: true });
   });
 });
 
@@ -196,3 +210,5 @@ menus.forEach((menu) => {
   const menuId = stableObjectId(`menu:${menu._id}`).valueOf();
   print(`- ${menu._id} -> ${menuId}`);
 });
+print('Origins seeded (restaurant:locationSlug -> ObjectId):');
+[...originMap.entries()].forEach(([key, id]) => print(`- ${key} -> ${id.valueOf()}`));

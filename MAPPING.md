@@ -12,6 +12,7 @@ This note documents how `dev/seed-mongo.js` maps the sample JSON files in `docs/
 ## Collections populated
 - `restaurants`
 - `locations`
+- `origins`
 - `menus`
 
 ## ID strategy
@@ -51,6 +52,9 @@ The docs menu files follow the `docs/menu/menu_schema.json` shape. The API expec
   - `variants`, `modifiers`, `stationTags` default to empty arrays (not present in docs menus)
 - `available` is computed from whether any item has `isAvailable = true`.
 - `salesTax` defaults to `0` if not present in the menu JSON.
+
+## Field mapping: origins (dev-only)
+Origins are not present in `docs/menu`, so a minimal origin record is created per location to allow the Order App to render. The origin is derived from the restaurant + location and uses deterministic ObjectIds so it is stable across runs.
 
 ## Local DB credentials
 The local MongoDB instance was configured with the same root credentials as `dev/docker-compose.dev.yml`:

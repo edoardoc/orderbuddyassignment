@@ -59,9 +59,9 @@ func main() {
 	menuSummaryType := graphql.NewObject(graphql.ObjectConfig{
 		Name: "MenuSummary",
 		Fields: graphql.Fields{
-			"_id": &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
-			"menuSlug": &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
-			"name": &graphql.Field{Type: graphql.NewNonNull(menuNameType)},
+			"_id":       &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
+			"menuSlug":  &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
+			"name":      &graphql.Field{Type: graphql.NewNonNull(menuNameType)},
 			"available": &graphql.Field{Type: graphql.NewNonNull(graphql.Boolean)},
 		},
 	})
@@ -73,9 +73,12 @@ func main() {
 				Type: graphql.NewNonNull(graphql.NewList(menuSummaryType)),
 				Args: graphql.FieldConfigArgument{
 					"restaurantId": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
-					"locationId": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
+					"locationId":   &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.String)},
 				},
 				Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+					restaurantID, _ := params.Args["restaurantId"].(string)
+					locationID, _ := params.Args["locationId"].(string)
+					log.Printf("menus query hit restaurantId=%s locationId=%s", restaurantID, locationID)
 					return menus, nil
 				},
 			},
@@ -114,6 +117,7 @@ func main() {
 	}
 }
 
+// without this, the browser would block the GraphQL POST due to CORS.
 func withCORS(next http.Handler) http.Handler {
 	allowOrigin := os.Getenv("CORS_ORIGIN")
 	if allowOrigin == "" {

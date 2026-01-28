@@ -1,5 +1,8 @@
 # Demo Video: Go GraphQL Endpoint + Mobile App
 
+## Quick URLs (local)
+- Menus list (Cuppa Co): `http://localhost:5173/menus/cuppa_co/lynnwood/ccfc45b12c4e8b87cf09d264?originId=27e6e5ea1966967c83f6a9b5`
+
 ## Goal
 Show the Order App fetching menus from the new Go GraphQL endpoint.
 
