@@ -4,6 +4,8 @@
 - Monorepo with two Ionic/React PWAs: `src/order` (customer) and `src/manage` (admin).
 - NestJS API in `src/api` with MongoDB Atlas, SuperTokens auth, WebSocket events, and integrations (payments, email, web push, printers).
 - Mobile apps rely on REST endpoints under `order-app/*` plus WebSocket events for real-time updates.
+- Go GraphQL demo service is available in `src/go-graphql-demo` with a `menus` query.
+- Local seed data is loaded from `docs/menu/*` into Mongo via `dev/seed-mongo.js`.
 
 ## Core backend responsibilities to port
 - Auth/session: SuperTokens middleware and guards (`src/api/src/auth/*`).
@@ -19,6 +21,7 @@
 - WebSocket events can be replicated with Go (Gorilla/WebSocket or Socket.IO-compatible layer if needed).
 - Middleware and validation logic must be reimplemented (logging, auth guards, request IDs).
 - Existing mobile clients expect REST shapes (e.g., `ApiResponse<T>`). Keeping response contracts stable is the highest priority.
+ - A GraphQL read-path prototype already exists (menus list) to validate incremental migration.
 
 ## Core functionality feasibility table
 | Core area (x) | Go feasibility (y) | Required changes / notes |
@@ -36,9 +39,20 @@
 
 ## Go for the upcoming web app
 - Go can comfortably serve both mobile and web clients using the same API contract.
-- GraphQL is optional but supported; REST remains the lowest-risk path for backward compatibility.
+- GraphQL is supported and already demoed for read paths; REST remains a stable fallback during migration.
 - Web client needs the same real-time events (order status, station routing). Go can handle this with WebSockets and pub/sub.
 - CORS and session management can be centralized in Go for both web and mobile.
+
+## Proof of concept completed (local)
+- Go GraphQL `menus` query serves the Order App via `VITE_GRAPHQL_ENDPOINT`.
+- Order App menus list can switch between REST and GraphQL without changing UI code.
+- Seeded menu data is sourced directly from `docs/menu/*` for local MVP testing.
+- Deterministic IDs allow stable local URLs for demo and testing.
+
+## Local MVP path (recommended)
+1. Use `dev/seed-mongo.js` to load `docs/menu/*` into Mongo.
+2. Run `dev/start-apps.sh` to launch Order, Manage, API, and Go GraphQL demo.
+3. Validate the menus list page via the seeded URLs in `docs/demo-go-graphql-mobile.md`.
 
 ## Recommendation
 - Proceed with a Go rebuild, but avoid a big-bang cutover.
@@ -50,10 +64,9 @@
 - Contract drift: Define and freeze API contracts (OpenAPI or shared schema) and add contract tests.
 - Real-time parity: The Socket.IO event model must be preserved or a compatible adapter provided.
 - Auth/session parity: Validate SuperTokens behavior and cookie/session handling across clients.
-- Observability gap: Reimplement Azure Application Insights tracing and request correlation IDs.
 
 ## Suggested next steps
-1. Inventory the exact endpoints called by `src/order` and `src/manage`.
-2. Build a Go service skeleton with the same routes and `ApiResponse<T>` format.
-3. Port WebSocket events and a subset of order lifecycle events.
-4. Run a dual-stack staging environment and migrate traffic endpoint-by-endpoint.
+1. Add GraphQL equivalents for restaurant/location/origin/campaign reads.
+2. Add GraphQL `menu` details query and switch `useMenu.ts` under the flag.
+3. Port preview order + checkout mutations to Go and validate pricing parity.
+4. Introduce real-time events and admin APIs after read/write parity is proven.
